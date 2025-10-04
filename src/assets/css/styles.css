@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Colores principales del dashboard */
+  --color-background: oklch(0.15 0.02 250);
+  --color-surface: oklch(0.2 0.03 250);
+  --color-surface-elevated: oklch(0.25 0.04 250);
+
+  /* Acentos azul-púrpura */
+  --color-primary-50: oklch(0.98 0.02 270);
+  --color-primary-100: oklch(0.95 0.04 270);
+  --color-primary-200: oklch(0.9 0.06 270);
+  --color-primary-300: oklch(0.8 0.08 270);
+  --color-primary-400: oklch(0.7 0.12 270);
+  --color-primary-500: oklch(0.6 0.16 270);
+  --color-primary-600: oklch(0.5 0.18 270);
+  --color-primary-700: oklch(0.4 0.16 270);
+  --color-primary-800: oklch(0.3 0.12 270);
+  --color-primary-900: oklch(0.2 0.08 270);
+
+  /* Acentos cian/azul claro */
+  --color-accent-50: oklch(0.98 0.02 220);
+  --color-accent-100: oklch(0.95 0.04 220);
+  --color-accent-200: oklch(0.88 0.08 220);
+  --color-accent-300: oklch(0.78 0.12 220);
+  --color-accent-400: oklch(0.68 0.16 220);
+  --color-accent-500: oklch(0.58 0.18 220);
+  --color-accent-600: oklch(0.48 0.16 220);
+  --color-accent-700: oklch(0.38 0.12 220);
+  --color-accent-800: oklch(0.28 0.08 220);
+  --color-accent-900: rgb(0, 21, 30);
+
+  /* Colores de estado */
+  --color-success: oklch(0.7 0.15 140);
+  --color-warning: oklch(0.75 0.15 80);
+  --color-error: oklch(0.6 0.2 25);
+  --color-info: oklch(0.65 0.15 230);
+
+  /* Textos */
+  --color-text-primary: oklch(0.98 0.01 250);
+  --color-text-secondary: oklch(0.75 0.02 250);
+  --color-text-tertiary: oklch(0.55 0.02 250);
+
+  /* Bordes y divisores */
+  --color-border: oklch(0.3 0.03 250);
+  --color-divider: oklch(0.25 0.02 250);
+}
