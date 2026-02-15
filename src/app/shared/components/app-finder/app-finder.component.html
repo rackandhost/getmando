@@ -1,0 +1,8 @@
+<input
+  type="search"
+  placeholder="Search applications..."
+  class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl xl:w-4xl xl:block xl:mx-auto p-2 mb-6 text-xl text-white placeholder-white/50 focus:bg-white/15 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 w-full transition-all duration-300"
+  [value]="searchQuery"
+  (input)="onSearchInput($event)"
+  aria-label="Search applications"
+/>

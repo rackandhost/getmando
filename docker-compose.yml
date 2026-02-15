@@ -1,0 +1,26 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: getmando-dashboard
+    ports:
+      - '8080:80'
+    volumes:
+      # Mount your local dashboard.yaml config
+      - ./config/dashboard.yaml:/app/config/dashboard.yaml:ro
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - dashboard-network
+
+networks:
+  dashboard-network:
+    driver: bridge

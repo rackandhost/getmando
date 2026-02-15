@@ -1,9 +1,4 @@
 {
-  "recommendations": [
-    "Vue.volar",
-    "vitest.explorer",
-    "dbaeumer.vscode-eslint",
-    "EditorConfig.EditorConfig",
-    "esbenp.prettier-vscode"
-  ]
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=827846
+  "recommendations": ["angular.ng-template"]
 }
