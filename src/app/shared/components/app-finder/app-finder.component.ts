@@ -1,13 +1,16 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroMagnifyingGlass } from '@ng-icons/heroicons/outline';
 
 import { AppService } from '../../../core/services/app.service';
 
 @Component({
   selector: 'app-finder',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NgIcon],
   templateUrl: 'app-finder.component.html',
+  viewProviders: [provideIcons({ heroMagnifyingGlass})]
 })
 export class AppFinderComponent {
   private readonly appService = inject(AppService);
