@@ -31,6 +31,7 @@
     "@angular/router": "^21.1.0",
     "@ng-icons/core": "^33.1.0",
     "@ng-icons/heroicons": "^33.1.0",
+    "@ng-icons/simple-icons": "^33.1.0",
     "js-yaml": "^4.1.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
