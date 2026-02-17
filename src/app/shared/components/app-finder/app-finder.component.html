@@ -9,4 +9,12 @@
     (input)="onSearchInput($event)"
     aria-label="Search applications"
   />
+
+  @if (haveSearch) {
+    <ng-icon
+      class="absolute z-10 top-3.5 right-4 text-2xl opacity-50 cursor-pointer"
+      name="heroXMark"
+      (click)="onHandleResetSearch()"
+    />
+  }
 </div>

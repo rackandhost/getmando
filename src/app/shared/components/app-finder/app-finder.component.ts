@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroMagnifyingGlass } from '@ng-icons/heroicons/outline';
+import { heroMagnifyingGlass, heroXMark } from '@ng-icons/heroicons/outline';
 
 import { AppService } from '../../../core/services/app.service';
 
@@ -10,7 +10,7 @@ import { AppService } from '../../../core/services/app.service';
   standalone: true,
   imports: [CommonModule, NgIcon],
   templateUrl: 'app-finder.component.html',
-  viewProviders: [provideIcons({ heroMagnifyingGlass})]
+  viewProviders: [provideIcons({ heroMagnifyingGlass, heroXMark })]
 })
 export class AppFinderComponent {
   private readonly appService = inject(AppService);
@@ -18,12 +18,27 @@ export class AppFinderComponent {
   // Local state for search
   searchQuery = '';
 
+  get haveSearch(): boolean {
+    return this.searchQuery.trim() !== '';
+  }
+
   /**
    * Handle search input
    */
   onSearchInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.searchQuery = target.value;
+    const { value } = event.target as HTMLInputElement;
+
+    this.setAndEmitSearchQuery(value);
+  }
+
+  onHandleResetSearch(): void {
+    if (!this.haveSearch) return;
+
+    this.setAndEmitSearchQuery('');
+  }
+
+  private setAndEmitSearchQuery(newValue: string): void {
+    this.searchQuery = newValue;
     this.appService.setSearchQuery(this.searchQuery);
   }
 }
