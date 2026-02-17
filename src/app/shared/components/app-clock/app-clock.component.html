@@ -1,6 +1,10 @@
 <section
   class="flex flex-col items-center justify-center gap-1 mb-6"
 >
+  @if (dateOnTop) {
+    <ng-container *ngTemplateOutlet="dateTemplate"></ng-container>
+  }
+
   <p class="text-5xl flex items-end gap-1">
     {{ currentDate() | date: 'HH:mm' }}
 
@@ -9,7 +13,14 @@
     }
   </p>
 
+  @if (dateOnBottom) {
+    <ng-container *ngTemplateOutlet="dateTemplate"></ng-container>
+  }
+</section>
+
+
+<ng-template #dateTemplate>
   <p class="text-lg">
     {{ currentDate() | date: dateFormat }}
   </p>
-</section>
+</ng-template>

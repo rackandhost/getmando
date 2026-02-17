@@ -182,7 +182,9 @@ searchEngines:
 settings:
   theme: 'auto'
   dateFormat: 'd MMMM yyyy'
+  datePosition: 'bottom'
   showSeconds: false
+  showDate: true
   itemsPerRow: 5
   allowBookmarks: true
   showAllCategory: true
