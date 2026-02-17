@@ -181,7 +181,8 @@ searchEngines:
 
 settings:
   theme: 'auto'
-  dateFormat: 'dd-MM-yyyy'
+  dateFormat: 'd MMMM yyyy'
+  showSeconds: false
   itemsPerRow: 5
   allowBookmarks: true
   showAllCategory: true

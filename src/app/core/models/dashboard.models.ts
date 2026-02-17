@@ -67,6 +67,7 @@ export const DashboardMetadataSchema = z.object({
 export const DashboardSettingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'auto']).default('auto'),
   dateFormat: z.string().default('dd-MM-yyyy'),
+  showSeconds: z.boolean().default(false),
   itemsPerRow: z.number().int().min(1).max(10).default(4),
   allowBookmarks: z.boolean().default(false),
   showAllCategory: z.boolean().default(true),
@@ -130,6 +131,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
   settings: {
     theme: 'auto',
     dateFormat: 'dd-MM-yyyy',
+    showSeconds: false,
     itemsPerRow: 4,
     allowBookmarks: false,
     showAllCategory: true,

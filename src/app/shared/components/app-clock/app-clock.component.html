@@ -4,7 +4,9 @@
   <p class="text-5xl flex items-end gap-1">
     {{ currentDate() | date: 'HH:mm' }}
 
-    <small class="text-sm">{{ currentDate() | date: 'ss' }}</small>
+    @if (showSeconds) {
+      <small class="text-sm">{{ currentDate() | date: 'ss' }}</small>
+    }
   </p>
 
   <p class="text-lg">

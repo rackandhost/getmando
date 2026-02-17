@@ -20,6 +20,10 @@ export class AppClockComponent implements OnInit, OnDestroy {
     return this.appService.settingsSubject.value.dateFormat;
   }
 
+  get showSeconds(): boolean {
+    return this.appService.settingsSubject.value.showSeconds;
+  }
+
   ngOnInit(): void {
     this.intervalId = setInterval(() => {
       this.currentDate.set(Date.now());
