@@ -45,7 +45,7 @@ export class AppFinderComponent {
       return `Search on the web... (press enter to search on ${this.currentEngine()?.name})`;
     }
 
-    return 'Search applications...';
+    return 'Search on your applications...';
   }
 
   /**
