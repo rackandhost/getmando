@@ -1,7 +1,7 @@
-import { Injectable } from '@angular/core';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import {Injectable} from '@angular/core';
+import {DomSanitizer, SafeUrl} from '@angular/platform-browser';
 
-import { SelfhostedApp } from '../models/dashboard.models';
+import {SelfhostedApp} from '../models/dashboard.models';
 
 /**
  * Icon type options

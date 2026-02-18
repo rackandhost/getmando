@@ -3,9 +3,11 @@ import {CommonModule} from '@angular/common';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {NgIcon, provideIcons} from '@ng-icons/core';
 import {heroChevronDown, heroMagnifyingGlass, heroXMark} from '@ng-icons/heroicons/outline';
-import { simpleYoutube, simpleGoogle, simpleDuckduckgo } from '@ng-icons/simple-icons';
+import {simpleYoutube, simpleGoogle, simpleDuckduckgo} from '@ng-icons/simple-icons';
 
 import {AppService} from '../../../core/services/app.service';
+import {SearchService} from '../../../core/services/search.service';
+
 import {SearchEngine} from '../../../core/models/dashboard.models';
 
 @Component({
@@ -25,12 +27,13 @@ import {SearchEngine} from '../../../core/models/dashboard.models';
 })
 export class AppFinderComponent {
   private readonly appService = inject(AppService);
+  private readonly searchService = inject(SearchService);
 
   protected readonly searchQuery = signal('');
   protected readonly selectedEngine = signal<SearchEngine | null>(null);
   protected readonly isEngineDropdownOpen = signal(false);
 
-  private readonly searchEngines = toSignal(this.appService.searchEngines$, {
+  private readonly searchEngines = toSignal(this.searchService.searchEngines$, {
     initialValue: [],
   });
 

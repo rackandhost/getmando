@@ -1,7 +1,7 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {Component, inject} from '@angular/core';
 
-import { AppService } from '../../../core/services/app.service';
+import {AppService} from '../../../core/services/app.service';
 
 @Component({
   selector: 'app-footer',

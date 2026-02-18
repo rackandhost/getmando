@@ -1,10 +1,11 @@
-import { Component, inject, input, output, ChangeDetectionStrategy, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, inject, input, output, ChangeDetectionStrategy, computed} from '@angular/core';
+import {CommonModule} from '@angular/common';
 
-import { SelfhostedApp } from '../../../core/models/dashboard.models';
+import {SelfhostedApp} from '../../../core/models/dashboard.models';
 
-import { IconService } from '../../../core/services/icon.service';
-import { AppService } from '../../../core/services/app.service';
+import {IconService} from '../../../core/services/icon.service';
+import {AppService} from '../../../core/services/app.service';
+import {SettingsService} from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-card',
@@ -18,6 +19,7 @@ import { AppService } from '../../../core/services/app.service';
 })
 export class AppCardComponent {
   private readonly appService = inject(AppService);
+  private readonly settingsService = inject(SettingsService);
 
   // Inputs
   readonly app = input.required<SelfhostedApp>();
@@ -33,11 +35,11 @@ export class AppCardComponent {
   readonly iconUrl = computed(() => this.iconService.getIconUrl(this.app()));
 
   get showDescriptions(): boolean {
-    return this.appService.settingsSubject.value.showDescriptions;
+    return this.settingsService.settingsSubject.value.showDescriptions;
   }
 
   get showLabels(): boolean {
-    return this.appService.settingsSubject.value.showLabels;
+    return this.settingsService.settingsSubject.value.showLabels;
   }
 
   /**

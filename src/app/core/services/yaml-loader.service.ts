@@ -1,10 +1,10 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, of, tap, map } from 'rxjs';
+import {inject, Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {catchError, map, Observable, of, tap} from 'rxjs';
 
-import { YamlParserService } from './yaml-parser.service';
+import {YamlParserService} from './yaml-parser.service';
 
-import { DashboardConfig } from '../models/dashboard.models';
+import {DashboardConfig} from '../models/dashboard.models';
 
 /**
  * Service for loading YAML configuration from assets
@@ -23,14 +23,11 @@ export class YamlLoaderService {
    */
   loadDashboardConfig(): Observable<DashboardConfig> {
     return this.http.get(this.CONFIG_PATH, { responseType: 'text' }).pipe(
-      tap((yamlContent: string) => {
+      tap(() => {
         console.log('[YamlLoader] YAML content loaded successfully');
       }),
       // Parse and validate YAML
-      map((yamlContent: string) => {
-        const parseResult = this.yamlParser.parseYamlOrThrow(yamlContent);
-        return parseResult;
-      }),
+      map((yamlContent: string) => this.yamlParser.parseYamlOrThrow(yamlContent)),
       // Log success
       tap((config: DashboardConfig) => {
         console.log('[YamlLoader] Dashboard config loaded:', {

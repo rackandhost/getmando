@@ -1,19 +1,19 @@
-import { Injectable, computed, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
-import { map, tap, distinctUntilChanged, filter } from 'rxjs/operators';
+import {Injectable, inject} from '@angular/core';
+import {Observable, combineLatest} from 'rxjs';
+import {map, tap, distinctUntilChanged} from 'rxjs/operators';
 
 import {
   DashboardConfig,
   SelfhostedApp,
-  Category,
-  SearchEngine,
-  DashboardSettings,
-  DEFAULT_DASHBOARD_CONFIG,
   APP_CATEGORY,
   BOOKMARKS_CATEGORY,
 } from '../models/dashboard.models';
 
-import { YamlLoaderService } from './yaml-loader.service';
+import {YamlLoaderService} from './yaml-loader.service';
+import {ConfigService} from './config.service';
+import {SearchService} from './search.service';
+import {CategoryService} from './category.service';
+import {BookmarkService} from './bookmark.service';
 
 /**
  * Service for managing dashboard application state
@@ -21,31 +21,27 @@ import { YamlLoaderService } from './yaml-loader.service';
  */
 @Injectable({ providedIn: 'root' })
 export class AppService {
+  private configService = inject(ConfigService);
   private yamlLoader = inject(YamlLoaderService);
-
-  private configSubject = new BehaviorSubject<DashboardConfig | undefined>(undefined);
-  private readonly searchQuerySubject = new BehaviorSubject<string>('');
-  private readonly selectedCategorySubject = new BehaviorSubject<string>(APP_CATEGORY.id);
-
-  settingsSubject = new BehaviorSubject<DashboardSettings>(DEFAULT_DASHBOARD_CONFIG.settings);
-  haveSearchSubject = new BehaviorSubject<boolean>(false);
+  private searchService = inject(SearchService);
+  private categoryService = inject(CategoryService);
+  private bookmarkService = inject(BookmarkService);
 
   appVersion = '0.1.0-beta';
 
   /**
    * Observable streams for component consumption
    */
-  readonly config$ = this.configSubject.asObservable().pipe(filter((config) => !!config));
-  readonly apps$ = this.config$.pipe(
+  readonly apps$ = this.configService.config$.pipe(
     tap((config) => {
       if (!config.settings.showAllCategory) {
-        this.selectedCategorySubject.next(config.categories[0].id);
+        this.categoryService.setSelectedCategory(config.categories[0].id);
       }
     }),
     map((config) => [
       ...config.applications,
       ...(config.settings.allowBookmarks
-        ? config.bookmarks.map((bookmark) => ({
+        ? this.bookmarkService.bookmarks.map((bookmark) => ({
             ...bookmark,
             category: BOOKMARKS_CATEGORY.id,
           }))
@@ -53,31 +49,10 @@ export class AppService {
       ).sort((a, b) => a.name.localeCompare(b.name)),
     ]),
   );
-  readonly bookmarks$ = this.config$.pipe(map((config) => config.bookmarks));
-  readonly categories$ = this.config$.pipe(
-    map((config) => {
-      const categories: Category[] = [];
 
-      if (config.settings.showAllCategory) {
-        categories.push(APP_CATEGORY);
-      }
-
-      if (config.settings.allowBookmarks) {
-        categories.push(BOOKMARKS_CATEGORY);
-      }
-
-      return [...categories, ...config.categories].sort((a, b) => a.name.localeCompare(b.name));
-    }),
-  );
-  readonly searchEngines$ = this.config$.pipe(map((config) => config.searchEngines));
-  readonly settings$ = this.config$.pipe(map((config) => config.settings));
-  readonly metadata$ = this.config$.pipe(map((config) => config.metadata));
-  readonly searchQuery$ = this.searchQuerySubject.asObservable();
-  readonly selectedCategory$ = this.selectedCategorySubject.asObservable();
 
   constructor() {
-    this.yamlLoader.loadDashboardConfig().subscribe((config) => this.configSubject.next(config));
-    this.settings$.subscribe((settings) => this.settingsSubject.next(settings));
+    this.yamlLoader.loadDashboardConfig().subscribe((config) => this.configService.fireNewSubject(config));
   }
 
   /**
@@ -85,10 +60,10 @@ export class AppService {
    */
   readonly filteredApps$: Observable<SelfhostedApp[]> = combineLatest([
     this.apps$,
-    this.searchQuery$,
-    this.selectedCategory$,
+    this.searchService.searchQuery$,
+    this.categoryService.selectedCategory$,
   ]).pipe(
-    map(([apps, query, category]) => this.filterApps(apps, query, category, query.trim() !== '')),
+    map(([apps, query, category]) => this.searchService.filterApps(apps, query, category, query.trim() !== '')),
     distinctUntilChanged(),
   );
 
@@ -96,7 +71,7 @@ export class AppService {
    * Current config value (synchronous access)
    */
   get config(): DashboardConfig | undefined {
-    return this.configSubject.value;
+    return this.configService.subject.value;
   }
 
   /**
@@ -104,7 +79,7 @@ export class AppService {
    * @param config - Dashboard configuration
    */
   initializeConfig(config: DashboardConfig): void {
-    this.configSubject.next(config);
+    this.configService.subject.next(config);
     console.log('[AppService] Dashboard config initialized');
   }
 
@@ -113,8 +88,7 @@ export class AppService {
    * @param query - Search query string
    */
   setSearchQuery(query: string): void {
-    this.searchQuerySubject.next(query);
-    this.haveSearchSubject.next(query.trim() !== '');
+    this.searchService.setSearchQuery(query);
   }
 
   /**
@@ -122,7 +96,7 @@ export class AppService {
    * @param categoryId - Category ID
    */
   setSelectedCategory(categoryId: string): void {
-    this.selectedCategorySubject.next(categoryId);
+    this.categoryService.setSelectedCategory(categoryId);
   }
 
   /**
@@ -137,17 +111,6 @@ export class AppService {
   }
 
   /**
-   * Get search engine by ID
-   * @param engineId - Search engine ID
-   * @returns Search engine or undefined
-   */
-  getSearchEngineById(engineId: string): SearchEngine | undefined {
-    if (!this.config) return;
-
-    return this.config.searchEngines.find((engine) => engine.id === engineId);
-  }
-
-  /**
    * Get apps by category
    * @param categoryId - Category ID
    * @returns Array of applications
@@ -158,52 +121,7 @@ export class AppService {
     if (categoryId === APP_CATEGORY.id) {
       return this.config.applications;
     }
+
     return this.config.applications.filter((app) => app.category === categoryId);
-  }
-
-  /**
-   * Filter applications based on search query and category
-   * @param apps - Applications to filter
-   * @param query - Search query
-   * @param categoryId - Category ID
-   * @returns Filtered applications
-   */
-  private filterApps(
-    apps: SelfhostedApp[],
-    query: string,
-    categoryId: string,
-    searchAll: boolean = false,
-  ): SelfhostedApp[] {
-    let filtered = [];
-
-    if (searchAll) {
-      filtered = apps;
-    } else {
-      filtered =
-        categoryId === APP_CATEGORY.id
-          ? apps.filter(({ category }) => category !== BOOKMARKS_CATEGORY.id)
-          : apps.filter((app) => app.category === categoryId);
-    }
-
-    if (!query.trim()) {
-      return filtered;
-    }
-
-    const lowerQuery = query.toLowerCase();
-    return filtered.filter(
-      (app) =>
-        app.name.toLowerCase().includes(lowerQuery) ||
-        app.description.toLowerCase().includes(lowerQuery) ||
-        app.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)),
-    );
-  }
-
-  /**
-   * Get app count by category
-   * @param categoryId - Category ID
-   * @returns Number of applications in category
-   */
-  getAppCountByCategory(categoryId: string): number {
-    return this.getAppsByCategory(categoryId).length;
   }
 }

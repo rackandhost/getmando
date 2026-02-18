@@ -1,8 +1,8 @@
-import { APP_INITIALIZER, Provider } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import {Provider} from '@angular/core';
+import {firstValueFrom} from 'rxjs';
 
-import { YamlLoaderService } from '../services/yaml-loader.service';
-import { AppService } from '../services/app.service';
+import {YamlLoaderService} from '../services/yaml-loader.service';
+import {AppService} from '../services/app.service';
 
 /**
  * Factory function to initialize dashboard configuration
@@ -33,7 +33,7 @@ export function initializeDashboard(
  * Provider for APP_INITIALIZER to load dashboard config on app start
  */
 export const DASHBOARD_INITIALIZER_PROVIDER: Provider = {
-  provide: APP_INITIALIZER,
+  provide:  [],
   useFactory: initializeDashboard,
   deps: [YamlLoaderService, AppService],
   multi: true,

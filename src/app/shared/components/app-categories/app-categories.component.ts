@@ -1,8 +1,10 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, inject} from '@angular/core';
+import {CommonModule} from '@angular/common';
 import {toSignal} from '@angular/core/rxjs-interop';
 
 import { AppService } from '../../../core/services/app.service';
+import {CategoryService} from '../../../core/services/category.service';
+import {SearchService} from '../../../core/services/search.service';
 
 @Component({
   selector: 'app-categories',
@@ -12,12 +14,14 @@ import { AppService } from '../../../core/services/app.service';
 })
 export class AppCategoriesComponent {
   private readonly appService = inject(AppService);
+  private readonly categoryService = inject(CategoryService);
+  private readonly searchService = inject(SearchService);
 
-  readonly categories = toSignal(this.appService.categories$);
-  readonly selectedCategory = toSignal(this.appService.selectedCategory$);
+  readonly categories = toSignal(this.categoryService.categories$);
+  readonly selectedCategory = toSignal(this.categoryService.selectedCategory$);
 
   get haveSearch(): boolean {
-    return this.appService.haveSearchSubject.value;
+    return this.searchService.haveSearchSubject.value;
   }
 
   /**

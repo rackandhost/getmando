@@ -1,10 +1,10 @@
-import { Injectable, inject } from '@angular/core';
-import { signal, computed, Signal } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
-import { Observable, fromEvent } from 'rxjs';
-import { startWith, map } from 'rxjs/operators';
+import {Injectable, inject} from '@angular/core';
+import {signal, computed, Signal} from '@angular/core';
+import {DOCUMENT} from '@angular/common';
+import {Observable, fromEvent} from 'rxjs';
+import {startWith, map} from 'rxjs/operators';
 
-import { AppService } from './app.service';
+import {SettingsService} from './settings.service';
 
 /**
  * Theme type options
@@ -25,7 +25,7 @@ export interface ThemeState {
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  private readonly appService = inject(AppService);
+  private readonly settingsService = inject(SettingsService);
   private readonly document = inject(DOCUMENT);
 
   private readonly STORAGE_KEY = 'dashboard-theme';
@@ -187,7 +187,7 @@ export class ThemeService {
    * @returns Theme mode or 'auto' if not set
    */
   private getStoredThemeMode(): ThemeMode {
-    return this.appService.settingsSubject.value.theme;
+    return this.settingsService.settingsSubject.value.theme;
   }
 
   /**

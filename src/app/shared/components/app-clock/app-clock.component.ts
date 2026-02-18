@@ -1,7 +1,7 @@
 import {CommonModule, NgTemplateOutlet} from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import {Component, inject, OnDestroy, OnInit, signal} from '@angular/core';
 
-import { AppService } from '../../../core/services/app.service';
+import {SettingsService} from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-clock',
@@ -10,26 +10,26 @@ import { AppService } from '../../../core/services/app.service';
   templateUrl: 'app-clock.component.html',
 })
 export class AppClockComponent implements OnInit, OnDestroy {
-  private appService = inject(AppService);
+  private readonly settingsService = inject(SettingsService);
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
   currentDate = signal<number>(Date.now());
 
   get dateFormat(): string {
-    return this.appService.settingsSubject.value.dateFormat;
+    return this.settingsService.settingsSubject.value.dateFormat;
   }
 
   get dateOnBottom(): boolean {
-    return this.showDate && this.appService.settingsSubject.value.datePosition === 'bottom';
+    return this.showDate && this.settingsService.settingsSubject.value.datePosition === 'bottom';
   }
 
   get dateOnTop(): boolean {
-    return this.showDate && this.appService.settingsSubject.value.datePosition === 'top';
+    return this.showDate && this.settingsService.settingsSubject.value.datePosition === 'top';
   }
 
   get showSeconds(): boolean {
-    return this.appService.settingsSubject.value.showSeconds;
+    return this.settingsService.settingsSubject.value.showSeconds;
   }
 
   ngOnInit(): void {
@@ -43,6 +43,6 @@ export class AppClockComponent implements OnInit, OnDestroy {
   }
 
   private get showDate(): boolean {
-    return this.appService.settingsSubject.value.showDate;
+    return this.settingsService.settingsSubject.value.showDate;
   }
 }
