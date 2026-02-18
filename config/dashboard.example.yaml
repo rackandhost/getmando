@@ -158,27 +158,6 @@ bookmarks:
     tags:
       - web
 
-searchEngines:
-  - id: 'google'
-    name: 'Google'
-    searchUrl: 'https://www.google.com/search?q={query}'
-    icon: 'google'
-
-  - id: 'duckduckgo'
-    name: 'DuckDuckGo'
-    searchUrl: 'https://duckduckgo.com/?q={query}'
-    icon: 'duckduckgo'
-
-  - id: 'bing'
-    name: 'Bing'
-    searchUrl: 'https://www.bing.com/search?q={query}'
-    icon: 'bing'
-
-  - id: 'youtube'
-    name: 'YouTube'
-    searchUrl: 'https://www.youtube.com/results?search_query={query}'
-    icon: 'youtube'
-
 settings:
   theme: 'auto'
   dateFormat: 'd MMMM yyyy'

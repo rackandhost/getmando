@@ -1,6 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject} from 'rxjs';
-import {map} from 'rxjs/operators';
+import {BehaviorSubject, of} from 'rxjs';
 
 import {ConfigService} from './config.service';
 
@@ -8,6 +7,7 @@ import {
   APP_CATEGORY,
   BOOKMARKS_CATEGORY,
   DashboardConfig,
+  DEFAULT_DASHBOARD_SEARCH_ENGINES,
   SearchEngine,
   SelfhostedApp
 } from '../models/dashboard.models';
@@ -23,7 +23,7 @@ export class SearchService {
 
   haveSearchSubject = new BehaviorSubject<boolean>(false);
 
-  readonly searchEngines$ = this.configService.config$.pipe(map((config) => config.searchEngines));
+  readonly searchEngines$ = of(DEFAULT_DASHBOARD_SEARCH_ENGINES);
   readonly searchQuery$ = this.searchQuerySubject.asObservable();
 
   private get config(): DashboardConfig | undefined {
@@ -36,9 +36,7 @@ export class SearchService {
    * @returns Search engine or undefined
    */
   getSearchEngineById(engineId: string): SearchEngine | undefined {
-    if (!this.config) return;
-
-    return this.config.searchEngines.find((engine) => engine.id === engineId);
+    return DEFAULT_DASHBOARD_SEARCH_ENGINES.find((engine) => engine.id === engineId);
   }
 
   /**

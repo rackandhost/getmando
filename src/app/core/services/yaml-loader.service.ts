@@ -33,8 +33,7 @@ export class YamlLoaderService {
         console.log('[YamlLoader] Dashboard config loaded:', {
           title: config.metadata.title,
           apps: config.applications.length,
-          categories: config.categories.length,
-          searchEngines: config.searchEngines.length,
+          categories: config.categories.length
         });
       }),
       // Handle errors gracefully

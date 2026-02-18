@@ -85,7 +85,6 @@ export const DashboardConfigSchema = z.object({
   categories: z.array(CategorySchema).min(1),
   applications: z.array(SelfhostedAppSchema).min(1),
   bookmarks: z.array(BookmarkSchema),
-  searchEngines: z.array(SearchEngineSchema).min(1),
   settings: DashboardSettingsSchema,
 });
 
@@ -122,14 +121,6 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
   categories: [APP_CATEGORY],
   applications: [],
   bookmarks: [],
-  searchEngines: [
-    {
-      id: 'google',
-      name: 'Google',
-      searchUrl: 'https://www.google.com/search?q={query}',
-      icon: 'google',
-    },
-  ],
   settings: {
     theme: 'auto',
     dateFormat: 'dd-MM-yyyy',
@@ -143,3 +134,24 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
     showLabels: true,
   },
 };
+
+export const DEFAULT_DASHBOARD_SEARCH_ENGINES: SearchEngine[] = [
+  {
+    id: 'google',
+    name: 'Google',
+    searchUrl: 'https://www.google.com/search?q={query}',
+    icon: 'simpleGoogle',
+  },
+  {
+    id: 'duckduckgo',
+    name: 'DuckDuckGo',
+    searchUrl: 'https://duckduckgo.com/?q={query}',
+    icon: 'simpleDuckduckgo',
+  },
+  {
+    id: 'youtube',
+    name: 'YouTube',
+    searchUrl: 'https://www.youtube.com/results?search_query={query}',
+    icon: 'simpleYoutube',
+  },
+];
