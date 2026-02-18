@@ -1,16 +1,16 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { AppService } from '../../../core/services/app.service';
-import { ThemeService } from '../../../core/services/theme.service';
+import { AppService } from '../../core/services/app.service';
+import { ThemeService } from '../../core/services/theme.service';
 
-import { AppCardComponent } from '../../../shared/components/app-card/app-card.component';
-import { AppHeaderComponent } from '../../../shared/components/app-header/app-header.component';
-import { AppFinderComponent } from '../../../shared/components/app-finder/app-finder.component';
-import { AppCategoriesComponent } from '../../../shared/components/app-categories/app-categories.component';
-import { AppLoadingComponent } from '../../../shared/components/app-loading/app-loading.component';
-import { AppFooterComponent } from '../../../shared/components/app-footer/app-footer.component';
-import { AppClockComponent } from '../../../shared/components/app-clock/app-clock.component';
+import { AppCardComponent } from '../../shared/components/app-card/app-card.component';
+import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
+import { AppFinderComponent } from '../../shared/components/app-finder/app-finder.component';
+import { AppCategoriesComponent } from '../../shared/components/app-categories/app-categories.component';
+import { AppLoadingComponent } from '../../shared/components/app-loading/app-loading.component';
+import { AppFooterComponent } from '../../shared/components/app-footer/app-footer.component';
+import { AppClockComponent } from '../../shared/components/app-clock/app-clock.component';
 
 @Component({
   selector: 'app-dashboard',

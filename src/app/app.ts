@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 
-import { DashboardComponent } from './features/dashboard/dashboard/dashboard.component';
+import { DashboardComponent } from './views/dashboard/dashboard.component';
 
 @Component({
   selector: 'app-root',
