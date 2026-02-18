@@ -18,11 +18,11 @@
 
       <div>
         <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">
-          {{ (metadata$ | async)?.title || 'Dashboard' }}
+          {{ metadata()?.title || 'Dashboard' }}
         </h1>
 
         <p class="text-base text-white/70">
-          {{ (metadata$ | async)?.description || 'Your selfhosted applications' }}
+          {{ metadata()?.description || 'Your selfhosted applications' }}
         </p>
       </div>
     </div>
