@@ -3,7 +3,7 @@ import {CommonModule} from '@angular/common';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {NgIcon, provideIcons} from '@ng-icons/core';
 import {heroChevronDown, heroMagnifyingGlass, heroXMark} from '@ng-icons/heroicons/outline';
-import {simpleYoutube, simpleGoogle, simpleDuckduckgo} from '@ng-icons/simple-icons';
+import {simpleYoutube, simpleGoogle, simpleDuckduckgo, simpleStartpage} from '@ng-icons/simple-icons';
 
 import {AppService} from '../../../core/services/app.service';
 import {SearchService} from '../../../core/services/search.service';
@@ -21,7 +21,8 @@ import {SearchEngine} from '../../../core/models/dashboard.models';
     heroChevronDown,
     simpleYoutube,
     simpleGoogle,
-    simpleDuckduckgo
+    simpleDuckduckgo,
+    simpleStartpage
   })],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

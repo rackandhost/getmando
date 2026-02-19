@@ -149,6 +149,12 @@ export const DEFAULT_DASHBOARD_SEARCH_ENGINES: SearchEngine[] = [
     icon: 'simpleDuckduckgo',
   },
   {
+    id: 'startpage',
+    name: 'Startpage',
+    searchUrl: 'https://www.startpage.com/sp/search?q={query}',
+    icon: 'simpleStartpage',
+  },
+  {
     id: 'youtube',
     name: 'YouTube',
     searchUrl: 'https://www.youtube.com/results?search_query={query}',
