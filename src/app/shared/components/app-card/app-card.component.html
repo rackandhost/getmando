@@ -1,8 +1,8 @@
 <article
   class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl h-full p-6 cursor-pointer flex flex-col items-center text-center transition-all duration-300 hover:bg-white/15 hover:shadow-2xl hover:border-white/30 hover:-translate-y-1 hover:scale-105 group"
-  [attr.aria-label]="'Open ' + app().name"
   role="button"
   tabindex="0"
+  [attr.aria-label]="'Open ' + app().name"
   (click)="openApp()"
   (keydown.enter)="openApp()"
   (keydown.space.prevent)="openApp()"
@@ -10,10 +10,10 @@
   <!-- Icon container -->
   <div class="relative mb-4">
     <img
-      [src]="iconUrl()"
-      [alt]="app().name + ' icon'"
       class="w-16 h-16 rounded-2xl object-cover transition-all duration-300 group-hover:scale-110"
       loading="lazy"
+      [alt]="app().name + ' icon'"
+      [src]="iconUrl()"
     />
   </div>
 

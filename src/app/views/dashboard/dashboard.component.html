@@ -12,9 +12,9 @@
     @if (filteredApps$ | async; as apps) {
       @if (apps.length > 0) {
         <section
-          [class]="`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${itemsPerRow} gap-4 md:gap-6`"
-          role="list"
           aria-label="Applications"
+          role="list"
+          [class]="`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${itemsPerRow} gap-4 md:gap-6`"
         >
           @for (app of apps; track app.id) {
             <app-card [app]="app" (appClick)="onAppClick(app)"></app-card>

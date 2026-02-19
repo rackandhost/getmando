@@ -1,6 +1,5 @@
 import {inject, Injectable} from '@angular/core';
 import {map} from 'rxjs/operators';
-import {toSignal} from '@angular/core/rxjs-interop';
 
 import {ConfigService} from './config.service';
 

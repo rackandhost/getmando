@@ -6,7 +6,6 @@ import {ConfigService} from './config.service';
 import {
   APP_CATEGORY,
   BOOKMARKS_CATEGORY,
-  DashboardConfig,
   DEFAULT_DASHBOARD_SEARCH_ENGINES,
   SearchEngine,
   SelfhostedApp
@@ -28,10 +27,6 @@ export class SearchService {
     map((searchEngines) => searchEngines.map(this.getSearchEngineById)),
   );
   readonly searchQuery$ = this.searchQuerySubject.asObservable();
-
-  private get config(): DashboardConfig | undefined {
-    return this.configService.subject.value;
-  }
 
   /**
    * Get search engine by ID

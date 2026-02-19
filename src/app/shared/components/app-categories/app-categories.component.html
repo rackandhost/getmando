@@ -1,21 +1,21 @@
 <nav
+  aria-label="Categories"
   class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-2 mb-6 md:w-fit shadow-lg overflow-x-auto"
+  role="navigation"
   [class.opacity-50]="haveSearch"
   [class.cursor-not-allowed]="haveSearch"
-  role="navigation"
-  aria-label="Categories"
 >
   <div class="flex gap-2 md:gap-3 min-w-max">
     @for (category of categories(); track category.id) {
       <button
-        type="button"
         class="px-2 py-1 rounded-xl font-medium transition-all duration-300 hover:bg-white/10 border-b-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
+        type="button"
+        [attr.aria-pressed]="selectedCategory()=== category.id"
         [class.bg-white/10]="selectedCategory()=== category.id"
         [class.border-white/50]="selectedCategory()=== category.id"
         [class.cursor-not-allowed]="haveSearch"
         [class.cursor-pointer]="!haveSearch"
         (click)="onCategoryChange(category.id)"
-        [attr.aria-pressed]="selectedCategory()=== category.id"
         [disabled]="haveSearch"
         >
       {{ category.name }}
