@@ -75,6 +75,7 @@ export const DashboardSettingsSchema = z.object({
   showAllCategory: z.boolean().default(true),
   showDescriptions: z.boolean().default(true),
   showLabels: z.boolean().default(true),
+  searchEngines: z.array(z.enum(['google', 'duckduckgo', 'startpage', 'youtube'] as const)).default([])
 });
 
 /**
@@ -132,6 +133,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
     showAllCategory: true,
     showDescriptions: true,
     showLabels: true,
+    searchEngines: []
   },
 };
 

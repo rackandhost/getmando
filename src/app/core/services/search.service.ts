@@ -1,5 +1,5 @@
 import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject, of} from 'rxjs';
+import {BehaviorSubject, map} from 'rxjs';
 
 import {ConfigService} from './config.service';
 
@@ -23,7 +23,10 @@ export class SearchService {
 
   haveSearchSubject = new BehaviorSubject<boolean>(false);
 
-  readonly searchEngines$ = of(DEFAULT_DASHBOARD_SEARCH_ENGINES);
+  readonly searchEngines$ = this.configService.config$.pipe(
+    map((config) => config.settings.searchEngines),
+    map((searchEngines) => searchEngines.map(this.getSearchEngineById)),
+  );
   readonly searchQuery$ = this.searchQuerySubject.asObservable();
 
   private get config(): DashboardConfig | undefined {

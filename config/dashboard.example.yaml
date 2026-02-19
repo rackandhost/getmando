@@ -169,3 +169,8 @@ settings:
   showAllCategory: true
   showDescriptions: true
   showLabels: true
+  searchEngines:
+    - 'google'
+    - 'duckduckgo'
+    - 'startpage'
+    - 'youtube'
