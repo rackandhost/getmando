@@ -65,7 +65,7 @@ export const DashboardMetadataSchema = z.object({
  * Settings schema
  */
 export const DashboardSettingsSchema = z.object({
-  theme: z.enum(['light', 'dark', 'auto']).default('auto'),
+  theme: z.enum(['light', 'dark', 'auto']).default('dark'),
   dateFormat: z.string().default('dd-MM-yyyy'),
   datePosition: z.enum(['top', 'bottom']).default('top'),
   showSeconds: z.boolean().default(false),
@@ -123,7 +123,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
   applications: [],
   bookmarks: [],
   settings: {
-    theme: 'auto',
+    theme: 'dark',
     dateFormat: 'dd-MM-yyyy',
     datePosition: 'top',
     showSeconds: false,

@@ -60,7 +60,8 @@ export class ThemeService {
    * Initialize theme on service creation
    */
   private initializeTheme(): void {
-    const storedMode = this.getStoredThemeMode();
+    // const storedMode = this.getStoredThemeMode();
+    const storedMode: ThemeMode = 'dark';
     this.themeModeSignal.set(storedMode);
     this.applyTheme(storedMode);
   }
