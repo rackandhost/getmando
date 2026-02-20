@@ -259,7 +259,7 @@ docker run -d \
   -p 8080:80 \
   -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:ro \
   --restart unless-stopped \
-  yourusername/getmando:latest
+  rackandhost/getmando:latest
 ```
 
 ---
@@ -342,7 +342,7 @@ The `icon` object supports three types:
 
 | Type | Value | Description |
 |------|-------|-------------|
-| `name` | `{ type: 'name', value: 'plex' }` | Use icon by name (see [ng-icons](https://ng-icons.github.io/ng-icons/)) |
+| `name` | `{ type: 'name', value: 'plex' }` | Use icon by name (see [haroeris01/walkxcode-dashboard-icons](https://github.com/haroeris01/walkxcode-dashboard-icons/blob/main/ICONS.md)) |
 | `url` | `{ type: 'url', value: 'https://...' }` | Use custom URL for icon |
 | `initials` | `{ type: 'initials', value: 'AB' }` | Generate icon from initials |
 
@@ -481,7 +481,7 @@ settings:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/getmando.git
+git clone https://github.com/rackandhost/getmando.git
 cd getmando
 
 # Install dependencies
@@ -580,13 +580,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Built with [Angular](https://angular.dev/)
 - Styled with [TailwindCSS](https://tailwindcss.com/)
 - Icons from [ng-icons](https://ng-icons.github.io/ng-icons/)
+- App Icons from [haroeris01/walkxcode-dashboard-icons](https://github.com/haroeris01/walkxcode-dashboard-icons)
 
 ---
 
 ## 📮 Support
 
-- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/yourusername/getmando/issues)
-- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/yourusername/getmando/discussions)
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
+- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
 
 ---
 
