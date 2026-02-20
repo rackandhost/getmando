@@ -222,7 +222,7 @@ settings:
  ```yaml
 services:
   dashboard:
-    image: xxx
+    image: ghcr.io/rackandhost/getmando:0.1.0
     container_name: getmando-dashboard
     ports:
       - '8080:80'
@@ -259,7 +259,7 @@ docker run -d \
   -p 8080:80 \
   -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:ro \
   --restart unless-stopped \
-  rackandhost/getmando:latest
+  ghcr.io/rackandhost/getmando:0.1.0
 ```
 
 ---
