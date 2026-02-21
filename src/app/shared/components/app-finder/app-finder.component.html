@@ -22,14 +22,18 @@
   @if (availableEngines().length > 0 && isEngineDropdownOpen()) {
     <ul
       aria-label="Search engines"
-      class="absolute z-20 top-full left-4 mt-2 bg-white/95 text-black backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl py-2 min-w-48"
+      class="absolute z-20 top-full left-4 mt-2 bg-white/95 text-black backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl px-1 py-2 min-w-48"
       role="listbox"
     >
       @if (currentEngine()) {
         <li
-          class="px-4 py-2 cursor-pointer transition-colors hover:bg-black/5 flex items-center gap-2"
+          aria-selected="true"
+          class="px-4 py-2 cursor-pointer transition-colors hover:bg-black/5 focus-visible:outline-neutral-500! rounded-2xl flex items-center gap-2"
           role="option"
+          tabindex="0"
           (click)="onSelectEngine()"
+          (keydown.enter)="onSelectEngine()"
+          (keydown.space)="onSelectEngine()"
         >
           <ng-icon name="heroMagnifyingGlass" />
           <span class="text-gray-700">Search on your apps</span>
@@ -39,10 +43,13 @@
       @for (engine of availableEngines(); track engine?.id) {
         @if (currentEngine()?.id !== engine?.id) {
           <li
-            class="px-4 py-2 cursor-pointer transition-colors hover:bg-black/5 flex items-center gap-2"
+            class="px-4 py-2 cursor-pointer transition-colors hover:bg-black/5 focus-visible:outline-neutral-500! rounded-2xl flex items-center gap-2"
             role="option"
+            tabindex="0"
             [attr.aria-selected]="currentEngine()?.id === engine?.id"
             (click)="onSelectEngine(engine)"
+            (keydown.enter)="onSelectEngine(engine)"
+            (keydown.space)="onSelectEngine(engine)"
           >
             <ng-icon [name]="engine?.icon" />
             <span class="text-gray-700">{{ engine?.name }}</span>
@@ -67,7 +74,10 @@
       aria-label="Clear search"
       class="absolute z-10 top-3.5 right-4 text-2xl opacity-50 cursor-pointer hover:opacity-70 transition-opacity"
       name="heroXMark"
+      tabindex="0"
       (click)="onHandleResetSearch()"
+      (keydown.enter)="onHandleResetSearch()"
+      (keydown.space)="onHandleResetSearch()"
     />
   }
 </div>
