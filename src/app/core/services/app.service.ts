@@ -27,7 +27,7 @@ export class AppService {
   private categoryService = inject(CategoryService);
   private bookmarkService = inject(BookmarkService);
 
-  appVersion = '0.1.1-beta';
+  appVersion = '0.1.2-beta';
 
   /**
    * Observable streams for component consumption

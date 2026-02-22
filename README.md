@@ -6,13 +6,13 @@
   <em>A simply and beautiful dashboard</em>
 </p>
 
-![Version](https://img.shields.io/badge/version-0.1.1--beta-orange)
+![Version](https://img.shields.io/badge/version-0.1.2--beta-orange)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > **⚠️ BETA RELEASE WARNING**  
-> This project is currently in **beta testing** (v0.1.1-beta). Features may change, bugs are expected, and the API could evolve. Use at your own risk in production environments. Feedback and bug reports are highly appreciated!
+> This project is currently in **beta testing** (v0.1.2-beta). Features may change, bugs are expected, and the API could evolve. Use at your own risk in production environments. Feedback and bug reports are highly appreciated!
 
 ---
 
@@ -224,7 +224,7 @@ settings:
  ```yaml
 services:
   dashboard:
-    image: ghcr.io/rackandhost/getmando:0.1.1
+    image: ghcr.io/rackandhost/getmando:0.1.2
     container_name: getmando-dashboard
     ports:
       - '8080:80'
@@ -261,7 +261,7 @@ docker run -d \
   -p 8080:80 \
   -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:ro \
   --restart unless-stopped \
-  ghcr.io/rackandhost/getmando:0.1.1
+  ghcr.io/rackandhost/getmando:0.1.2
 ```
 
 ---
@@ -540,7 +540,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Beta (v0.1.1-beta)
+### Current Beta (v0.1.2-beta)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering

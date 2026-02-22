@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.2-beta
+
+### Bug Fixes & Improvements
+
+- **Mobile UX**: Added arrow icon to app-finder to enable search functionality on mobile devices
+- **Documentation**: Added new screenshot and updated version in README.md
+
+### Changed Files
+
+- `src/app/shared/components/app-finder/app-finder.component.html`
+- `src/app/shared/components/app-finder/app-finder.component.ts`
+- `README.md`
+- `screenshots/dashboard.png`
+
+### Summary
+
+Focused on improving mobile user experience with a search icon, alongside documentation and version updates for v0.1.2-beta.
+
 ## v0.1.1-beta
 
 ### Bug Fixes & Improvements
