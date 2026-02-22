@@ -2,7 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@ang
 import {CommonModule} from '@angular/common';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {NgIcon, provideIcons} from '@ng-icons/core';
-import {heroChevronDown, heroMagnifyingGlass, heroXMark} from '@ng-icons/heroicons/outline';
+import {heroChevronDown, heroMagnifyingGlass, heroXMark, heroArrowRight} from '@ng-icons/heroicons/outline';
 import {simpleYoutube, simpleGoogle, simpleDuckduckgo, simpleStartpage} from '@ng-icons/simple-icons';
 
 import {AppService} from '../../../core/services/app.service';
@@ -22,7 +22,8 @@ import {SearchEngine} from '../../../core/models/dashboard.models';
     simpleYoutube,
     simpleGoogle,
     simpleDuckduckgo,
-    simpleStartpage
+    simpleStartpage,
+    heroArrowRight
   })],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

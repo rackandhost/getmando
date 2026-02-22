@@ -72,12 +72,20 @@
   @if (haveSearch()) {
     <ng-icon
       aria-label="Clear search"
-      class="absolute z-10 top-3.5 right-4 text-2xl opacity-50 cursor-pointer hover:opacity-70 transition-opacity"
+      class="absolute z-10 top-3.5 right-11 text-2xl opacity-50 cursor-pointer hover:opacity-70 transition-opacity"
       name="heroXMark"
       tabindex="0"
       (click)="onHandleResetSearch()"
       (keydown.enter)="onHandleResetSearch()"
       (keydown.space)="onHandleResetSearch()"
+    />
+
+    <ng-icon
+      aria-label="Search"
+      class="absolute z-10 top-3.5 right-4 text-2xl opacity-50 cursor-pointer hover:opacity-70 transition-opacity"
+      name="heroArrowRight"
+      tabindex="0"
+      (click)="onSearchEnter()"
     />
   }
 </div>
