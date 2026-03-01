@@ -60,6 +60,8 @@ export class DashboardComponent {
   private setBackgroundImage(image: string): void {
     const body$ = document.getElementsByTagName('body')[0];
 
-    body$.style.backgroundImage = `url(/img/${image})`;
+    const isImageAnUrl = image.startsWith('https') || image.startsWith('http');
+
+    body$.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/' }${image})`;
   }
 }
