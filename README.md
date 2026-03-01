@@ -203,6 +203,7 @@ bookmarks:
       - web
 
 settings:
+  theme: 'auto'
   dateFormat: 'd MMMM yyyy'
   datePosition: 'bottom'
   showSeconds: false
@@ -427,19 +428,20 @@ bookmarks:
 
 #### `settings` - Dashboard Settings
 
-| Field              | Type            | Default          | Options         | Description                       |
-|--------------------|-----------------|------------------|-----------------|-----------------------------------|
-| `dateFormat`       | `string`        | `dd-MM-yyyy`     | Any format      | Date format for clock display     |
-| `datePosition`     | `string`        | `top`            | `top`, `bottom` | Clock date position               |
-| `showSeconds`      | `boolean`       | `false`          | -               | Show seconds in clock             |
-| `showDate`         | `boolean`       | `false`          | -               | Show date in clock                |
-| `itemsPerRow`      | `number`        | `4`              | `1-12`          | Number of apps per row on desktop |
-| `allowBookmarks`   | `boolean`       | `false`          | -               | Enable bookmarks section          |
-| `showAllCategory`  | `boolean`       | `true`           | -               | Show "All" category filter        |
-| `showDescriptions` | `boolean`       | `true`           | -               | Show app descriptions in cards    |
-| `showLabels`       | `boolean`       | `true`           | -               | Show app tags as labels           |
-| `searchEngines`    | `array[string]` | `[]`             | See below       | Available search engines          |
-| `backgroundImage`  | `string`        | `background.jpg` | -               | Custom image or url as background |
+| Field              | Type            | Default          | Options                 | Description                       |
+|--------------------|-----------------|------------------|-------------------------|-----------------------------------|
+| `theme`            | `string`        | `auto`           | `auto`, `light`, `dark` | Set dark and light mode           |
+| `dateFormat`       | `string`        | `dd-MM-yyyy`     | Any format              | Date format for clock display     |
+| `datePosition`     | `string`        | `top`            | `top`, `bottom`         | Clock date position               |
+| `showSeconds`      | `boolean`       | `false`          | -                       | Show seconds in clock             |
+| `showDate`         | `boolean`       | `false`          | -                       | Show date in clock                |
+| `itemsPerRow`      | `number`        | `4`              | `1-12`                  | Number of apps per row on desktop |
+| `allowBookmarks`   | `boolean`       | `false`          | -                       | Enable bookmarks section          |
+| `showAllCategory`  | `boolean`       | `true`           | -                       | Show "All" category filter        |
+| `showDescriptions` | `boolean`       | `true`           | -                       | Show app descriptions in cards    |
+| `showLabels`       | `boolean`       | `true`           | -                       | Show app tags as labels           |
+| `searchEngines`    | `array[string]` | `[]`             | See below               | Available search engines          |
+| `backgroundImage`  | `string`        | `background.jpg` | -                       | Custom image or url as background |
 
 **Search Engine Options:**
 - `google` - Google Search
@@ -450,6 +452,7 @@ bookmarks:
 **Example:**
 ```yaml
 settings:
+  theme: 'auto'
   dateFormat: 'd MMMM yyyy'
   datePosition: 'bottom'
   showSeconds: false
@@ -551,9 +554,9 @@ Build artifacts are created in the `dist/` directory.
 - ✅ Search engines
 - ✅ Docker deployment
 - ✅ Custom background image
+- ✅ Dark/light mode
 
 ### Planned Features
-- [ ] Dark/light mode
 - [ ] Add DB feature to allow user be able to choose between .yaml configuration or DB
 - [ ] Statistics/analytics when DB feature are available
 - [ ] Backup/restore configurations
