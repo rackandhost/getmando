@@ -54,8 +54,6 @@
 /* Body styles */
 body {
   min-height: 100vh;
-  /*background: linear-gradient(to bottom right, rgb(15 23 42), rgb(30 41 59), rgb(15 23 42));*/
-  background-image: url('/img/background.jpg');
   background-position: center;
   background-repeat: no-repeat;
   background-size: 100% 100%;

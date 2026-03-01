@@ -39,10 +39,15 @@ export class DashboardComponent {
   // Observable streams
   readonly filteredApps$ = this.appService.filteredApps$;
   readonly searchQuery$ = this.searchService.searchQuery$;
+  readonly settings$ = this.settingsService.settings$;
   readonly isDark$ = this.themeService.isDark$;
 
   get itemsPerRow(): number {
     return this.settingsService.settingsSubject.value.itemsPerRow;
+  }
+
+  constructor() {
+    this.settings$.subscribe(({ backgroundImage }) => this.setBackgroundImage(backgroundImage));
   }
 
   /**
@@ -50,5 +55,11 @@ export class DashboardComponent {
    */
   onAppClick(app: unknown): void {
     console.log('[Dashboard] App clicked:', app);
+  }
+
+  private setBackgroundImage(image: string): void {
+    const body$ = document.getElementsByTagName('body')[0];
+
+    body$.style.backgroundImage = `url(/img/${image})`;
   }
 }

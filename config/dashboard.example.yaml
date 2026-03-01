@@ -168,6 +168,7 @@ settings:
   showAllCategory: true
   showDescriptions: true
   showLabels: true
+#  backgroundImage: 'my-custom-image.jpg'
   searchEngines:
     - 'google'
     - 'duckduckgo'
