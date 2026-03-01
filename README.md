@@ -18,6 +18,8 @@
 
 <img alt="Dashboard" width="1024" src="screenshots/dashboard.png" />
 
+<img alt="Dashboard Light" width="1024" src="screenshots/dashboard_light.png" />
+
 ## 📖 Overview
 
 **Mando** is a beautiful and simply dashboard (not pretend to add too many features such a widgets, weather, etc...) for your self-hosted applications. Built with modern web technologies, it provides an elegant glassmorphism UI to organize and access all your homelab services from a single place. 
@@ -213,7 +215,6 @@ settings:
   showAllCategory: true
   showDescriptions: true
   showLabels: true
-  backgroundImage: 'my-custom-image-jpg'
   searchEngines:
     - 'google'
     - 'duckduckgo'
@@ -428,20 +429,21 @@ bookmarks:
 
 #### `settings` - Dashboard Settings
 
-| Field              | Type            | Default          | Options                 | Description                       |
-|--------------------|-----------------|------------------|-------------------------|-----------------------------------|
-| `theme`            | `string`        | `auto`           | `auto`, `light`, `dark` | Set dark and light mode           |
-| `dateFormat`       | `string`        | `dd-MM-yyyy`     | Any format              | Date format for clock display     |
-| `datePosition`     | `string`        | `top`            | `top`, `bottom`         | Clock date position               |
-| `showSeconds`      | `boolean`       | `false`          | -                       | Show seconds in clock             |
-| `showDate`         | `boolean`       | `false`          | -                       | Show date in clock                |
-| `itemsPerRow`      | `number`        | `4`              | `1-12`                  | Number of apps per row on desktop |
-| `allowBookmarks`   | `boolean`       | `false`          | -                       | Enable bookmarks section          |
-| `showAllCategory`  | `boolean`       | `true`           | -                       | Show "All" category filter        |
-| `showDescriptions` | `boolean`       | `true`           | -                       | Show app descriptions in cards    |
-| `showLabels`       | `boolean`       | `true`           | -                       | Show app tags as labels           |
-| `searchEngines`    | `array[string]` | `[]`             | See below               | Available search engines          |
-| `backgroundImage`  | `string`        | `background.jpg` | -                       | Custom image or url as background |
+| Field                  | Type            | Default          | Options                 | Description                                   |
+|------------------------|-----------------|------------------|-------------------------|-----------------------------------------------|
+| `theme`                | `string`        | `auto`           | `auto`, `light`, `dark` | Set dark and light mode                       |
+| `dateFormat`           | `string`        | `dd-MM-yyyy`     | Any format              | Date format for clock display                 |
+| `datePosition`         | `string`        | `top`            | `top`, `bottom`         | Clock date position                           |
+| `showSeconds`          | `boolean`       | `false`          | -                       | Show seconds in clock                         |
+| `showDate`             | `boolean`       | `false`          | -                       | Show date in clock                            |
+| `itemsPerRow`          | `number`        | `4`              | `1-12`                  | Number of apps per row on desktop             |
+| `allowBookmarks`       | `boolean`       | `false`          | -                       | Enable bookmarks section                      |
+| `showAllCategory`      | `boolean`       | `true`           | -                       | Show "All" category filter                    |
+| `showDescriptions`     | `boolean`       | `true`           | -                       | Show app descriptions in cards                |
+| `showLabels`           | `boolean`       | `true`           | -                       | Show app tags as labels                       |
+| `searchEngines`        | `array[string]` | `[]`             | See below               | Available search engines                      |
+| `lightBackgroundImage` | `string`        | `background.jpg` | -                       | Custom image or url as light theme background |
+| `darkBackgroundImage`  | `string`        | `background.jpg` | -                       | Custom image or url as dark theme background  |
 
 **Search Engine Options:**
 - `google` - Google Search
@@ -462,7 +464,8 @@ settings:
   showAllCategory: true
   showDescriptions: true
   showLabels: true
-  backgroundImage: 'my-custom-background.jpg' # Or 'https://domain.tld/my-custom-image.jpg'
+  lightBackgroundImage: 'my-custom-background.jpg' # Or 'https://domain.tld/my-custom-image.jpg'
+  darkBackgroundImage: 'my-custom-background.jpg' # Or 'https://domain.tld/my-custom-image.jpg'
   searchEngines:
     - 'google'
     - 'duckduckgo'
@@ -555,6 +558,7 @@ Build artifacts are created in the `dist/` directory.
 - ✅ Docker deployment
 - ✅ Custom background image
 - ✅ Dark/light mode
+- ✅ Different images for Dark/light mode
 
 ### Planned Features
 - [ ] Add DB feature to allow user be able to choose between .yaml configuration or DB
