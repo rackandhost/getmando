@@ -2,6 +2,8 @@ import {Injectable, inject} from '@angular/core';
 import {Observable, combineLatest} from 'rxjs';
 import {map, tap, distinctUntilChanged} from 'rxjs/operators';
 
+import {version} from '../../../../package.json';
+
 import {
   DashboardConfig,
   SelfhostedApp,
@@ -27,7 +29,7 @@ export class AppService {
   private categoryService = inject(CategoryService);
   private bookmarkService = inject(BookmarkService);
 
-  appVersion = '0.1.2-beta';
+  appVersion = version;
 
   /**
    * Observable streams for component consumption
