@@ -6,13 +6,13 @@
   <em>A simply and beautiful dashboard</em>
 </p>
 
-![Version](https://img.shields.io/badge/version-0.1.2--beta-orange)
+![Version](https://img.shields.io/badge/version-0.2.0--beta-orange)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > **⚠️ BETA RELEASE WARNING**  
-> This project is currently in **beta testing** (v0.1.2-beta). Features may change, bugs are expected, and the API could evolve. Use at your own risk in production environments. Feedback and bug reports are highly appreciated!
+> This project is currently in **beta testing** (v0.2.0-beta). Features may change, bugs are expected, and the API could evolve. Use at your own risk in production environments. Feedback and bug reports are highly appreciated!
 
 ---
 
@@ -212,6 +212,7 @@ settings:
   showAllCategory: true
   showDescriptions: true
   showLabels: true
+  backgroundImage: 'my-custom-image-jpg'
   searchEngines:
     - 'google'
     - 'duckduckgo'
@@ -224,13 +225,14 @@ settings:
  ```yaml
 services:
   dashboard:
-    image: ghcr.io/rackandhost/getmando:0.1.2
+    image: ghcr.io/rackandhost/getmando:latest
     container_name: getmando-dashboard
     ports:
       - '8080:80'
     volumes:
       # Mount your local dashboard.yaml config
       - ./config/dashboard.yaml:/app/config/dashboard.yaml:ro
+      - ./my-custom-image.jpg:/app/img/my-custom-image.jpg:ro # Use this if you want to set a custom background
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -261,7 +263,7 @@ docker run -d \
   -p 8080:80 \
   -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:ro \
   --restart unless-stopped \
-  ghcr.io/rackandhost/getmando:0.1.2
+  ghcr.io/rackandhost/getmando:latest
 ```
 
 ---
@@ -425,18 +427,19 @@ bookmarks:
 
 #### `settings` - Dashboard Settings
 
-| Field | Type | Default | Options         | Description |
-|-------|------|---------|-----------------|-------------|
-| `dateFormat` | `string` | `dd-MM-yyyy` | Any format      | Date format for clock display |
-| `datePosition` | `string` | `top` | `top`, `bottom` | Clock date position |
-| `showSeconds` | `boolean` | `false` | -               | Show seconds in clock |
-| `showDate` | `boolean` | `false` | -               | Show date in clock |
-| `itemsPerRow` | `number` | `4` | `1-12`          | Number of apps per row on desktop |
-| `allowBookmarks` | `boolean` | `false` | -               | Enable bookmarks section |
-| `showAllCategory` | `boolean` | `true` | -               | Show "All" category filter |
-| `showDescriptions` | `boolean` | `true` | -               | Show app descriptions in cards |
-| `showLabels` | `boolean` | `true` | -               | Show app tags as labels |
-| `searchEngines` | `array[string]` | `[]` | See below       | Available search engines |
+| Field              | Type            | Default          | Options         | Description                       |
+|--------------------|-----------------|------------------|-----------------|-----------------------------------|
+| `dateFormat`       | `string`        | `dd-MM-yyyy`     | Any format      | Date format for clock display     |
+| `datePosition`     | `string`        | `top`            | `top`, `bottom` | Clock date position               |
+| `showSeconds`      | `boolean`       | `false`          | -               | Show seconds in clock             |
+| `showDate`         | `boolean`       | `false`          | -               | Show date in clock                |
+| `itemsPerRow`      | `number`        | `4`              | `1-12`          | Number of apps per row on desktop |
+| `allowBookmarks`   | `boolean`       | `false`          | -               | Enable bookmarks section          |
+| `showAllCategory`  | `boolean`       | `true`           | -               | Show "All" category filter        |
+| `showDescriptions` | `boolean`       | `true`           | -               | Show app descriptions in cards    |
+| `showLabels`       | `boolean`       | `true`           | -               | Show app tags as labels           |
+| `searchEngines`    | `array[string]` | `[]`             | See below       | Available search engines          |
+| `backgroundImage`  | `string`        | `background.jpg` | -               | Custom image or url as background |
 
 **Search Engine Options:**
 - `google` - Google Search
@@ -456,6 +459,7 @@ settings:
   showAllCategory: true
   showDescriptions: true
   showLabels: true
+  backgroundImage: 'my-custom-background.jpg' # Or 'https://domain.tld/my-custom-image.jpg'
   searchEngines:
     - 'google'
     - 'duckduckgo'
@@ -540,16 +544,16 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Beta (v0.1.2-beta)
+### Current Beta (v0.2.0-beta)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering
 - ✅ Search engines
 - ✅ Docker deployment
+- ✅ Custom background image
 
 ### Planned Features
 - [ ] Dark/light mode
-- [ ] Custom background image
 - [ ] Add DB feature to allow user be able to choose between .yaml configuration or DB
 - [ ] Statistics/analytics when DB feature are available
 - [ ] Backup/restore configurations
@@ -598,5 +602,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 <div align="center">
-**Built with ❤️ for the homelab community**
+  Built with ❤️ for the homelab community
 </div>
