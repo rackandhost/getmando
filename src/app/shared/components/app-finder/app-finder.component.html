@@ -3,7 +3,7 @@
   <button
     aria-label="Select search engine"
     aria-haspopup="listbox"
-    class="absolute z-10 top-4.5 left-4 flex items-center gap-2 text-white/70 hover:text-white transition-colors cursor-pointer group"
+    class="absolute z-10 top-4.5 left-4 flex items-center gap-2 text-neutral-900 dark:text-white/70 hover:text-neutral-950 dark:hover:text-white transition-colors cursor-pointer group"
     [attr.aria-expanded]="isEngineDropdownOpen()"
     (click)="onToggleEngineDropdown($event)"
   >
@@ -61,7 +61,7 @@
 
   <input
     aria-label="Search applications"
-    class="bg-white/10 backdrop-blur-md border border-white/20 rounded-4xl xl:w-4xl xl:block xl:mx-auto px-12 py-3 mb-6 text-xl text-white placeholder-white/50 focus:bg-white/15 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 w-full transition-all duration-300"
+    class="bg-white/10 backdrop-blur-md border border-white/20 rounded-4xl xl:w-4xl xl:block xl:mx-auto px-12 py-3 mb-6 text-xl text-neutral-800 dark:text-white placeholder-black/50 dark:placeholder-white/50 focus:bg-white/15 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 w-full transition-all duration-300"
     type="search"
     (input)="onSearchInput($event)"
     (keyup.enter)="onSearchEnter()"

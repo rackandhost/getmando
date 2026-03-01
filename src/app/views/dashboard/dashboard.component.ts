@@ -2,7 +2,6 @@ import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import {CommonModule} from '@angular/common';
 
 import {AppService} from '../../core/services/app.service';
-import {ThemeService} from '../../core/services/theme.service';
 import {SearchService} from '../../core/services/search.service';
 import {SettingsService} from '../../core/services/settings.service';
 
@@ -32,7 +31,6 @@ import {AppClockComponent} from '../../shared/components/app-clock/app-clock.com
 })
 export class DashboardComponent {
   private readonly appService = inject(AppService);
-  private readonly themeService = inject(ThemeService);
   private readonly searchService = inject(SearchService);
   private readonly settingsService = inject(SettingsService);
 
@@ -40,7 +38,6 @@ export class DashboardComponent {
   readonly filteredApps$ = this.appService.filteredApps$;
   readonly searchQuery$ = this.searchService.searchQuery$;
   readonly settings$ = this.settingsService.settings$;
-  readonly isDark$ = this.themeService.isDark$;
 
   get itemsPerRow(): number {
     return this.settingsService.settingsSubject.value.itemsPerRow;

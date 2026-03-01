@@ -3,6 +3,7 @@ import {signal, computed, Signal} from '@angular/core';
 import {DOCUMENT} from '@angular/common';
 import {Observable, fromEvent} from 'rxjs';
 import {startWith, map} from 'rxjs/operators';
+import {toSignal} from '@angular/core/rxjs-interop';
 
 import {SettingsService} from './settings.service';
 
@@ -34,6 +35,8 @@ export class ThemeService {
   private readonly themeModeSignal = signal<ThemeMode>('auto');
   private readonly currentThemeSignal = signal<'light' | 'dark'>('light');
 
+  private readonly settings = toSignal(this.settingsService.settings$);
+
   /**
    * Observable streams for component consumption
    */
@@ -60,8 +63,7 @@ export class ThemeService {
    * Initialize theme on service creation
    */
   private initializeTheme(): void {
-    // const storedMode = this.getStoredThemeMode();
-    const storedMode: ThemeMode = 'dark';
+    const storedMode = this.getStoredThemeMode();
     this.themeModeSignal.set(storedMode);
     this.applyTheme(storedMode);
   }
@@ -188,7 +190,7 @@ export class ThemeService {
    * @returns Theme mode or 'auto' if not set
    */
   private getStoredThemeMode(): ThemeMode {
-    return this.settingsService.settingsSubject.value.theme;
+    return localStorage.getItem(this.STORAGE_KEY) as ThemeMode || this.settings()?.theme || this.currentThemeSignal();
   }
 
   /**
