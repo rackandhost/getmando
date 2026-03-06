@@ -1,4 +1,5 @@
 import {render, screen} from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import {Mock} from 'vitest';
 import {CommonModule} from '@angular/common';
 import {of} from 'rxjs';
@@ -40,6 +41,21 @@ describe('AppHeader', () => {
       expect(screen.queryByText(DEFAULT_DASHBOARD_CONFIG.metadata.title)).toBeInTheDocument();
       expect(screen.queryByText(DEFAULT_DASHBOARD_CONFIG.metadata.description)).toBeInTheDocument();
       expect(screen.queryByRole('button')).toBeInTheDocument();
+    })
+  })
+
+  describe('functionality', () => {
+    it('should set the theme', async () => {
+      const toggleThemeMock = vi.fn();
+
+      await setup(toggleThemeMock);
+
+      const themeButton = await screen.findByRole('button');
+
+      await userEvent.click(themeButton);
+
+      expect(toggleThemeMock).toBeCalled();
+      expect(toggleThemeMock).toBeCalledTimes(1);
     })
   })
 })
