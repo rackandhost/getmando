@@ -43,6 +43,9 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+# Agent skill registry
+.atl/
+
 # Dashboard configuration
 # DO NOT commit your actual dashboard.yaml - it contains your personal URLs
 config/dashboard.yaml

@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
 
 env:
   REGISTRY: ghcr.io
@@ -14,7 +12,7 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       packages: write
@@ -22,6 +20,10 @@ jobs:
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: pkg
+        run: echo "version=v$(jq -r .version package.json)" >> $GITHUB_OUTPUT
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -36,15 +38,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
+      - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch,enable=${{ !startsWith(github.ref, 'refs/heads/main') }}
-            type=ref,event=tag
+            type=raw,value=latest
+            type=raw,value=${{ steps.pkg.outputs.version }}
             type=sha,format=long
 
       - name: Build and push Docker image

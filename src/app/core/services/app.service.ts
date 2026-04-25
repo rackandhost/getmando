@@ -9,6 +9,7 @@ import {
   SelfhostedApp,
   APP_CATEGORY,
   BOOKMARKS_CATEGORY,
+  FAVORITES_CATEGORY,
 } from '../models/dashboard.models';
 
 import {YamlLoaderService} from './yaml-loader.service';
@@ -35,17 +36,13 @@ export class AppService {
    * Observable streams for component consumption
    */
   readonly apps$ = this.configService.config$.pipe(
-    tap((config) => {
-      if (!config.settings.showAllCategory) {
-        this.categoryService.setSelectedCategory(config.categories[0].id);
-      }
-    }),
     map((config) => [
       ...config.applications,
       ...(config.settings.allowBookmarks
         ? this.bookmarkService.bookmarks.map((bookmark) => ({
             ...bookmark,
             category: BOOKMARKS_CATEGORY.id,
+            favorite: false,
           }))
         : []
       ).sort((a, b) => a.name.localeCompare(b.name)),
@@ -122,6 +119,10 @@ export class AppService {
 
     if (categoryId === APP_CATEGORY.id) {
       return this.config.applications;
+    }
+
+    if (categoryId === FAVORITES_CATEGORY.id) {
+      return this.config.applications.filter((app) => app.favorite);
     }
 
     return this.config.applications.filter((app) => app.category === categoryId);
