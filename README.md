@@ -71,6 +71,7 @@ applications:
       value: 'plex'
     category: 'media'
     openNewTab: true
+    favorite: true
     tags:
       - media
       - streaming
