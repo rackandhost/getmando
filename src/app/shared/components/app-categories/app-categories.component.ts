@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {toSignal} from '@angular/core/rxjs-interop';
 
@@ -11,6 +11,7 @@ import {SearchService} from '../../../core/services/search.service';
   standalone: true,
   imports: [CommonModule],
   templateUrl: 'app-categories.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppCategoriesComponent {
   private readonly appService = inject(AppService);
@@ -19,10 +20,7 @@ export class AppCategoriesComponent {
 
   readonly categories = toSignal(this.categoryService.categories$);
   readonly selectedCategory = toSignal(this.categoryService.selectedCategory$);
-
-  get haveSearch(): boolean {
-    return this.searchService.haveSearchSubject.value;
-  }
+  readonly haveSearch = toSignal(this.searchService.haveSearchSubject);
 
   /**
    * Handle category change
