@@ -6,13 +6,13 @@
   <em>A simply and beautiful dashboard</em>
 </p>
 
-![Version](https://img.shields.io/badge/version-0.2.0--beta-orange)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> **⚠️ BETA RELEASE WARNING**  
-> This project is currently in **beta testing** (v0.2.0-beta). Features may change, bugs are expected, and the API could evolve. Use at your own risk in production environments. Feedback and bug reports are highly appreciated!
+> **✅ STABLE RELEASE**  
+> This project has reached **v1.0.0** and is considered stable for production use. The core API is now finalized. Feedback and bug reports are still highly appreciated!
 
 ---
 
@@ -553,7 +553,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Beta (v0.2.0-beta)
+### Current Release (v1.0.0)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering
@@ -562,6 +562,8 @@ Build artifacts are created in the `dist/` directory.
 - ✅ Custom background image
 - ✅ Dark/light mode
 - ✅ Different images for Dark/light mode
+- ✅ Favorites support
+- ✅ Comprehensive test suite
 
 ### Planned Features
 - [ ] Add DB feature to allow user be able to choose between .yaml configuration or DB
@@ -604,10 +606,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
-
----
-
-**⚠️ Remember: This is a BETA release. Things may break, features may change. Please report any issues you encounter!**
 
 ---
 
