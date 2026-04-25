@@ -5,7 +5,7 @@
   [attr.aria-label]="'Open ' + app().name"
   (click)="openApp()"
   (keydown.enter)="openApp()"
-  (keydown.space.prevent)="openApp()"
+  (keydown)="onKeydown($event)"
 >
   <!-- Icon container -->
   <div class="relative mb-4">

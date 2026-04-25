@@ -86,6 +86,8 @@
       name="heroArrowRight"
       tabindex="0"
       (click)="onSearchEnter()"
+      (keydown.enter)="onSearchEnter()"
+      (keydown.space)="onSearchEnter()"
     />
   }
 </div>

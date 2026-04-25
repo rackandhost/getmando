@@ -43,6 +43,16 @@ export class AppCardComponent {
   }
 
   /**
+   * Handle keydown events for keyboard accessibility
+   */
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === ' ' || event.code === 'Space') {
+      event.preventDefault();
+      this.openApp();
+    }
+  }
+
+  /**
    * Open application
    */
   openApp(): void {
