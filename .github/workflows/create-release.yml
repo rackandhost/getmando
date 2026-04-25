@@ -1,0 +1,95 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: pkg
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: check-tag
+        run: |
+          if git rev-parse "v${{ steps.pkg.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get previous tag
+        if: steps.check-tag.outputs.exists == 'false'
+        id: prev-tag
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          echo "tag=$PREV" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes via GitHub API
+        if: steps.check-tag.outputs.exists == 'false'
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV_TAG="${{ steps.prev-tag.outputs.tag }}"
+          if [ -n "$PREV_TAG" ]; then
+            BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="v${{ steps.pkg.outputs.version }}" \
+              -f previous_tag_name="$PREV_TAG" \
+              --jq '.body')
+          else
+            BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="v${{ steps.pkg.outputs.version }}" \
+              --jq '.body')
+          fi
+          {
+            echo "body<<EOF"
+            echo "$BODY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create tag and release
+        if: steps.check-tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.pkg.outputs.version }}"
+          PREV_TAG="${{ steps.prev-tag.outputs.tag }}"
+
+          # Build full release body
+          {
+            echo "## What's New in v$VERSION"
+            echo ""
+            echo "${{ steps.notes.outputs.body }}"
+            echo ""
+            echo "### 🐳 Docker"
+            echo '```bash'
+            echo "docker pull ghcr.io/rackandhost/getmando:v$VERSION"
+            echo '```'
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...v$VERSION"
+            fi
+          } > release_body.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes-file release_body.md
