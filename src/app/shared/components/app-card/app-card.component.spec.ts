@@ -28,6 +28,7 @@ describe('AppCardComponent', () => {
     category: 'media',
     openNewTab: true,
     tags: ['video', 'streaming'],
+    favorite: false,
   };
 
   const setup = async (

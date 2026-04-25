@@ -6,6 +6,7 @@ import {ConfigService} from './config.service';
 import {
   APP_CATEGORY,
   BOOKMARKS_CATEGORY,
+  FAVORITES_CATEGORY,
   DEFAULT_DASHBOARD_SEARCH_ENGINES,
   SearchEngine,
   SelfhostedApp
@@ -65,10 +66,13 @@ export class SearchService {
     if (searchAll) {
       filtered = apps;
     } else {
-      filtered =
-        categoryId === APP_CATEGORY.id
-          ? apps.filter(({ category }) => category !== BOOKMARKS_CATEGORY.id)
-          : apps.filter((app) => app.category === categoryId);
+      if (categoryId === APP_CATEGORY.id) {
+        filtered = apps.filter(({ category }) => category !== BOOKMARKS_CATEGORY.id);
+      } else if (categoryId === FAVORITES_CATEGORY.id) {
+        filtered = apps.filter((app) => app.favorite);
+      } else {
+        filtered = apps.filter((app) => app.category === categoryId);
+      }
     }
 
     if (!query.trim()) {

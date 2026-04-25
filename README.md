@@ -341,6 +341,7 @@ Each application supports:
 | `category` | `string` | ✅ Yes | - | Category ID to belong to |
 | `openNewTab` | `boolean` | No | `true` | Open in new tab or same window |
 | `tags` | `array[string]` | No | `[]` | Searchable tags |
+| `favorite` | `boolean` | No | `false` | Mark as favorite and show in Favorites category |
 
 **Icon Configuration:**
 
@@ -364,6 +365,7 @@ applications:
       value: 'plex'
     category: 'media'
     openNewTab: true
+    favorite: true
     tags:
       - media
       - streaming

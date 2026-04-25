@@ -8,7 +8,7 @@ import {AppService} from '../../../core/services/app.service';
 import {CategoryService} from '../../../core/services/category.service';
 import {SearchService} from '../../../core/services/search.service';
 
-import {APP_CATEGORY, Category} from '../../../core/models/dashboard.models';
+import {APP_CATEGORY, FAVORITES_CATEGORY, Category} from '../../../core/models/dashboard.models';
 
 describe('AppCategoriesComponent', () => {
   const categories: Category[] = [
@@ -125,5 +125,47 @@ describe('AppCategoriesComponent', () => {
     expect(appsButton).toHaveClass('bg-white/10', 'border-white/50');
     expect(mediaButton).toHaveAttribute('aria-pressed', 'false');
     expect(mediaButton).not.toHaveClass('bg-white/10', 'border-white/50');
+  });
+
+  it('should render FAVORITES_CATEGORY when present and maintain accessibility', async () => {
+    const categoriesWithFavorites: Category[] = [
+      FAVORITES_CATEGORY,
+      APP_CATEGORY,
+      {
+        id: 'media',
+        name: 'Media',
+      },
+    ];
+
+    selectedCategorySubject.next('favorites');
+
+    await render(AppCategoriesComponent, {
+      providers: [
+        {
+          provide: AppService,
+          useValue: appServiceMock,
+        },
+        {
+          provide: CategoryService,
+          useValue: {
+            categories$: of(categoriesWithFavorites),
+            selectedCategory$: selectedCategorySubject,
+          },
+        },
+        {
+          provide: SearchService,
+          useValue: {
+            haveSearchSubject,
+          },
+        },
+      ],
+    });
+
+    const favoritesButton = screen.getByRole('button', {name: 'Favorites'});
+
+    expect(favoritesButton).toBeInTheDocument();
+    expect(favoritesButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', {name: 'Apps'})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Media'})).toBeInTheDocument();
   });
 });
