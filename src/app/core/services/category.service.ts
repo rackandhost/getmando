@@ -2,7 +2,7 @@ import {inject, Injectable} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
 import {map} from 'rxjs/operators';
 
-import {APP_CATEGORY, BOOKMARKS_CATEGORY, Category} from '../models/dashboard.models';
+import {APP_CATEGORY, BOOKMARKS_CATEGORY, FAVORITES_CATEGORY, Category} from '../models/dashboard.models';
 
 import {ConfigService} from './config.service';
 
@@ -16,6 +16,10 @@ export class CategoryService {
     map((config) => {
       const categories: Category[] = [];
 
+      if (config.applications.some((app) => app.favorite)) {
+        categories.push(FAVORITES_CATEGORY);
+      }
+
       if (config.settings.showAllCategory) {
         categories.push(APP_CATEGORY);
       }
@@ -24,10 +28,22 @@ export class CategoryService {
         categories.push(BOOKMARKS_CATEGORY);
       }
 
-      return [...categories, ...config.categories].sort((a, b) => a.name.localeCompare(b.name));
+      return [
+        ...categories,
+        ...config.categories.sort((a, b) => a.name.localeCompare(b.name)),
+      ];
     }),
   );
   readonly selectedCategory$ = this.selectedCategorySubject.asObservable();
+
+  constructor() {
+    this.categories$.subscribe((categories) => {
+      const ids = categories.map((c) => c.id);
+      if (!ids.includes(this.selectedCategorySubject.value) && categories.length > 0) {
+        this.selectedCategorySubject.next(categories[0].id);
+      }
+    });
+  }
 
   /**
    * Update selected category

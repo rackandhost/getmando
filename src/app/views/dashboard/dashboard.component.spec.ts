@@ -26,6 +26,7 @@ describe('DashboardComponent', () => {
     category: 'media',
     openNewTab: true,
     tags: ['video'],
+    favorite: false,
   };
 
   const settingsSubject = new BehaviorSubject<DashboardSettings>(DEFAULT_DASHBOARD_CONFIG.settings);
@@ -140,6 +141,7 @@ describe('DashboardComponent', () => {
       id: 'radarr',
       name: 'Radarr',
       url: 'https://radarr.example.com',
+      favorite: false,
     };
 
     await setup({

@@ -20,6 +20,7 @@ export const SelfhostedAppSchema = z.object({
   category: z.string(),
   openNewTab: z.boolean().default(true),
   tags: z.array(z.string()).default([]),
+  favorite: z.boolean().default(false),
 });
 
 /**
@@ -114,6 +115,11 @@ export const APP_CATEGORY: Category = {
 export const BOOKMARKS_CATEGORY: Category = {
   id: 'bookmarks',
   name: 'Bookmarks',
+};
+
+export const FAVORITES_CATEGORY: Category = {
+  id: 'favorites',
+  name: 'Favorites',
 };
 
 export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
