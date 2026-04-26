@@ -70,13 +70,14 @@ export class DashboardComponent implements OnDestroy {
   private setBackgroundImage(
     { lightBackgroundImage, darkBackgroundImage }: { lightBackgroundImage: string, darkBackgroundImage: string }
   ): void {
-    const body$ = document.getElementsByTagName('body')[0];
+    const bgLayer = document.getElementById('app-background');
+    if (!bgLayer) return;
 
     const selectedImage: string = this.themeService.isDarkMode() ? darkBackgroundImage : lightBackgroundImage;
 
     const isImageAnUrl = selectedImage.startsWith('https') || selectedImage.startsWith('http');
 
-    body$.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/' }${selectedImage})`;
+    bgLayer.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/' }${selectedImage})`;
   }
 
   ngOnDestroy(): void {
