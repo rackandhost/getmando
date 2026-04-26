@@ -4,12 +4,14 @@
 
 ### Bug Fixes
 
+- **Safari iPhone White Bars**: Fixed white bars visible at the top and bottom of the viewport in Safari on iPhone. Added `viewport-fit=cover` to the viewport meta tag, replaced `100vh` with `100dvh` (with fallback) for dynamic viewport height, and used `inset: 0` on background layers to ensure full safe-area coverage.
 - **Mobile Background**: Fixed background image shifting when navigating between categories on mobile devices. The background is now rendered on a fixed-position layer independent of content height.
 
 ### Changed Files
 
 - `src/index.html`
 - `src/styles.css`
+- `src/app/styles.spec.ts`
 - `src/app/views/dashboard/dashboard.component.ts`
 - `src/app/views/dashboard/dashboard.component.spec.ts`
 
