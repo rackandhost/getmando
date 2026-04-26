@@ -1,5 +1,18 @@
 # Changelog
 
+## [Pending Release]
+
+### Bug Fixes
+
+- **Mobile Background**: Fixed background image shifting when navigating between categories on mobile devices. The background is now rendered on a fixed-position layer independent of content height.
+
+### Changed Files
+
+- `src/index.html`
+- `src/styles.css`
+- `src/app/views/dashboard/dashboard.component.ts`
+- `src/app/views/dashboard/dashboard.component.spec.ts`
+
 ## v1.0.0
 
 ### New Features
