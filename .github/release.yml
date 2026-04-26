@@ -1,0 +1,31 @@
+changelog:
+  categories:
+    - title: ✨ New Features
+      labels:
+        - feature
+        - feat
+        - enhancement
+    - title: 🧪 Testing
+      labels:
+        - test
+        - testing
+    - title: 🛠️ CI/CD & Tooling
+      labels:
+        - ci
+        - chore
+        - build
+        - refactor
+    - title: 📝 Documentation
+      labels:
+        - docs
+        - documentation
+    - title: 🐛 Bug Fixes
+      labels:
+        - fix
+        - bug
+    - title: Other Changes
+      labels:
+        - "*"
+  exclude:
+    authors:
+      - dependabot
