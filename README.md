@@ -9,7 +9,7 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-GPL3.0-green)
 
 > **✅ STABLE RELEASE**  
 > This project has reached **v1.0.0** and is considered stable for production use. The core API is now finalized. Feedback and bug reports are still highly appreciated!
