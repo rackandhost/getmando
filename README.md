@@ -6,13 +6,13 @@
   <em>A simply and beautiful dashboard</em>
 </p>
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.1-blue)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+![Github last-commit](https://badgen.net/github/license/rackandhost/getmando)
 
 > **✅ STABLE RELEASE**  
-> This project has reached **v1.0.0** and is considered stable for production use. The core API is now finalized. Feedback and bug reports are still highly appreciated!
+> This project has reached **v1.0.1** and is considered stable for production use. The core API is now finalized. Feedback and bug reports are still highly appreciated!
 
 ---
 
@@ -553,7 +553,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Release (v1.0.0)
+### Current Release (v1.0.1)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering
@@ -589,7 +589,7 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the GNU General Public License v3.0 - see the LICENSE file for details.
 
 ---
 

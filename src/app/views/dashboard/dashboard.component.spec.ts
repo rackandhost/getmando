@@ -47,9 +47,11 @@ describe('DashboardComponent', () => {
 
   const expectBackgroundImageToBe = (expectedUrl: string) => {
     const escapedUrl = expectedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const bgLayer = document.getElementById('app-background');
 
-    expect(document.body.style.backgroundImage).toMatch(new RegExp(`^url\\(["']?${escapedUrl}["']?\\)$`));
-    expect(document.body.style.backgroundImage.match(/url\(/g)).toHaveLength(1);
+    expect(bgLayer).not.toBeNull();
+    expect(bgLayer!.style.backgroundImage).toMatch(new RegExp(`^url\\(["']?${escapedUrl}["']?\\)$`));
+    expect(bgLayer!.style.backgroundImage.match(/url\(/g)).toHaveLength(1);
   };
 
   const setup = async ({
@@ -63,7 +65,13 @@ describe('DashboardComponent', () => {
     settings?: DashboardSettings;
     isDarkMode?: boolean;
   } = {}): Promise<void> => {
-    document.body.style.backgroundImage = '';
+    let bgLayer = document.getElementById('app-background');
+    if (!bgLayer) {
+      bgLayer = document.createElement('div');
+      bgLayer.id = 'app-background';
+      document.body.appendChild(bgLayer);
+    }
+    bgLayer.style.backgroundImage = '';
     appServiceMock.setSearchQuery.mockReset();
     appServiceMock.setSelectedCategory.mockReset();
     iconServiceMock.getIconUrl.mockClear();
@@ -227,7 +235,7 @@ describe('DashboardComponent', () => {
     });
 
     expectBackgroundImageToBe('https://cdn.example.com/dark.jpg');
-    expect(document.body.style.backgroundImage).not.toContain('/img/https://cdn.example.com/dark.jpg');
+    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain('/img/https://cdn.example.com/dark.jpg');
   });
 
   it('should not prefix http background image URLs with /img/', async () => {
@@ -242,7 +250,7 @@ describe('DashboardComponent', () => {
     });
 
     expectBackgroundImageToBe('http://cdn.example.com/light.jpg');
-    expect(document.body.style.backgroundImage).not.toContain('/img/http://cdn.example.com/light.jpg');
+    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain('/img/http://cdn.example.com/light.jpg');
   });
 
   it('should update the background image when the theme changes after render', async () => {
