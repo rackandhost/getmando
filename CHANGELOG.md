@@ -1,17 +1,40 @@
 # Changelog
 
-## [Pending Release]
+## v1.0.1
 
 ### Bug Fixes
 
 - **Mobile Background**: Fixed background image shifting when navigating between categories on mobile devices. The background is now rendered on a fixed-position layer independent of content height.
 
+### CI / Tooling
+
+- **Auto-Release Workflow**: Added GitHub Actions workflow that automatically creates a tag and GitHub release when pushing to `main`.
+
+### Legal
+
+- **License**: Added GNU General Public License v3.0 (project was previously unlicensed).
+- **License Badge**: Updated shields badge to reflect GPL v3.0.
+
+### Documentation
+
+- **README**: Updated version references and license information.
+
 ### Changed Files
 
+- `package.json`
+- `package-lock.json`
+- `README.md`
+- `CHANGELOG.md`
+- `LICENSE`
 - `src/index.html`
 - `src/styles.css`
 - `src/app/views/dashboard/dashboard.component.ts`
 - `src/app/views/dashboard/dashboard.component.spec.ts`
+- `.github/workflows/create-release.yml`
+
+### Summary
+
+Patch release that fixes a mobile background shifting issue, adds automatic release CI/CD, and licenses the project under GPL v3.0.
 
 ## v1.0.0
 
