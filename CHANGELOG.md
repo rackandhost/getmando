@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### CI / Tooling
+
+- **Release Notes Template**: Fixed the `create-release.yml` workflow to respect the `.github/release.yml` configuration when generating release notes. Previously the workflow called the GitHub API directly without passing `configuration_file_path` and `configuration_file_name`, causing the custom categories and exclusions to be ignored.
+
 ## v1.0.1
 
 ### Bug Fixes
