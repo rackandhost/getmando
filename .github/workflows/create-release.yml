@@ -49,10 +49,14 @@ jobs:
             BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes \
               -f tag_name="v${{ steps.pkg.outputs.version }}" \
               -f previous_tag_name="$PREV_TAG" \
+              -f configuration_file_path=".github" \
+              -f configuration_file_name="release.yml" \
               --jq '.body')
           else
             BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes \
               -f tag_name="v${{ steps.pkg.outputs.version }}" \
+              -f configuration_file_path=".github" \
+              -f configuration_file_name="release.yml" \
               --jq '.body')
           fi
           {
