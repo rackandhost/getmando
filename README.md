@@ -6,13 +6,12 @@
   <em>A simply and beautiful dashboard</em>
 </p>
 
-![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![Version](https://badgen.net/github/release/rackandhost/getmando/stable)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
+![Github stars](https://badgen.net/github/stars/rackandhost/getmando?icon=github&label=stars)
+![Github last-commit](https://img.shields.io/github/last-commit/rackandhost/getmando)
 ![Github last-commit](https://badgen.net/github/license/rackandhost/getmando)
-
-> **✅ STABLE RELEASE**  
-> This project has reached **v1.0.1** and is considered stable for production use. The core API is now finalized. Feedback and bug reports are still highly appreciated!
 
 ---
 
@@ -606,6 +605,18 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
+
+---
+
+## ⭐ Star History
+
+<a href="https://www.star-history.com/#rackandhost/getmando&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=rackandhost/getmando&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=rackandhost/getmando&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=rackandhost/getmando&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ---
 
