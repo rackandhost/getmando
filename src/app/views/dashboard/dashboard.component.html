@@ -1,14 +1,17 @@
-<main class="pb-14">
-  <app-header />
+<main class="flex flex-col h-screen overflow-hidden">
+  <app-header class="shrink-0" />
 
-  <div class="p-6 md:p-8 md:pt-0 flex flex-col justify-center">
+  <div class="shrink-0 p-6 md:p-8 md:pt-0 flex flex-col justify-center">
     <app-clock />
 
     <app-finder />
 
     <app-categories class="flex items-center justify-center" />
+  </div>
 
-    <!-- Apps grid -->
+  <!-- Apps grid - scrollable -->
+  <div class="flex-1 overflow-y-auto px-6 md:px-8 pb-14">
+
     @if (filteredApps$ | async; as apps) {
       @if (apps.length > 0) {
         <section
@@ -41,5 +44,5 @@
     }
   </div>
 
-  <app-footer />
+  <app-footer class="shrink-0" />
 </main>
