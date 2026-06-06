@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+- **Sticky Header and Finder**: Header, finder, and categories now stay fixed while only the apps area scrolls, improving navigation when dealing with many applications.
+
 ### CI / Tooling
 
 - **Release Notes Template**: Fixed the `create-release.yml` workflow to respect the `.github/release.yml` configuration when generating release notes. Previously the workflow called the GitHub API directly without passing `configuration_file_path` and `configuration_file_name`, causing the custom categories and exclusions to be ignored.
