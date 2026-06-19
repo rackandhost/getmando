@@ -9,6 +9,13 @@
 ### CI / Tooling
 
 - **Release Notes Template**: Fixed the `create-release.yml` workflow to respect the `.github/release.yml` configuration when generating release notes. Previously the workflow called the GitHub API directly without passing `configuration_file_path` and `configuration_file_name`, causing the custom categories and exclusions to be ignored.
+- **Node 22 LTS CI Runtime**: Pinned the GitHub Actions Node.js test workflow to Node 22 LTS and documented Node 22 LTS in the README as the recommended local version because it matches CI.
+
+### Changed Files
+
+- `.github/workflows/test.yml`
+- `README.md`
+- `CHANGELOG.md`
 
 ## v1.0.1
 
