@@ -17,6 +17,7 @@ import {ConfigService} from './config.service';
 import {SearchService} from './search.service';
 import {CategoryService} from './category.service';
 import {BookmarkService} from './bookmark.service';
+import {LoggerService} from './logger.service';
 
 /**
  * Service for managing dashboard application state
@@ -29,6 +30,7 @@ export class AppService {
   private searchService = inject(SearchService);
   private categoryService = inject(CategoryService);
   private bookmarkService = inject(BookmarkService);
+  private logger = inject(LoggerService);
 
   appVersion = version;
 
@@ -79,7 +81,7 @@ export class AppService {
    */
   initializeConfig(config: DashboardConfig): void {
     this.configService.subject.next(config);
-    console.log('[AppService] Dashboard config initialized');
+    this.logger.info('[AppService] Dashboard config initialized');
   }
 
   /**
