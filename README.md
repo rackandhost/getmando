@@ -488,8 +488,10 @@ settings:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22 LTS (recommended; matches the version used in CI)
 - npm 11+
+
+GitHub Actions CI runs on Node.js 22 LTS, and using the same version locally is recommended.
 
 ### Setup
 
