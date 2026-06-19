@@ -63,9 +63,7 @@ export class DashboardComponent implements OnDestroy {
   /**
    * Handle app click (for tracking/analytics if needed)
    */
-  onAppClick(app: unknown): void {
-    console.log('[Dashboard] App clicked:', app);
-  }
+  onAppClick(_app: unknown): void {}
 
   private setBackgroundImage(
     { lightBackgroundImage, darkBackgroundImage }: { lightBackgroundImage: string, darkBackgroundImage: string }

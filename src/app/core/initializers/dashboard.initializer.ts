@@ -1,8 +1,9 @@
-import {Provider} from '@angular/core';
+import {inject, Provider} from '@angular/core';
 import {firstValueFrom} from 'rxjs';
 
 import {YamlLoaderService} from '../services/yaml-loader.service';
 import {AppService} from '../services/app.service';
+import {LoggerService} from '../services/logger.service';
 
 /**
  * Factory function to initialize dashboard configuration
@@ -14,16 +15,18 @@ export function initializeDashboard(
   yamlLoader: YamlLoaderService,
   appService: AppService,
 ): () => Promise<void> {
+  const logger = inject(LoggerService);
+
   return async () => {
-    console.log('[AppInitializer] Starting dashboard initialization...');
+    logger.debug('[AppInitializer] Starting dashboard initialization...');
 
     return firstValueFrom(yamlLoader.loadDashboardConfig())
       .then((config) => {
         appService.initializeConfig(config);
-        console.log('[AppInitializer] Dashboard initialized successfully');
+        logger.info('[AppInitializer] Dashboard initialized successfully');
       })
       .catch((error) => {
-        console.error('[AppInitializer] Failed to initialize dashboard:', error);
+        logger.error('[AppInitializer] Failed to initialize dashboard:', error);
         throw error;
       });
   };

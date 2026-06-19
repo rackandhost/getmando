@@ -5,6 +5,7 @@
 ### Bug Fixes
 
 - **Sticky Header and Finder**: Header, finder, and categories now stay fixed while only the apps area scrolls, improving navigation when dealing with many applications.
+- **Production Logging Cleanup**: Replaced development-only `console.log` usage in dashboard initialization and config loading flows with a centralized logger service, while removing the dashboard click debug log from production code.
 
 ### CI / Tooling
 
@@ -16,6 +17,12 @@
 - `.github/workflows/test.yml`
 - `README.md`
 - `CHANGELOG.md`
+- `src/app/core/initializers/dashboard.initializer.ts`
+- `src/app/core/services/app.service.ts`
+- `src/app/core/services/logger.service.ts`
+- `src/app/core/services/logger.service.spec.ts`
+- `src/app/core/services/yaml-loader.service.ts`
+- `src/app/views/dashboard/dashboard.component.ts`
 
 ## v1.0.1
 
