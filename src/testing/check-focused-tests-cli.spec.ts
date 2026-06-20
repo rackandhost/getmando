@@ -69,4 +69,32 @@ describe('check-focused-tests CLI', () => {
     expect(result.stderr).toContain('Focused test check failed. Remove committed focused tests:');
     expect(result.stderr).toContain('scripts/__focused-test-cli-regression__.test.mjs:1 (fit)');
   });
+
+  it('reports focused .only.each chains as committed violations', async () => {
+    await writeFile(
+      temporaryViolationPath,
+      "test.only.each([[1]])('temporary focused test %s', () => {});\n",
+    );
+
+    const result = await runFocusedTestsCli();
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Focused test check failed. Remove committed focused tests:');
+    expect(result.stderr).toContain('scripts/__focused-test-cli-regression__.test.mjs:1 (.only)');
+  });
+
+  it('reports chained Vitest focus APIs as committed violations', async () => {
+    await writeFile(
+      temporaryViolationPath,
+      "test.concurrent.only('temporary focused test', () => {});\n",
+    );
+
+    const result = await runFocusedTestsCli();
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('Focused test check failed. Remove committed focused tests:');
+    expect(result.stderr).toContain('scripts/__focused-test-cli-regression__.test.mjs:1 (.only)');
+  });
 });

@@ -3,7 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const FOCUSED_TEST_PATTERNS = [
-  { label: '.only', regex: /\b(?:describe|it|test|suite|context|specify)\s*\.\s*only\s*\(/g },
+  {
+    label: '.only',
+    regex:
+      /\b(?:describe|it|test|suite|context|specify)\b(?:\s*\.\s*[A-Za-z_$][\w$]*)*\s*\.\s*only\b(?:\s*\(|\s*\.\s*each\s*\()/g,
+  },
   { label: 'fit', regex: /\bfit\s*\(/g },
   { label: 'fdescribe', regex: /\bfdescribe\s*\(/g },
 ];

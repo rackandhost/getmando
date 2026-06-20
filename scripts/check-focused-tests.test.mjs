@@ -66,6 +66,62 @@ describe('collectFocusedTestViolations', () => {
     ]);
   });
 
+  it('detects focused .only chains before .each callbacks execute', () => {
+    const violations = collectFocusedTestViolations([
+      {
+        path: 'src/app/example.component.spec.ts',
+        content: [
+          "test.only.each([[1]])('row %s', () => {});",
+          "describe.only.each([[2]])('group %s', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(violations).toEqual([
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 1,
+        pattern: '.only',
+      },
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 2,
+        pattern: '.only',
+      },
+    ]);
+  });
+
+  it('detects chained Vitest focus APIs where .only follows another segment', () => {
+    const violations = collectFocusedTestViolations([
+      {
+        path: 'src/app/example.component.spec.ts',
+        content: [
+          "test.concurrent.only('component', () => {});",
+          "describe.concurrent.only('suite', () => {});",
+          "it.sequential.only('case', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(violations).toEqual([
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 1,
+        pattern: '.only',
+      },
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 2,
+        pattern: '.only',
+      },
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 3,
+        pattern: '.only',
+      },
+    ]);
+  });
+
   it('ignores normal tests, comments, and non-test files', () => {
     const violations = collectFocusedTestViolations([
       {
