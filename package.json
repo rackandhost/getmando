@@ -6,7 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "pretest": "npm run test:focused-tests",
+    "test": "ng test",
+    "check:focused-tests": "node scripts/check-focused-tests.mjs",
+    "test:focused-tests": "vitest run scripts/check-focused-tests.test.mjs"
   },
   "prettier": {
     "printWidth": 100,

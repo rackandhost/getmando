@@ -583,6 +583,7 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 - Follow Angular best practices
 - Use TypeScript strict mode
 - Write tests for new features
+- Do not commit focused tests such as `.only`, `fit`, or `fdescribe`; CI fails fast on them
 - Ensure accessibility (WCAG AA)
 - Keep components small and focused
 
