@@ -11,12 +11,18 @@
 
 - **Release Notes Template**: Fixed the `create-release.yml` workflow to respect the `.github/release.yml` configuration when generating release notes. Previously the workflow called the GitHub API directly without passing `configuration_file_path` and `configuration_file_name`, causing the custom categories and exclusions to be ignored.
 - **Node 22 LTS CI Runtime**: Pinned the GitHub Actions Node.js test workflow to Node 22 LTS and documented Node 22 LTS in the README as the recommended local version because it matches CI.
+- **Focused Test CI Guard**: Added a repository-level guard that fails pull request CI when committed focused tests such as `.only`, `fit`, `fdescribe`, or `.only.each(...)` are present, with regression coverage for the checker and its CLI contract.
 
 ### Changed Files
 
 - `.github/workflows/test.yml`
 - `README.md`
 - `CHANGELOG.md`
+- `package.json`
+- `scripts/check-focused-tests.mjs`
+- `scripts/check-focused-tests.test.mjs`
+- `src/testing/check-focused-tests-cli.spec.ts`
+- `src/testing/node-test-harness.d.ts`
 - `src/app/core/initializers/dashboard.initializer.ts`
 - `src/app/core/services/app.service.ts`
 - `src/app/core/services/logger.service.ts`
