@@ -513,6 +513,8 @@ npm run build
 npm test
 ```
 
+`npm test` includes axe-core accessibility assertions for the rendered `app-finder`, `app-card`, `app-categories`, and `dashboard` states covered by the component specs, so the existing CI test job fails on violations found in those checks. The shared jsdom helper currently disables axe's `color-contrast` rule because that rule needs browser APIs that are not reliably available in this test environment.
+
 ### Development Server
 
 The dev server runs on `http://localhost:4200` with hot-reload enabled.
@@ -585,6 +587,7 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 - Write tests for new features
 - Do not commit focused tests such as `.only`, `fit`, or `fdescribe`; CI fails fast on them
 - Ensure accessibility (WCAG AA)
+- Keep axe-core component accessibility checks passing; they run as part of `npm test` for the covered component states, with `color-contrast` excluded in jsdom
 - Keep components small and focused
 
 ---
