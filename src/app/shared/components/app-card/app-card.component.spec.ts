@@ -4,11 +4,11 @@ import {BehaviorSubject} from 'rxjs';
 
 import {AppCardComponent} from './app-card.component';
 
-import {AppService} from '../../../core/services/app.service';
 import {IconService} from '../../../core/services/icon.service';
 import {SettingsService} from '../../../core/services/settings.service';
 
 import {DEFAULT_DASHBOARD_CONFIG, SelfhostedApp} from '../../../core/models/dashboard.models';
+import {expectNoAxeViolations} from '../../../../testing/a11y';
 
 describe('AppCardComponent', () => {
   const settingsSubject = new BehaviorSubject(DEFAULT_DASHBOARD_CONFIG.settings);
@@ -44,10 +44,6 @@ describe('AppCardComponent', () => {
       },
       providers: [
         {
-          provide: AppService,
-          useValue: {},
-        },
-        {
           provide: IconService,
           useValue: iconServiceMock,
         },
@@ -77,6 +73,12 @@ describe('AppCardComponent', () => {
     expect(screen.getByText('video')).toBeInTheDocument();
     expect(screen.getByText('streaming')).toBeInTheDocument();
     expect(screen.getByAltText('Plex icon')).toHaveAttribute('src', 'https://example.com/icons/plex.png');
+  });
+
+  it('should have no accessibility violations', async () => {
+    const view = await setup();
+
+    await expectNoAxeViolations(view.container);
   });
 
   it('should not render the description when showDescriptions is disabled', async () => {
@@ -146,6 +148,7 @@ describe('AppCardComponent', () => {
   });
 
   it('should support keyboard activation with Space', async () => {
+    const user = userEvent.setup();
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     const view = await setup();
     const appClickSpy = vi.fn();
@@ -155,8 +158,7 @@ describe('AppCardComponent', () => {
     const appCard = screen.getByRole('button', {name: 'Open Plex'});
     appCard.focus();
 
-    appCard.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', code: 'Space', bubbles: true, cancelable: true}));
-    appCard.dispatchEvent(new KeyboardEvent('keyup', {key: ' ', code: 'Space', bubbles: true}));
+    await user.keyboard(' ');
 
     expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
     expect(windowOpenSpy).toHaveBeenCalledTimes(1);

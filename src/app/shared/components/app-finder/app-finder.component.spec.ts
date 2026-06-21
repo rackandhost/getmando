@@ -8,16 +8,17 @@ import {AppService} from '../../../core/services/app.service';
 import {SearchService} from '../../../core/services/search.service';
 
 import {DEFAULT_DASHBOARD_SEARCH_ENGINES, SearchEngine} from '../../../core/models/dashboard.models';
+import {expectNoAxeViolations} from '../../../../testing/a11y';
 
 describe('AppFinderComponent', () => {
   const appServiceMock = {
     setSearchQuery: vi.fn(),
   };
 
-  const setup = async (searchEngines: SearchEngine[] = []): Promise<void> => {
+  const setup = async (searchEngines: SearchEngine[] = []) => {
     appServiceMock.setSearchQuery.mockReset();
 
-    await render(AppFinderComponent, {
+    return render(AppFinderComponent, {
       providers: [
         {
           provide: AppService,
@@ -44,6 +45,48 @@ describe('AppFinderComponent', () => {
       'placeholder',
       'Search on your applications...',
     );
+  });
+
+  it('should have no accessibility violations in local search mode', async () => {
+    const view = await render(AppFinderComponent, {
+      providers: [
+        {
+          provide: AppService,
+          useValue: appServiceMock,
+        },
+        {
+          provide: SearchService,
+          useValue: {
+            searchEngines$: of([]),
+          },
+        },
+      ],
+    });
+
+    await expectNoAxeViolations(view.container);
+  });
+
+  it('should have no accessibility violations when the engine dropdown is open', async () => {
+    const user = userEvent.setup();
+    const googleEngine = DEFAULT_DASHBOARD_SEARCH_ENGINES[0];
+
+    const view = await setup([googleEngine]);
+
+    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
+
+    await expectNoAxeViolations(view.container);
+  });
+
+  it('should have no accessibility violations when active search controls are visible', async () => {
+    const user = userEvent.setup();
+    const view = await setup();
+
+    await user.type(screen.getByRole('searchbox', {name: 'Search applications'}), 'radarr');
+
+    expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
+    expect(screen.getByLabelText('Search')).toBeInTheDocument();
+
+    await expectNoAxeViolations(view.container);
   });
 
   it('should propagate search input to AppService when no engine is selected', async () => {

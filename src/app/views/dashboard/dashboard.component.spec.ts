@@ -12,6 +12,7 @@ import {CategoryService} from '../../core/services/category.service';
 import {IconService} from '../../core/services/icon.service';
 
 import {APP_CATEGORY, DEFAULT_DASHBOARD_CONFIG, DashboardSettings, SelfhostedApp} from '../../core/models/dashboard.models';
+import {expectNoAxeViolations} from '../../../testing/a11y';
 
 describe('DashboardComponent', () => {
   const appFixture: SelfhostedApp = {
@@ -141,6 +142,146 @@ describe('DashboardComponent', () => {
     expect(screen.getByText('Loading dashboard...')).toBeInTheDocument();
     expect(screen.queryByRole('list', {name: 'Applications'})).not.toBeInTheDocument();
     expect(screen.queryByText('No applications found')).not.toBeInTheDocument();
+  });
+
+  it('should have no accessibility violations when applications are rendered', async () => {
+    const secondAppFixture: SelfhostedApp = {
+      ...appFixture,
+      id: 'radarr',
+      name: 'Radarr',
+      url: 'https://radarr.example.com',
+      favorite: false,
+    };
+
+    const view = await render(DashboardComponent, {
+      providers: [
+        {
+          provide: AppService,
+          useValue: {
+            ...appServiceMock,
+            filteredApps$: of([appFixture, secondAppFixture]),
+          },
+        },
+        {
+          provide: SearchService,
+          useValue: {
+            searchQuery$: of(''),
+            searchEngines$: of([]),
+            haveSearchSubject,
+          },
+        },
+        {
+          provide: SettingsService,
+          useValue: {
+            settings$: settingsSubject.asObservable(),
+            settingsSubject,
+          },
+        },
+        {
+          provide: ThemeService,
+          useValue: {
+            themeSubject,
+            isDarkMode: () => themeSubject.value === 'dark',
+            toggleTheme: vi.fn(),
+          },
+        },
+        {
+          provide: MetadataService,
+          useValue: {
+            metadata$: of(DEFAULT_DASHBOARD_CONFIG.metadata),
+          },
+        },
+        {
+          provide: CategoryService,
+          useValue: {
+            categories$: of([APP_CATEGORY]),
+            selectedCategory$: selectedCategorySubject,
+          },
+        },
+        {
+          provide: IconService,
+          useValue: iconServiceMock,
+        },
+      ],
+    });
+
+    await expectNoAxeViolations(view.container);
+  });
+
+  it('should have no accessibility violations in the loading state', async () => {
+    const filteredAppsSubject = new Subject<SelfhostedApp[]>();
+
+    const view = await render(DashboardComponent, {
+      providers: [
+        {
+          provide: AppService,
+          useValue: {
+            ...appServiceMock,
+            filteredApps$: filteredAppsSubject.asObservable(),
+          },
+        },
+        {
+          provide: SearchService,
+          useValue: {
+            searchQuery$: of(''),
+            searchEngines$: of([]),
+            haveSearchSubject,
+          },
+        },
+        {
+          provide: SettingsService,
+          useValue: {
+            settings$: settingsSubject.asObservable(),
+            settingsSubject,
+          },
+        },
+        {
+          provide: ThemeService,
+          useValue: {
+            themeSubject,
+            isDarkMode: () => themeSubject.value === 'dark',
+            toggleTheme: vi.fn(),
+          },
+        },
+        {
+          provide: MetadataService,
+          useValue: {
+            metadata$: of(DEFAULT_DASHBOARD_CONFIG.metadata),
+          },
+        },
+        {
+          provide: CategoryService,
+          useValue: {
+            categories$: of([APP_CATEGORY]),
+            selectedCategory$: selectedCategorySubject,
+          },
+        },
+        {
+          provide: IconService,
+          useValue: iconServiceMock,
+        },
+      ],
+    });
+
+    await expectNoAxeViolations(view.container);
+  });
+
+  it('should have no accessibility violations in the empty search state', async () => {
+    await setup({
+      filteredApps$: of([]),
+      searchQuery$: of('plex'),
+    });
+
+    await expectNoAxeViolations(document.body);
+  });
+
+  it('should have no accessibility violations in the empty default state', async () => {
+    await setup({
+      filteredApps$: of([]),
+      searchQuery$: of(''),
+    });
+
+    await expectNoAxeViolations(document.body);
   });
 
   it('should render the applications grid when apps are available', async () => {

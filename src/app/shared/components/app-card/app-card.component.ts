@@ -4,7 +4,6 @@ import {CommonModule} from '@angular/common';
 import {SelfhostedApp} from '../../../core/models/dashboard.models';
 
 import {IconService} from '../../../core/services/icon.service';
-import {AppService} from '../../../core/services/app.service';
 import {SettingsService} from '../../../core/services/settings.service';
 
 @Component({
@@ -18,7 +17,6 @@ import {SettingsService} from '../../../core/services/settings.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppCardComponent {
-  private readonly appService = inject(AppService);
   private readonly settingsService = inject(SettingsService);
 
   // Inputs
@@ -40,16 +38,6 @@ export class AppCardComponent {
 
   get showLabels(): boolean {
     return this.settingsService.settingsSubject.value.showLabels;
-  }
-
-  /**
-   * Handle keydown events for keyboard accessibility
-   */
-  onKeydown(event: KeyboardEvent): void {
-    if (event.key === ' ' || event.code === 'Space') {
-      event.preventDefault();
-      this.openApp();
-    }
   }
 
   /**

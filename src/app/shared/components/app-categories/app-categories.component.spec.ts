@@ -9,6 +9,7 @@ import {CategoryService} from '../../../core/services/category.service';
 import {SearchService} from '../../../core/services/search.service';
 
 import {APP_CATEGORY, FAVORITES_CATEGORY, Category} from '../../../core/models/dashboard.models';
+import {expectNoAxeViolations} from '../../../../testing/a11y';
 
 describe('AppCategoriesComponent', () => {
   const categories: Category[] = [
@@ -60,6 +61,12 @@ describe('AppCategoriesComponent', () => {
     expect(screen.getByRole('navigation', {name: 'Categories'})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Apps'})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Media'})).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('should have no accessibility violations', async () => {
+    const view = await setup();
+
+    await expectNoAxeViolations(view.container);
   });
 
   it('should change the category through AppService', async () => {
