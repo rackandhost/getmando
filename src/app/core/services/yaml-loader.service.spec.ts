@@ -1,12 +1,12 @@
-import {TestBed} from '@angular/core/testing';
-import {HttpClient} from '@angular/common/http';
-import {firstValueFrom, of, throwError} from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom, of, throwError } from 'rxjs';
 
-import {YamlLoaderService} from './yaml-loader.service';
-import {YamlParserService} from './yaml-parser.service';
-import {LoggerService} from './logger.service';
+import { YamlLoaderService } from './yaml-loader.service';
+import { YamlParserService } from './yaml-parser.service';
+import { LoggerService } from './logger.service';
 
-import {DEFAULT_DASHBOARD_CONFIG} from '../models/dashboard.models';
+import { DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
 describe('YamlLoaderService', () => {
   let service: YamlLoaderService;
@@ -88,9 +88,14 @@ describe('YamlLoaderService', () => {
 
     httpClient.get.mockReturnValue(throwError(() => loadError));
 
-    await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(DEFAULT_DASHBOARD_CONFIG);
+    await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(
+      DEFAULT_DASHBOARD_CONFIG,
+    );
 
-    expect(logger.error).toHaveBeenCalledWith('[YamlLoader] Failed to load dashboard config:', loadError);
+    expect(logger.error).toHaveBeenCalledWith(
+      '[YamlLoader] Failed to load dashboard config:',
+      loadError,
+    );
     expect(logger.warn).toHaveBeenCalledWith('[YamlLoader] Falling back to default configuration');
     expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
   });

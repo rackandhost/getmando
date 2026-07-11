@@ -6,7 +6,12 @@ const FOCUSED_TEST_PATTERNS = [
   {
     label: '.only',
     regex:
-      /\b(?:describe|it|test|suite|context|specify)\b(?:\s*\.\s*[A-Za-z_$][\w$]*)*\s*\.\s*only\b(?:\s*\(|\s*\.\s*each\s*\()/g,
+      /\b(?:describe|it|test|suite|context|specify)\b(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\?\.\s*|\s*\.\s*)only\b(?:\s*\(|\s*\.\s*each\s*\()/g,
+  },
+  {
+    label: '.only',
+    regex:
+      /\b(?:describe|it|test|suite|context|specify)\b(?:\s*\.\s*[A-Za-z_$][\w$]*)*(?:\s*\?\.\s*|\s*)\[\s*(['"])only\1\s*\](?:\s*\(|\s*\.\s*each\s*\()/g,
   },
   { label: 'fit', regex: /\bfit\s*\(/g },
   { label: 'fdescribe', regex: /\bfdescribe\s*\(/g },
@@ -54,12 +59,24 @@ function sanitizeContentForPatternMatch(content) {
     }
 
     if (!inDoubleQuote && !inTemplateLiteral && current === "'" && previous !== '\\') {
+      if (!inSingleQuote && content.slice(index + 1, index + 5) === 'only' && content[index + 5] === current) {
+        result += content.slice(index, index + 6);
+        index += 5;
+        continue;
+      }
+
       inSingleQuote = !inSingleQuote;
       result += ' ';
       continue;
     }
 
     if (!inSingleQuote && !inTemplateLiteral && current === '"' && previous !== '\\') {
+      if (!inDoubleQuote && content.slice(index + 1, index + 5) === 'only' && content[index + 5] === current) {
+        result += content.slice(index, index + 6);
+        index += 5;
+        continue;
+      }
+
       inDoubleQuote = !inDoubleQuote;
       result += ' ';
       continue;
@@ -106,7 +123,9 @@ export function collectFocusedTestViolations(files) {
     return FOCUSED_TEST_PATTERNS.flatMap(({ label, regex }) =>
       Array.from(searchableContent.matchAll(regex), (match) => {
         const matchText = match[0] ?? '';
-        const lineAnchorOffset = label === '.only' ? matchText.indexOf('.only') : 0;
+        const lineAnchorOffset = label === '.only'
+          ? Math.max(matchText.indexOf('.only'), matchText.indexOf('['))
+          : 0;
 
         return {
           filePath,

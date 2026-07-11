@@ -1,10 +1,10 @@
-import {Component, inject, ChangeDetectionStrategy} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {toSignal} from '@angular/core/rxjs-interop';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { AppService } from '../../../core/services/app.service';
-import {CategoryService} from '../../../core/services/category.service';
-import {SearchService} from '../../../core/services/search.service';
+import { CategoryService } from '../../../core/services/category.service';
+import { SearchService } from '../../../core/services/search.service';
 
 @Component({
   selector: 'app-categories',

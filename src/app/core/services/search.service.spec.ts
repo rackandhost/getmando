@@ -1,8 +1,8 @@
-import {TestBed} from '@angular/core/testing';
-import {BehaviorSubject} from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { BehaviorSubject } from 'rxjs';
 
-import {SearchService} from './search.service';
-import {ConfigService} from './config.service';
+import { SearchService } from './search.service';
+import { ConfigService } from './config.service';
 
 import {
   APP_CATEGORY,
@@ -19,7 +19,7 @@ describe('SearchService', () => {
     name: 'Test App',
     description: 'A test app',
     url: 'https://test.example.com',
-    icon: {type: 'name', value: 'test'},
+    icon: { type: 'name', value: 'test' },
     category: 'media',
     openNewTab: true,
     tags: [],
@@ -46,9 +46,9 @@ describe('SearchService', () => {
   describe('filterApps', () => {
     it('should return only favorited apps when categoryId is FAVORITES_CATEGORY.id', () => {
       const apps: SelfhostedApp[] = [
-        createApp({id: 'plex', name: 'Plex', favorite: true}),
-        createApp({id: 'radarr', name: 'Radarr', favorite: false}),
-        createApp({id: 'sonarr', name: 'Sonarr', favorite: true}),
+        createApp({ id: 'plex', name: 'Plex', favorite: true }),
+        createApp({ id: 'radarr', name: 'Radarr', favorite: false }),
+        createApp({ id: 'sonarr', name: 'Sonarr', favorite: true }),
       ];
 
       const result = service.filterApps(apps, '', FAVORITES_CATEGORY.id, false);
@@ -59,8 +59,8 @@ describe('SearchService', () => {
 
     it('should return empty array when no favorites exist and FAVORITES_CATEGORY is selected', () => {
       const apps: SelfhostedApp[] = [
-        createApp({id: 'radarr', name: 'Radarr', favorite: false}),
-        createApp({id: 'sonarr', name: 'Sonarr', favorite: false}),
+        createApp({ id: 'radarr', name: 'Radarr', favorite: false }),
+        createApp({ id: 'sonarr', name: 'Sonarr', favorite: false }),
       ];
 
       const result = service.filterApps(apps, '', FAVORITES_CATEGORY.id, false);
@@ -70,8 +70,8 @@ describe('SearchService', () => {
 
     it('should bypass category filter when searchAll is true, returning matching apps regardless of favorite status', () => {
       const apps: SelfhostedApp[] = [
-        createApp({id: 'plex', name: 'Plex Media', favorite: true}),
-        createApp({id: 'radarr', name: 'Radarr', favorite: false}),
+        createApp({ id: 'plex', name: 'Plex Media', favorite: true }),
+        createApp({ id: 'radarr', name: 'Radarr', favorite: false }),
       ];
 
       const result = service.filterApps(apps, 'Plex', FAVORITES_CATEGORY.id, true);
@@ -82,8 +82,8 @@ describe('SearchService', () => {
 
     it('should still include favorited apps in their original category', () => {
       const apps: SelfhostedApp[] = [
-        createApp({id: 'plex', name: 'Plex', category: 'media', favorite: true}),
-        createApp({id: 'radarr', name: 'Radarr', category: 'media', favorite: false}),
+        createApp({ id: 'plex', name: 'Plex', category: 'media', favorite: true }),
+        createApp({ id: 'radarr', name: 'Radarr', category: 'media', favorite: false }),
       ];
 
       const result = service.filterApps(apps, '', 'media', false);
@@ -93,9 +93,9 @@ describe('SearchService', () => {
 
     it('should combine favorites filter with search text', () => {
       const apps: SelfhostedApp[] = [
-        createApp({id: 'plex', name: 'Plex', favorite: true}),
-        createApp({id: 'plex-2', name: 'Plex Two', favorite: true}),
-        createApp({id: 'radarr', name: 'Radarr', favorite: false}),
+        createApp({ id: 'plex', name: 'Plex', favorite: true }),
+        createApp({ id: 'plex-2', name: 'Plex Two', favorite: true }),
+        createApp({ id: 'radarr', name: 'Radarr', favorite: false }),
       ];
 
       const result = service.filterApps(apps, 'Two', FAVORITES_CATEGORY.id, false);

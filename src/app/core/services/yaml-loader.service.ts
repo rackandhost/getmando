@@ -1,11 +1,11 @@
-import {inject, Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {catchError, map, Observable, of, tap} from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { catchError, map, Observable, of, tap } from 'rxjs';
 
-import {YamlParserService} from './yaml-parser.service';
-import {LoggerService} from './logger.service';
+import { YamlParserService } from './yaml-parser.service';
+import { LoggerService } from './logger.service';
 
-import {DashboardConfig} from '../models/dashboard.models';
+import { DashboardConfig } from '../models/dashboard.models';
 
 /**
  * Service for loading YAML configuration from assets
@@ -35,7 +35,7 @@ export class YamlLoaderService {
         this.logger.info('[YamlLoader] Dashboard config loaded:', {
           title: config.metadata.title,
           apps: config.applications.length,
-          categories: config.categories.length
+          categories: config.categories.length,
         });
       }),
       // Handle errors gracefully

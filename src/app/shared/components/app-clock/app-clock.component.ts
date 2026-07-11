@@ -1,7 +1,7 @@
-import {CommonModule, NgTemplateOutlet} from '@angular/common';
-import {Component, inject, OnDestroy, OnInit, signal} from '@angular/core';
+import { CommonModule, NgTemplateOutlet } from '@angular/common';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 
-import {SettingsService} from '../../../core/services/settings.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-clock',

@@ -1,15 +1,15 @@
-import {render, screen} from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import {BehaviorSubject, of} from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 
-import {AppCategoriesComponent} from './app-categories.component';
+import { AppCategoriesComponent } from './app-categories.component';
 
-import {AppService} from '../../../core/services/app.service';
-import {CategoryService} from '../../../core/services/category.service';
-import {SearchService} from '../../../core/services/search.service';
+import { AppService } from '../../../core/services/app.service';
+import { CategoryService } from '../../../core/services/category.service';
+import { SearchService } from '../../../core/services/search.service';
 
-import {APP_CATEGORY, FAVORITES_CATEGORY, Category} from '../../../core/models/dashboard.models';
-import {expectNoAxeViolations} from '../../../../testing/a11y';
+import { APP_CATEGORY, FAVORITES_CATEGORY, Category } from '../../../core/models/dashboard.models';
+import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppCategoriesComponent', () => {
   const categories: Category[] = [
@@ -27,7 +27,10 @@ describe('AppCategoriesComponent', () => {
   const selectedCategorySubject = new BehaviorSubject<string>('media');
   const haveSearchSubject = new BehaviorSubject<boolean>(false);
 
-  const setup = async ({selectedCategory = 'media', haveSearch = false}: {selectedCategory?: string; haveSearch?: boolean} = {}) => {
+  const setup = async ({
+    selectedCategory = 'media',
+    haveSearch = false,
+  }: { selectedCategory?: string; haveSearch?: boolean } = {}) => {
     appServiceMock.setSelectedCategory.mockReset();
     selectedCategorySubject.next(selectedCategory);
     haveSearchSubject.next(haveSearch);
@@ -58,9 +61,9 @@ describe('AppCategoriesComponent', () => {
   it('should render the available categories and expose the selected state accessibly', async () => {
     await setup();
 
-    expect(screen.getByRole('navigation', {name: 'Categories'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Apps'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Media'})).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('navigation', { name: 'Categories' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apps' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Media' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('should have no accessibility violations', async () => {
@@ -72,9 +75,9 @@ describe('AppCategoriesComponent', () => {
   it('should change the category through AppService', async () => {
     const user = userEvent.setup();
 
-    await setup({selectedCategory: APP_CATEGORY.id});
+    await setup({ selectedCategory: APP_CATEGORY.id });
 
-    await user.click(screen.getByRole('button', {name: 'Media'}));
+    await user.click(screen.getByRole('button', { name: 'Media' }));
 
     expect(appServiceMock.setSelectedCategory).toHaveBeenCalledWith('media');
   });
@@ -82,9 +85,9 @@ describe('AppCategoriesComponent', () => {
   it('should disable category interaction when there is an active search', async () => {
     const user = userEvent.setup();
 
-    await setup({haveSearch: true});
+    await setup({ haveSearch: true });
 
-    const mediaButton = screen.getByRole('button', {name: 'Media'});
+    const mediaButton = screen.getByRole('button', { name: 'Media' });
 
     expect(mediaButton).toBeDisabled();
 
@@ -94,10 +97,10 @@ describe('AppCategoriesComponent', () => {
   });
 
   it('should react when search state changes after render', async () => {
-    const view = await setup({haveSearch: false});
+    const view = await setup({ haveSearch: false });
 
-    const categoriesNav = screen.getByRole('navigation', {name: 'Categories'});
-    const mediaButton = screen.getByRole('button', {name: 'Media'});
+    const categoriesNav = screen.getByRole('navigation', { name: 'Categories' });
+    const mediaButton = screen.getByRole('button', { name: 'Media' });
 
     expect(categoriesNav).not.toHaveClass('opacity-50');
     expect(mediaButton).toBeEnabled();
@@ -116,10 +119,10 @@ describe('AppCategoriesComponent', () => {
   });
 
   it('should update the selected category state and styling after render', async () => {
-    const view = await setup({selectedCategory: 'media'});
+    const view = await setup({ selectedCategory: 'media' });
 
-    const appsButton = screen.getByRole('button', {name: 'Apps'});
-    const mediaButton = screen.getByRole('button', {name: 'Media'});
+    const appsButton = screen.getByRole('button', { name: 'Apps' });
+    const mediaButton = screen.getByRole('button', { name: 'Media' });
 
     expect(mediaButton).toHaveAttribute('aria-pressed', 'true');
     expect(mediaButton).toHaveClass('bg-white/10', 'border-white/50');
@@ -168,11 +171,11 @@ describe('AppCategoriesComponent', () => {
       ],
     });
 
-    const favoritesButton = screen.getByRole('button', {name: 'Favorites'});
+    const favoritesButton = screen.getByRole('button', { name: 'Favorites' });
 
     expect(favoritesButton).toBeInTheDocument();
     expect(favoritesButton).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', {name: 'Apps'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Media'})).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apps' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Media' })).toBeInTheDocument();
   });
 });

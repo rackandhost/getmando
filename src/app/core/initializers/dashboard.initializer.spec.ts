@@ -1,11 +1,11 @@
-import {TestBed} from '@angular/core/testing';
-import {of, throwError} from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 
-import {initializeDashboard} from './dashboard.initializer';
-import {YamlLoaderService} from '../services/yaml-loader.service';
-import {AppService} from '../services/app.service';
-import {LoggerService} from '../services/logger.service';
-import {DEFAULT_DASHBOARD_CONFIG} from '../models/dashboard.models';
+import { initializeDashboard } from './dashboard.initializer';
+import { YamlLoaderService } from '../services/yaml-loader.service';
+import { AppService } from '../services/app.service';
+import { LoggerService } from '../services/logger.service';
+import { DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
 describe('initializeDashboard', () => {
   let logger: {
@@ -42,12 +42,17 @@ describe('initializeDashboard', () => {
     yamlLoader.loadDashboardConfig.mockReturnValue(of(DEFAULT_DASHBOARD_CONFIG));
 
     const initializer = TestBed.runInInjectionContext(() =>
-      initializeDashboard(yamlLoader as unknown as YamlLoaderService, appService as unknown as AppService),
+      initializeDashboard(
+        yamlLoader as unknown as YamlLoaderService,
+        appService as unknown as AppService,
+      ),
     );
 
     await initializer();
 
-    expect(logger.debug).toHaveBeenCalledWith('[AppInitializer] Starting dashboard initialization...');
+    expect(logger.debug).toHaveBeenCalledWith(
+      '[AppInitializer] Starting dashboard initialization...',
+    );
     expect(appService.initializeConfig).toHaveBeenCalledWith(DEFAULT_DASHBOARD_CONFIG);
     expect(logger.info).toHaveBeenCalledWith('[AppInitializer] Dashboard initialized successfully');
     expect(logger.error).not.toHaveBeenCalled();
@@ -58,12 +63,18 @@ describe('initializeDashboard', () => {
     yamlLoader.loadDashboardConfig.mockReturnValue(throwError(() => initError));
 
     const initializer = TestBed.runInInjectionContext(() =>
-      initializeDashboard(yamlLoader as unknown as YamlLoaderService, appService as unknown as AppService),
+      initializeDashboard(
+        yamlLoader as unknown as YamlLoaderService,
+        appService as unknown as AppService,
+      ),
     );
 
     await expect(initializer()).rejects.toThrow(initError);
 
     expect(appService.initializeConfig).not.toHaveBeenCalled();
-    expect(logger.error).toHaveBeenCalledWith('[AppInitializer] Failed to initialize dashboard:', initError);
+    expect(logger.error).toHaveBeenCalledWith(
+      '[AppInitializer] Failed to initialize dashboard:',
+      initError,
+    );
   });
 });

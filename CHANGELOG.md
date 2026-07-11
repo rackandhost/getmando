@@ -13,10 +13,12 @@
 - **Node 22 LTS CI Runtime**: Pinned the GitHub Actions Node.js test workflow to Node 22 LTS and documented Node 22 LTS in the README as the recommended local version because it matches CI.
 - **Focused Test CI Guard**: Added a repository-level guard that fails pull request CI when committed focused tests such as `.only`, `fit`, `fdescribe`, or `.only.each(...)` are present, with regression coverage for the checker and its CLI contract.
 - **Automated Axe Accessibility Checks**: Added reusable axe-core assertions for covered `app-finder`, `app-card`, `app-categories`, and `dashboard` render states. Because CI already runs `npm test`, violations found by those checks now fail the existing test workflow automatically.
+- **ESLint and Scoped Source Formatting**: Added lint-staged ESLint autofixes for staged TypeScript, including `test-setup.ts`, and Prettier formatting for staged TypeScript, HTML, and SCSS. Pull request CI now enforces focused-test detection, linting, scoped formatting, tests, and the production build.
 
 ### Documentation
 
 - **Accessibility Testing Policy**: Documented that `npm test` includes axe-core accessibility checks for the covered component states, and that the jsdom helper excludes `color-contrast` until browser-level support is available.
+- **Linting Workflow**: Documented local linting, source-only formatting, and staged-file pre-commit automation.
 
 ### Changed Files
 
@@ -25,8 +27,12 @@
 - `CHANGELOG.md`
 - `package.json`
 - `package-lock.json`
+- `angular.json`
+- `eslint.config.js`
+- `.husky/pre-commit`
 - `scripts/check-focused-tests.mjs`
 - `scripts/check-focused-tests.test.mjs`
+- `src/testing/tooling-setup.spec.ts`
 - `src/testing/check-focused-tests-cli.spec.ts`
 - `src/testing/node-test-harness.d.ts`
 - `src/testing/a11y.ts`

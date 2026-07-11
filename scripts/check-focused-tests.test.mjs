@@ -122,6 +122,76 @@ describe('collectFocusedTestViolations', () => {
     ]);
   });
 
+  it('detects bracket-property only usage in test files', () => {
+    const violations = collectFocusedTestViolations([
+      {
+        path: 'src/app/example.component.spec.ts',
+        content: [
+          "test['only']('component', () => {});",
+          'describe["only"](\'suite\', () => {});',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(violations).toEqual([
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 1,
+        pattern: '.only',
+      },
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 2,
+        pattern: '.only',
+      },
+    ]);
+  });
+
+  it('detects optional-chain focused test usage', () => {
+    const violations = collectFocusedTestViolations([
+      {
+        path: 'src/app/example.component.spec.ts',
+        content: [
+          "test?.only('component', () => {});",
+          "describe?.only('suite', () => {});",
+          "test?.['only']('case', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(violations).toEqual([
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 1,
+        pattern: '.only',
+      },
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 2,
+        pattern: '.only',
+      },
+      {
+        filePath: 'src/app/example.component.spec.ts',
+        line: 3,
+        pattern: '.only',
+      },
+    ]);
+  });
+
+  it('ignores computed bracket properties that are not string literals', () => {
+    const violations = collectFocusedTestViolations([
+      {
+        path: 'src/app/example.component.spec.ts',
+        content: [
+          "test[only]('component', () => {});",
+          "test?.[only]('component', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(violations).toEqual([]);
+  });
+
   it('ignores normal tests, comments, and non-test files', () => {
     const violations = collectFocusedTestViolations([
       {

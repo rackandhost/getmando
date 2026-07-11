@@ -1,10 +1,10 @@
-import {Component, inject, input, output, ChangeDetectionStrategy, computed} from '@angular/core';
-import {CommonModule} from '@angular/common';
+import { Component, inject, input, output, ChangeDetectionStrategy, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
-import {SelfhostedApp} from '../../../core/models/dashboard.models';
+import { SelfhostedApp } from '../../../core/models/dashboard.models';
 
-import {IconService} from '../../../core/services/icon.service';
-import {SettingsService} from '../../../core/services/settings.service';
+import { IconService } from '../../../core/services/icon.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-card',

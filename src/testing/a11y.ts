@@ -1,5 +1,5 @@
 import * as axe from 'axe-core';
-import {expect} from 'vitest';
+import { expect } from 'vitest';
 
 const AXE_OPTIONS: axe.RunOptions = {
   rules: {
@@ -24,7 +24,7 @@ const formatViolations = (violations: axe.Result[]): string =>
     .join('\n\n');
 
 export async function expectNoAxeViolations(container: Element): Promise<void> {
-  const {violations} = await axe.run(container, AXE_OPTIONS);
+  const { violations } = await axe.run(container, AXE_OPTIONS);
 
   expect(violations, formatViolations(violations)).toHaveLength(0);
 }

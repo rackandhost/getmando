@@ -1,14 +1,17 @@
-import {render, screen} from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import {of} from 'rxjs';
+import { of } from 'rxjs';
 
-import {AppFinderComponent} from './app-finder.component';
+import { AppFinderComponent } from './app-finder.component';
 
-import {AppService} from '../../../core/services/app.service';
-import {SearchService} from '../../../core/services/search.service';
+import { AppService } from '../../../core/services/app.service';
+import { SearchService } from '../../../core/services/search.service';
 
-import {DEFAULT_DASHBOARD_SEARCH_ENGINES, SearchEngine} from '../../../core/models/dashboard.models';
-import {expectNoAxeViolations} from '../../../../testing/a11y';
+import {
+  DEFAULT_DASHBOARD_SEARCH_ENGINES,
+  SearchEngine,
+} from '../../../core/models/dashboard.models';
+import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppFinderComponent', () => {
   const appServiceMock = {
@@ -41,7 +44,7 @@ describe('AppFinderComponent', () => {
   it('should render the finder with the default placeholder', async () => {
     await setup();
 
-    expect(screen.getByRole('searchbox', {name: 'Search applications'})).toHaveAttribute(
+    expect(screen.getByRole('searchbox', { name: 'Search applications' })).toHaveAttribute(
       'placeholder',
       'Search on your applications...',
     );
@@ -72,7 +75,7 @@ describe('AppFinderComponent', () => {
 
     const view = await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
 
     await expectNoAxeViolations(view.container);
   });
@@ -81,7 +84,7 @@ describe('AppFinderComponent', () => {
     const user = userEvent.setup();
     const view = await setup();
 
-    await user.type(screen.getByRole('searchbox', {name: 'Search applications'}), 'radarr');
+    await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'radarr');
 
     expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
     expect(screen.getByLabelText('Search')).toBeInTheDocument();
@@ -94,7 +97,7 @@ describe('AppFinderComponent', () => {
 
     await setup();
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'plex');
 
@@ -108,10 +111,10 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     expect(searchInput).toHaveAttribute(
       'placeholder',
@@ -130,10 +133,10 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'home assistant');
     await user.keyboard('{Enter}');
@@ -152,10 +155,10 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.keyboard('{Enter}');
     expect(windowOpenSpy).not.toHaveBeenCalled();
@@ -174,14 +177,14 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'plex');
 
     expect(appServiceMock.setSearchQuery).toHaveBeenLastCalledWith('plex');
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     expect(searchInput).toHaveValue('');
     expect(searchInput).toHaveAttribute(
@@ -204,17 +207,17 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'grafana');
 
     expect(appServiceMock.setSearchQuery).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: 'Search on your apps'}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: 'Search on your apps' }));
 
     expect(searchInput).toHaveAttribute('placeholder', 'Search on your applications...');
 
@@ -230,7 +233,7 @@ describe('AppFinderComponent', () => {
 
     await setup();
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'radarr');
     await user.keyboard('{Enter}');
@@ -245,7 +248,7 @@ describe('AppFinderComponent', () => {
 
     await setup();
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'radarr');
     await user.click(screen.getByLabelText('Clear search'));
@@ -259,7 +262,7 @@ describe('AppFinderComponent', () => {
 
     await setup();
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'radarr');
 
@@ -277,7 +280,7 @@ describe('AppFinderComponent', () => {
 
     await setup();
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'radarr');
 
@@ -297,10 +300,10 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'home assistant');
 
@@ -322,10 +325,10 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', {name: 'Select search engine'}));
-    await user.click(screen.getByRole('option', {name: googleEngine.name}));
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
-    const searchInput = screen.getByRole('searchbox', {name: 'Search applications'});
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
     await user.type(searchInput, 'home assistant');
 

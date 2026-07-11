@@ -6,6 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "lint": "ng lint",
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
+    "prepare": "husky",
     "pretest": "npm run test:focused-tests",
     "test": "ng test",
     "check:focused-tests": "node scripts/check-focused-tests.mjs",
@@ -22,6 +26,14 @@
         }
       }
     ]
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "src/**/*.{html,scss}": "prettier --write",
+    "test-setup.ts": "eslint --fix"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
@@ -44,17 +56,26 @@
     "@angular/build": "^21.1.4",
     "@angular/cli": "^21.1.4",
     "@angular/compiler-cli": "^21.1.0",
+    "@angular-eslint/builder": "^21.4.0",
+    "@eslint/js": "^9.39.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@testing-library/angular": "^19.1.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.7",
     "axe-core": "^4.11.0",
+    "angular-eslint": "^21.4.0",
+    "eslint": "^9.39.1",
+    "husky": "^9.1.7",
     "jsdom": "^27.1.0",
+    "lint-staged": "^16.2.6",
     "postcss": "^8.5.3",
+    "prettier": "^3.6.2",
     "tailwindcss": "^4.1.12",
     "typescript": "~5.9.2",
+    "typescript-eslint": "^8.46.3",
     "vitest": "^4.0.8"
   }
 }
