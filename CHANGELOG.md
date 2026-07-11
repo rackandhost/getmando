@@ -13,7 +13,7 @@
 - **Node 22 LTS CI Runtime**: Pinned the GitHub Actions Node.js test workflow to Node 22 LTS and documented Node 22 LTS in the README as the recommended local version because it matches CI.
 - **Focused Test CI Guard**: Added a repository-level guard that fails pull request CI when committed focused tests such as `.only`, `fit`, `fdescribe`, or `.only.each(...)` are present, with regression coverage for the checker and its CLI contract.
 - **Automated Axe Accessibility Checks**: Added reusable axe-core assertions for covered `app-finder`, `app-card`, `app-categories`, and `dashboard` render states. Because CI already runs `npm test`, violations found by those checks now fail the existing test workflow automatically.
-- **ESLint and Scoped Source Formatting**: Added Angular 21-compatible ESLint flat-config support with `ng lint`, Prettier scripts scoped to `src/**/*.{ts,html,scss}`, a Husky pre-commit hook that applies the same source boundary to staged formatting, and CI lint plus source-format enforcement.
+- **ESLint and Scoped Source Formatting**: Added lint-staged ESLint autofixes for staged TypeScript, including `test-setup.ts`, and Prettier formatting for staged TypeScript, HTML, and SCSS. Pull request CI now enforces focused-test detection, linting, scoped formatting, tests, and the production build.
 
 ### Documentation
 
