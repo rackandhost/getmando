@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { Mock } from 'vitest';
 import { CommonModule } from '@angular/common';
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
 
 import { AppHeaderComponent } from './app-header.component';
 
@@ -27,7 +26,7 @@ describe('AppHeader', () => {
         {
           provide: MetadataService,
           useValue: {
-            metadata$: of(DEFAULT_DASHBOARD_CONFIG.metadata),
+            metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
           },
         },
       ],

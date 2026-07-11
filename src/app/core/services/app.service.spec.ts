@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
 
 import { AppService } from './app.service';
 import { ConfigService } from './config.service';
@@ -19,7 +20,7 @@ import {
 
 describe('AppService', () => {
   let service: AppService;
-  let configSubject: BehaviorSubject<DashboardConfig>;
+  let configState: ReturnType<typeof signal<DashboardConfig | undefined>>;
   let searchService: SearchService;
   let categoryService: CategoryService;
 
@@ -29,7 +30,7 @@ describe('AppService', () => {
   });
 
   beforeEach(() => {
-    configSubject = new BehaviorSubject<DashboardConfig>(createConfig());
+    configState = signal<DashboardConfig | undefined>(createConfig());
 
     TestBed.configureTestingModule({
       providers: [
@@ -39,21 +40,20 @@ describe('AppService', () => {
         {
           provide: ConfigService,
           useValue: {
-            config$: configSubject.asObservable(),
-            subject: configSubject,
-            fireNewSubject: (config: DashboardConfig) => configSubject.next(config),
+            config: configState.asReadonly(),
+            fireNewSubject: (config: DashboardConfig) => configState.set(config),
           },
         },
         {
           provide: YamlLoaderService,
           useValue: {
-            loadDashboardConfig: () => new BehaviorSubject(createConfig()),
+            loadDashboardConfig: () => of(createConfig()),
           },
         },
         {
           provide: BookmarkService,
           useValue: {
-            bookmarks: [],
+            bookmarks: signal([]),
           },
         },
       ],
@@ -67,7 +67,9 @@ describe('AppService', () => {
   describe('apps$', () => {
     it('should assign favorite: false to bookmarks when allowBookmarks is true', async () => {
       const bookmarkServiceMock = TestBed.inject(BookmarkService);
-      (bookmarkServiceMock as unknown as { bookmarks: unknown[] }).bookmarks = [
+      (
+        bookmarkServiceMock as unknown as { bookmarks: ReturnType<typeof signal<unknown[]>> }
+      ).bookmarks.set([
         {
           id: 'google',
           name: 'Google',
@@ -77,9 +79,9 @@ describe('AppService', () => {
           openNewTab: true,
           tags: [],
         },
-      ];
+      ]);
 
-      configSubject.next(
+      configState.set(
         createConfig({
           applications: [],
           bookmarks: [
@@ -100,7 +102,7 @@ describe('AppService', () => {
         }),
       );
 
-      const apps = await firstValueFrom(service.apps$);
+      const apps = service.apps();
       expect(apps).toHaveLength(1);
       expect(apps[0].favorite).toBe(false);
       expect(apps[0].category).toBe(BOOKMARKS_CATEGORY.id);
@@ -109,7 +111,7 @@ describe('AppService', () => {
 
   describe('getAppsByCategory', () => {
     it('should return only favorite apps when categoryId is FAVORITES_CATEGORY.id', () => {
-      configSubject.next(
+      configState.set(
         createConfig({
           applications: [
             {
@@ -144,7 +146,7 @@ describe('AppService', () => {
     });
 
     it('should return all apps for APP_CATEGORY regardless of favorite status', () => {
-      configSubject.next(
+      configState.set(
         createConfig({
           applications: [
             {

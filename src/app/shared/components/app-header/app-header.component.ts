@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 import { ThemeService } from '../../../core/services/theme.service';
 import { MetadataService } from '../../../core/services/metadata.service';
@@ -15,7 +14,7 @@ export class AppHeaderComponent {
   private readonly themeService = inject(ThemeService);
   private readonly metadataService = inject(MetadataService);
 
-  readonly metadata = toSignal(this.metadataService.metadata$);
+  readonly metadata = this.metadataService.metadata;
 
   readonly themeIcon = computed(() => (this.themeService.isDark() ? '🌙' : '☀️'));
   readonly themeText = computed(() => (this.themeService.isDark() ? 'Dark' : 'Light'));

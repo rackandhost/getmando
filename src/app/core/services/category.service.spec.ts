@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { CategoryService } from './category.service';
 import { ConfigService } from './config.service';
@@ -14,7 +14,7 @@ import {
 
 describe('CategoryService', () => {
   let service: CategoryService;
-  let configSubject: BehaviorSubject<DashboardConfig>;
+  let configSubject: ReturnType<typeof signal<DashboardConfig | undefined>>;
 
   const createConfig = (overrides: Partial<DashboardConfig> = {}): DashboardConfig => ({
     ...DEFAULT_DASHBOARD_CONFIG,
@@ -22,7 +22,7 @@ describe('CategoryService', () => {
   });
 
   beforeEach(() => {
-    configSubject = new BehaviorSubject<DashboardConfig>(createConfig());
+    configSubject = signal<DashboardConfig | undefined>(createConfig());
 
     TestBed.configureTestingModule({
       providers: [
@@ -30,7 +30,7 @@ describe('CategoryService', () => {
         {
           provide: ConfigService,
           useValue: {
-            config$: configSubject.asObservable(),
+            config: configSubject.asReadonly(),
           },
         },
       ],
@@ -41,7 +41,7 @@ describe('CategoryService', () => {
 
   describe('categories$', () => {
     it('should prepend FAVORITES_CATEGORY as the first category when at least one app is favorited', async () => {
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -65,13 +65,13 @@ describe('CategoryService', () => {
         }),
       );
 
-      const categories = await firstValueFrom(service.categories$);
+      const categories = service.categories();
       expect(categories[0]).toEqual(FAVORITES_CATEGORY);
       expect(categories.map((c) => c.id)).toEqual(['favorites', 'apps', 'media']);
     });
 
     it('should omit FAVORITES_CATEGORY when no apps are favorited', async () => {
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -95,13 +95,13 @@ describe('CategoryService', () => {
         }),
       );
 
-      const categories = await firstValueFrom(service.categories$);
+      const categories = service.categories();
       expect(categories.some((c) => c.id === FAVORITES_CATEGORY.id)).toBe(false);
       expect(categories.map((c) => c.id)).toEqual(['apps', 'media']);
     });
 
     it('should place virtual categories first, followed by user categories sorted A-Z', async () => {
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -128,7 +128,7 @@ describe('CategoryService', () => {
         }),
       );
 
-      const categories = await firstValueFrom(service.categories$);
+      const categories = service.categories();
       const ids = categories.map((c) => c.id);
       expect(ids[0]).toBe('favorites');
       expect(ids.indexOf('apps')).toBeLessThan(ids.indexOf('media'));
@@ -139,7 +139,7 @@ describe('CategoryService', () => {
 
   describe('selectedCategory$ fallback', () => {
     it('should auto-select the first visible category when the current selection disappears', async () => {
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -169,7 +169,7 @@ describe('CategoryService', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Remove all favorites so Favorites category disappears
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -195,12 +195,12 @@ describe('CategoryService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      const selectedId = await firstValueFrom(service.selectedCategory$);
+      const selectedId = service.selectedCategory();
       expect(selectedId).toBe('media');
     });
 
     it('should select FAVORITES_CATEGORY as first visible when showAllCategory is false and favorites exist', async () => {
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -226,12 +226,12 @@ describe('CategoryService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      const selectedId = await firstValueFrom(service.selectedCategory$);
+      const selectedId = service.selectedCategory();
       expect(selectedId).toBe(FAVORITES_CATEGORY.id);
     });
 
     it('should select the first user category when showAllCategory is false and no favorites exist', async () => {
-      configSubject.next(
+      configSubject.set(
         createConfig({
           applications: [
             {
@@ -257,7 +257,7 @@ describe('CategoryService', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      const selectedId = await firstValueFrom(service.selectedCategory$);
+      const selectedId = service.selectedCategory();
       expect(selectedId).toBe('media');
     });
   });

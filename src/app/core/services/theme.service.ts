@@ -1,9 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { effect, Injectable, inject } from '@angular/core';
 import { signal, computed, Signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { Observable, fromEvent, BehaviorSubject } from 'rxjs';
-import { startWith, map } from 'rxjs/operators';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 import { SettingsService } from './settings.service';
 
@@ -34,24 +31,7 @@ export class ThemeService {
   // Reactive state with signals
   private readonly themeModeSignal = signal<ThemeMode>('auto');
   private readonly currentThemeSignal = signal<'light' | 'dark'>('light');
-
-  private readonly settings = toSignal(this.settingsService.settings$);
-
-  themeSubject: BehaviorSubject<ThemeMode> = new BehaviorSubject<ThemeMode>(
-    this.currentThemeSignal(),
-  );
-
-  /**
-   * Observable streams for component consumption
-   */
-  readonly themeMode$: Observable<ThemeMode> = fromEvent<StorageEvent>(window, 'storage').pipe(
-    startWith({ key: this.STORAGE_KEY } as StorageEvent),
-    map(() => this.getStoredThemeMode() || 'auto'),
-  );
-
-  readonly isDark$: Observable<boolean> = this.themeMode$.pipe(
-    map((mode) => this.isDarkMode(mode)),
-  );
+  private hasUserPreference = false;
 
   // Signal-based API (preferred in Angular 21)
   readonly themeMode: Signal<ThemeMode> = this.themeModeSignal.asReadonly();
@@ -68,8 +48,22 @@ export class ThemeService {
    */
   private initializeTheme(): void {
     const storedMode = this.getStoredThemeMode();
-    this.themeModeSignal.set(storedMode);
-    this.applyTheme(storedMode);
+
+    if (storedMode) {
+      this.hasUserPreference = true;
+      this.themeModeSignal.set(storedMode);
+      this.applyTheme(storedMode);
+      return;
+    }
+
+    effect(() => {
+      const configuredMode = this.settingsService.settings().theme;
+
+      if (!this.hasUserPreference) {
+        this.themeModeSignal.set(configuredMode);
+        this.applyTheme(configuredMode);
+      }
+    });
   }
 
   /**
@@ -93,8 +87,8 @@ export class ThemeService {
    * @param mode - Theme mode to set
    */
   setThemeMode(mode: ThemeMode): void {
+    this.hasUserPreference = true;
     this.themeModeSignal.set(mode);
-    this.themeSubject.next(mode);
     this.saveThemeMode(mode);
     this.applyTheme(mode);
   }
@@ -194,12 +188,13 @@ export class ThemeService {
    * Get stored theme mode from localStorage
    * @returns Theme mode or 'auto' if not set
    */
-  private getStoredThemeMode(): ThemeMode {
-    return (
-      (localStorage.getItem(this.STORAGE_KEY) as ThemeMode) ||
-      this.settings()?.theme ||
-      this.currentThemeSignal()
-    );
+  private getStoredThemeMode(): ThemeMode | undefined {
+    try {
+      return (localStorage.getItem(this.STORAGE_KEY) as ThemeMode) || undefined;
+    } catch (error) {
+      console.warn('[ThemeService] Failed to read theme from localStorage:', error);
+      return undefined;
+    }
   }
 
   /**

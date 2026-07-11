@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { BehaviorSubject } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { AppCardComponent } from './app-card.component';
 
@@ -11,7 +11,7 @@ import { DEFAULT_DASHBOARD_CONFIG, SelfhostedApp } from '../../../core/models/da
 import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppCardComponent', () => {
-  const settingsSubject = new BehaviorSubject(DEFAULT_DASHBOARD_CONFIG.settings);
+  const settingsState = signal(DEFAULT_DASHBOARD_CONFIG.settings);
   const iconServiceMock = {
     getIconUrl: vi.fn((app: SelfhostedApp) => `https://example.com/icons/${app.id}.png`),
   };
@@ -35,7 +35,7 @@ describe('AppCardComponent', () => {
     app: SelfhostedApp = appFixture,
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
   ) => {
-    settingsSubject.next(settings);
+    settingsState.set(settings);
     iconServiceMock.getIconUrl.mockClear();
 
     const view = await render(AppCardComponent, {
@@ -50,7 +50,7 @@ describe('AppCardComponent', () => {
         {
           provide: SettingsService,
           useValue: {
-            settingsSubject,
+            settings: settingsState,
           },
         },
       ],
@@ -109,7 +109,7 @@ describe('AppCardComponent', () => {
     expect(screen.getByText('Media server')).toBeInTheDocument();
     expect(screen.getByText('video')).toBeInTheDocument();
 
-    settingsSubject.next({
+    settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
       showDescriptions: false,
       showLabels: false,

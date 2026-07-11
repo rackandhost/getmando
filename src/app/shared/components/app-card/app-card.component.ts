@@ -1,6 +1,5 @@
 import { Component, inject, input, output, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 import { SelfhostedApp } from '../../../core/models/dashboard.models';
 
@@ -19,7 +18,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 })
 export class AppCardComponent {
   private readonly settingsService = inject(SettingsService);
-  private readonly settings = toSignal(this.settingsService.settingsSubject, { requireSync: true });
+  private readonly settings = this.settingsService.settings;
 
   // Inputs
   readonly app = input.required<SelfhostedApp>();

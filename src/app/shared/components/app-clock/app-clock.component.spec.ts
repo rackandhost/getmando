@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/angular';
-import { BehaviorSubject } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { DEFAULT_DASHBOARD_CONFIG, DashboardSettings } from '../../../core/models/dashboard.models';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -14,7 +14,7 @@ describe('AppClockComponent', () => {
   it('updates the rendered time every second under OnPush', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 0, 1, 12, 0, 0));
-    const settingsSubject = new BehaviorSubject<DashboardSettings>({
+    const settings = signal<DashboardSettings>({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
       showDate: false,
       showSeconds: true,
@@ -24,7 +24,7 @@ describe('AppClockComponent', () => {
       providers: [
         {
           provide: SettingsService,
-          useValue: { settingsSubject },
+          useValue: { settings },
         },
       ],
     });

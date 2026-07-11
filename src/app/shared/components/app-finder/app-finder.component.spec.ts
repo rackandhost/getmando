@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { of } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { AppFinderComponent } from './app-finder.component';
 
@@ -30,7 +30,7 @@ describe('AppFinderComponent', () => {
         {
           provide: SearchService,
           useValue: {
-            searchEngines$: of(searchEngines),
+            searchEngines: signal(searchEngines),
           },
         },
       ],
@@ -60,7 +60,7 @@ describe('AppFinderComponent', () => {
         {
           provide: SearchService,
           useValue: {
-            searchEngines$: of([]),
+            searchEngines: signal([]),
           },
         },
       ],
