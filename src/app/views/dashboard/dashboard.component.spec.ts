@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/angular';
 import { signal } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
 
 import { DashboardComponent } from './dashboard.component';
 
@@ -36,15 +35,15 @@ describe('DashboardComponent', () => {
     favorite: false,
   };
 
-  const settingsSubject = new BehaviorSubject<DashboardSettings>(DEFAULT_DASHBOARD_CONFIG.settings);
-  const selectedCategorySubject = new BehaviorSubject<string>(APP_CATEGORY.id);
-  const haveSearchSubject = new BehaviorSubject<boolean>(false);
-  const themeSubject = new BehaviorSubject<'light' | 'dark' | 'auto'>('dark');
+  const settingsState = signal<DashboardSettings>(DEFAULT_DASHBOARD_CONFIG.settings);
+  const selectedCategory = signal(APP_CATEGORY.id);
+  const haveSearch = signal(false);
+  const currentTheme = signal<'light' | 'dark'>('dark');
   const isDark = signal(true);
 
   const appServiceMock = {
     appVersion: '0.2.0-test',
-    filteredApps$: of([] as SelfhostedApp[]),
+    filteredApps: signal<SelfhostedApp[] | undefined>([]),
     setSearchQuery: vi.fn(),
     setSelectedCategory: vi.fn(),
   };
@@ -65,16 +64,16 @@ describe('DashboardComponent', () => {
   };
 
   const setup = async ({
-    filteredApps$ = of([] as SelfhostedApp[]),
-    searchQuery$ = of(''),
+    filteredApps = [] as SelfhostedApp[] | null,
+    searchQuery = '',
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
     isDarkMode = true,
   }: {
-    filteredApps$?: Observable<SelfhostedApp[]>;
-    searchQuery$?: Observable<string>;
+    filteredApps?: SelfhostedApp[] | null;
+    searchQuery?: string;
     settings?: DashboardSettings;
     isDarkMode?: boolean;
-  } = {}): Promise<void> => {
+  } = {}) => {
     let bgLayer = document.getElementById('app-background');
     if (!bgLayer) {
       bgLayer = document.createElement('div');
@@ -85,14 +84,14 @@ describe('DashboardComponent', () => {
     appServiceMock.setSearchQuery.mockReset();
     appServiceMock.setSelectedCategory.mockReset();
     iconServiceMock.getIconUrl.mockClear();
-    settingsSubject.next(settings);
-    haveSearchSubject.next(false);
-    selectedCategorySubject.next(APP_CATEGORY.id);
-    themeSubject.next(isDarkMode ? 'dark' : 'light');
+    settingsState.set(settings);
+    haveSearch.set(false);
+    selectedCategory.set(APP_CATEGORY.id);
+    currentTheme.set(isDarkMode ? 'dark' : 'light');
     isDark.set(isDarkMode);
-    appServiceMock.filteredApps$ = filteredApps$;
+    appServiceMock.filteredApps = signal(filteredApps ?? undefined);
 
-    await render(DashboardComponent, {
+    return render(DashboardComponent, {
       providers: [
         {
           provide: AppService,
@@ -101,38 +100,37 @@ describe('DashboardComponent', () => {
         {
           provide: SearchService,
           useValue: {
-            searchQuery$,
-            searchEngines$: of([]),
-            haveSearchSubject,
+            searchQuery: signal(searchQuery),
+            searchEngines: signal([]),
+            haveSearch,
           },
         },
         {
           provide: SettingsService,
           useValue: {
-            settings$: settingsSubject.asObservable(),
-            settingsSubject,
+            settings: settingsState,
           },
         },
         {
           provide: ThemeService,
           useValue: {
-            themeSubject,
+            currentTheme,
             isDark,
-            isDarkMode: () => themeSubject.value === 'dark',
+            isDarkMode: () => currentTheme() === 'dark',
             toggleTheme: vi.fn(),
           },
         },
         {
           provide: MetadataService,
           useValue: {
-            metadata$: of(DEFAULT_DASHBOARD_CONFIG.metadata),
+            metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
           },
         },
         {
           provide: CategoryService,
           useValue: {
-            categories$: of([APP_CATEGORY]),
-            selectedCategory$: selectedCategorySubject,
+            categories: signal([APP_CATEGORY]),
+            selectedCategory,
           },
         },
         {
@@ -144,10 +142,8 @@ describe('DashboardComponent', () => {
   };
 
   it('should render the loading state while applications are still pending', async () => {
-    const filteredAppsSubject = new Subject<SelfhostedApp[]>();
-
-    await setup({
-      filteredApps$: filteredAppsSubject.asObservable(),
+    const view = await setup({
+      filteredApps: null,
     });
 
     expect(screen.getByText('Loading dashboard...')).toBeInTheDocument();
@@ -170,44 +166,43 @@ describe('DashboardComponent', () => {
           provide: AppService,
           useValue: {
             ...appServiceMock,
-            filteredApps$: of([appFixture, secondAppFixture]),
+            filteredApps: signal([appFixture, secondAppFixture]),
           },
         },
         {
           provide: SearchService,
           useValue: {
-            searchQuery$: of(''),
-            searchEngines$: of([]),
-            haveSearchSubject,
+            searchQuery: signal(''),
+            searchEngines: signal([]),
+            haveSearch,
           },
         },
         {
           provide: SettingsService,
           useValue: {
-            settings$: settingsSubject.asObservable(),
-            settingsSubject,
+            settings: settingsState,
           },
         },
         {
           provide: ThemeService,
           useValue: {
-            themeSubject,
+            currentTheme,
             isDark,
-            isDarkMode: () => themeSubject.value === 'dark',
+            isDarkMode: () => currentTheme() === 'dark',
             toggleTheme: vi.fn(),
           },
         },
         {
           provide: MetadataService,
           useValue: {
-            metadata$: of(DEFAULT_DASHBOARD_CONFIG.metadata),
+            metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
           },
         },
         {
           provide: CategoryService,
           useValue: {
-            categories$: of([APP_CATEGORY]),
-            selectedCategory$: selectedCategorySubject,
+            categories: signal([APP_CATEGORY]),
+            selectedCategory,
           },
         },
         {
@@ -221,52 +216,49 @@ describe('DashboardComponent', () => {
   });
 
   it('should have no accessibility violations in the loading state', async () => {
-    const filteredAppsSubject = new Subject<SelfhostedApp[]>();
-
     const view = await render(DashboardComponent, {
       providers: [
         {
           provide: AppService,
           useValue: {
             ...appServiceMock,
-            filteredApps$: filteredAppsSubject.asObservable(),
+            filteredApps: signal(undefined),
           },
         },
         {
           provide: SearchService,
           useValue: {
-            searchQuery$: of(''),
-            searchEngines$: of([]),
-            haveSearchSubject,
+            searchQuery: signal(''),
+            searchEngines: signal([]),
+            haveSearch,
           },
         },
         {
           provide: SettingsService,
           useValue: {
-            settings$: settingsSubject.asObservable(),
-            settingsSubject,
+            settings: settingsState,
           },
         },
         {
           provide: ThemeService,
           useValue: {
-            themeSubject,
+            currentTheme,
             isDark,
-            isDarkMode: () => themeSubject.value === 'dark',
+            isDarkMode: () => currentTheme() === 'dark',
             toggleTheme: vi.fn(),
           },
         },
         {
           provide: MetadataService,
           useValue: {
-            metadata$: of(DEFAULT_DASHBOARD_CONFIG.metadata),
+            metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
           },
         },
         {
           provide: CategoryService,
           useValue: {
-            categories$: of([APP_CATEGORY]),
-            selectedCategory$: selectedCategorySubject,
+            categories: signal([APP_CATEGORY]),
+            selectedCategory,
           },
         },
         {
@@ -280,9 +272,9 @@ describe('DashboardComponent', () => {
   });
 
   it('should have no accessibility violations in the empty search state', async () => {
-    await setup({
-      filteredApps$: of([]),
-      searchQuery$: of('plex'),
+    const view = await setup({
+      filteredApps: [],
+      searchQuery: 'plex',
     });
 
     await expectNoAxeViolations(document.body);
@@ -290,8 +282,8 @@ describe('DashboardComponent', () => {
 
   it('should have no accessibility violations in the empty default state', async () => {
     await setup({
-      filteredApps$: of([]),
-      searchQuery$: of(''),
+      filteredApps: [],
+      searchQuery: '',
     });
 
     await expectNoAxeViolations(document.body);
@@ -307,7 +299,7 @@ describe('DashboardComponent', () => {
     };
 
     await setup({
-      filteredApps$: of([appFixture, secondAppFixture]),
+      filteredApps: [appFixture, secondAppFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         itemsPerRow: 5,
@@ -327,8 +319,8 @@ describe('DashboardComponent', () => {
 
   it('should render the empty state for an active search', async () => {
     await setup({
-      filteredApps$: of([]),
-      searchQuery$: of('plex'),
+      filteredApps: [],
+      searchQuery: 'plex',
     });
 
     expect(screen.getByText('No applications found')).toBeInTheDocument();
@@ -341,8 +333,8 @@ describe('DashboardComponent', () => {
 
   it('should render the empty state without a search query', async () => {
     await setup({
-      filteredApps$: of([]),
-      searchQuery$: of(''),
+      filteredApps: [],
+      searchQuery: '',
     });
 
     expect(screen.getByText('No applications found')).toBeInTheDocument();
@@ -355,7 +347,7 @@ describe('DashboardComponent', () => {
 
   it('should apply the background image that matches the current theme', async () => {
     await setup({
-      filteredApps$: of([appFixture]),
+      filteredApps: [appFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         darkBackgroundImage: 'custom-dark.jpg',
@@ -369,7 +361,7 @@ describe('DashboardComponent', () => {
 
   it('should apply the light background image when light theme is active', async () => {
     await setup({
-      filteredApps$: of([appFixture]),
+      filteredApps: [appFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         darkBackgroundImage: 'custom-dark.jpg',
@@ -383,7 +375,7 @@ describe('DashboardComponent', () => {
 
   it('should not prefix https background image URLs with /img/', async () => {
     await setup({
-      filteredApps$: of([appFixture]),
+      filteredApps: [appFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         darkBackgroundImage: 'https://cdn.example.com/dark.jpg',
@@ -400,7 +392,7 @@ describe('DashboardComponent', () => {
 
   it('should not prefix http background image URLs with /img/', async () => {
     await setup({
-      filteredApps$: of([appFixture]),
+      filteredApps: [appFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         darkBackgroundImage: 'https://cdn.example.com/dark.jpg',
@@ -416,8 +408,8 @@ describe('DashboardComponent', () => {
   });
 
   it('should update the background image when the theme changes after render', async () => {
-    await setup({
-      filteredApps$: of([appFixture]),
+    const view = await setup({
+      filteredApps: [appFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         darkBackgroundImage: 'custom-dark.jpg',
@@ -428,14 +420,15 @@ describe('DashboardComponent', () => {
 
     expectBackgroundImageToBe('/img/custom-dark.jpg');
 
-    themeSubject.next('light');
+    currentTheme.set('light');
+    await view.fixture.whenStable();
 
     expectBackgroundImageToBe('/img/custom-light.jpg');
   });
 
   it('should update the background image when settings change after render', async () => {
-    await setup({
-      filteredApps$: of([appFixture]),
+    const view = await setup({
+      filteredApps: [appFixture],
       settings: {
         ...DEFAULT_DASHBOARD_CONFIG.settings,
         darkBackgroundImage: 'initial-dark.jpg',
@@ -446,11 +439,12 @@ describe('DashboardComponent', () => {
 
     expectBackgroundImageToBe('/img/initial-dark.jpg');
 
-    settingsSubject.next({
+    settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
       darkBackgroundImage: 'updated-dark.jpg',
       lightBackgroundImage: 'updated-light.jpg',
     });
+    await view.fixture.whenStable();
 
     expectBackgroundImageToBe('/img/updated-dark.jpg');
   });

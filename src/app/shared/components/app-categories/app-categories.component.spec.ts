@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { BehaviorSubject, of } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { AppCategoriesComponent } from './app-categories.component';
 
@@ -24,16 +24,16 @@ describe('AppCategoriesComponent', () => {
     setSelectedCategory: vi.fn(),
   };
 
-  const selectedCategorySubject = new BehaviorSubject<string>('media');
-  const haveSearchSubject = new BehaviorSubject<boolean>(false);
+  const selectedCategoryState = signal('media');
+  const haveSearchState = signal(false);
 
   const setup = async ({
     selectedCategory = 'media',
     haveSearch = false,
   }: { selectedCategory?: string; haveSearch?: boolean } = {}) => {
     appServiceMock.setSelectedCategory.mockReset();
-    selectedCategorySubject.next(selectedCategory);
-    haveSearchSubject.next(haveSearch);
+    selectedCategoryState.set(selectedCategory);
+    haveSearchState.set(haveSearch);
 
     return render(AppCategoriesComponent, {
       providers: [
@@ -44,14 +44,14 @@ describe('AppCategoriesComponent', () => {
         {
           provide: CategoryService,
           useValue: {
-            categories$: of(categories),
-            selectedCategory$: selectedCategorySubject,
+            categories: signal(categories),
+            selectedCategory: selectedCategoryState,
           },
         },
         {
           provide: SearchService,
           useValue: {
-            haveSearchSubject,
+            haveSearch: haveSearchState,
           },
         },
       ],
@@ -105,13 +105,13 @@ describe('AppCategoriesComponent', () => {
     expect(categoriesNav).not.toHaveClass('opacity-50');
     expect(mediaButton).toBeEnabled();
 
-    haveSearchSubject.next(true);
+    haveSearchState.set(true);
     await view.fixture.whenStable();
 
     expect(categoriesNav).toHaveClass('opacity-50');
     expect(mediaButton).toBeDisabled();
 
-    haveSearchSubject.next(false);
+    haveSearchState.set(false);
     await view.fixture.whenStable();
 
     expect(categoriesNav).not.toHaveClass('opacity-50');
@@ -128,7 +128,7 @@ describe('AppCategoriesComponent', () => {
     expect(mediaButton).toHaveClass('bg-white/10', 'border-white/50');
     expect(appsButton).toHaveAttribute('aria-pressed', 'false');
 
-    selectedCategorySubject.next(APP_CATEGORY.id);
+    selectedCategoryState.set(APP_CATEGORY.id);
     await view.fixture.whenStable();
 
     expect(appsButton).toHaveAttribute('aria-pressed', 'true');
@@ -147,7 +147,7 @@ describe('AppCategoriesComponent', () => {
       },
     ];
 
-    selectedCategorySubject.next('favorites');
+    selectedCategoryState.set('favorites');
 
     await render(AppCategoriesComponent, {
       providers: [
@@ -158,14 +158,14 @@ describe('AppCategoriesComponent', () => {
         {
           provide: CategoryService,
           useValue: {
-            categories$: of(categoriesWithFavorites),
-            selectedCategory$: selectedCategorySubject,
+            categories: signal(categoriesWithFavorites),
+            selectedCategory: selectedCategoryState,
           },
         },
         {
           provide: SearchService,
           useValue: {
-            haveSearchSubject,
+            haveSearch: haveSearchState,
           },
         },
       ],

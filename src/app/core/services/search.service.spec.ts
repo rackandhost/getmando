@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { BehaviorSubject } from 'rxjs';
+import { signal } from '@angular/core';
 
 import { SearchService } from './search.service';
 import { ConfigService } from './config.service';
@@ -34,7 +34,7 @@ describe('SearchService', () => {
         {
           provide: ConfigService,
           useValue: {
-            config$: new BehaviorSubject({}),
+            config: signal(undefined),
           },
         },
       ],

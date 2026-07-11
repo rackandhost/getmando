@@ -1,5 +1,4 @@
-import { inject, Injectable } from '@angular/core';
-import { map } from 'rxjs';
+import { computed, inject, Injectable } from '@angular/core';
 
 import { ConfigService } from './config.service';
 
@@ -7,5 +6,5 @@ import { ConfigService } from './config.service';
 export class MetadataService {
   private configService = inject(ConfigService);
 
-  readonly metadata$ = this.configService.config$.pipe(map((config) => config.metadata));
+  readonly metadata = computed(() => this.configService.config()?.metadata);
 }

@@ -10,6 +10,7 @@
 ### Performance
 
 - **OnPush Change Detection**: Enabled `ChangeDetectionStrategy.OnPush` across all application components and made theme and card visibility state signal-reactive so their rendered values remain current without unnecessary tree-wide change detection.
+- **Signal-Based Application State**: Migrated synchronous configuration, settings, search, category, bookmark, metadata, filtering, and theme state to Angular signals while retaining RxJS only for asynchronous YAML loading. Theme initialization now tolerates unavailable browser storage and reconciles delayed YAML configuration without overriding user preferences.
 
 ### CI / Tooling
 
@@ -27,6 +28,7 @@
 ### Changed Files
 
 - `.github/workflows/test.yml`
+- `AGENTS.md`
 - `README.md`
 - `CHANGELOG.md`
 - `package.json`
@@ -41,9 +43,20 @@
 - `src/testing/node-test-harness.d.ts`
 - `src/testing/a11y.ts`
 - `src/app/core/initializers/dashboard.initializer.ts`
+- `src/app/core/services/app.service.spec.ts`
 - `src/app/core/services/app.service.ts`
+- `src/app/core/services/bookmark.service.ts`
+- `src/app/core/services/category.service.spec.ts`
+- `src/app/core/services/category.service.ts`
+- `src/app/core/services/config.service.ts`
 - `src/app/core/services/logger.service.ts`
 - `src/app/core/services/logger.service.spec.ts`
+- `src/app/core/services/metadata.service.ts`
+- `src/app/core/services/search.service.spec.ts`
+- `src/app/core/services/search.service.ts`
+- `src/app/core/services/settings.service.ts`
+- `src/app/core/services/theme.service.spec.ts`
+- `src/app/core/services/theme.service.ts`
 - `src/app/core/services/yaml-loader.service.ts`
 - `src/app/app.ts`
 - `src/app/shared/components/app-card/app-card.component.html`
@@ -52,7 +65,9 @@
 - `src/app/shared/components/app-clock/app-clock.component.spec.ts`
 - `src/app/shared/components/app-clock/app-clock.component.ts`
 - `src/app/shared/components/app-categories/app-categories.component.spec.ts`
+- `src/app/shared/components/app-categories/app-categories.component.ts`
 - `src/app/shared/components/app-finder/app-finder.component.spec.ts`
+- `src/app/shared/components/app-finder/app-finder.component.ts`
 - `src/app/shared/components/app-footer/app-footer.component.ts`
 - `src/app/shared/components/app-header/app-header.component.spec.ts`
 - `src/app/shared/components/app-header/app-header.component.ts`

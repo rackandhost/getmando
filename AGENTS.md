@@ -36,10 +36,13 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 ## State Management
 
-- Use signals for local component state
+- Use signals for component-local state, derived state, and synchronous application or UI state
 - Use `computed()` for derived state
 - Keep state transformations pure and predictable
 - Do NOT use `mutate` on signals, use `update` or `set` instead
+- Use RxJS for genuinely asynchronous streams such as HTTP, browser events, debouncing, or multi-source async orchestration
+- Do not use `BehaviorSubject` as a general-purpose state container; expose readonly signals and update state through service methods
+- Use `toSignal()` only at a component or service boundary that consumes a genuine RxJS stream
 
 ## Templates
 

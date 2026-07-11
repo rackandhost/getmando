@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   heroChevronDown,
@@ -47,12 +46,8 @@ export class AppFinderComponent {
   protected readonly selectedEngine = signal<SearchEngine | null>(null);
   protected readonly isEngineDropdownOpen = signal(false);
 
-  private readonly searchEngines = toSignal(this.searchService.searchEngines$, {
-    initialValue: [],
-  });
-
   protected readonly haveSearch = computed(() => this.searchQuery().trim() !== '');
-  protected readonly availableEngines = computed(() => this.searchEngines());
+  protected readonly availableEngines = computed(() => this.searchService.searchEngines());
   protected readonly currentEngine = computed(() => this.selectedEngine() ?? null);
 
   get inputPlaceholder(): string {

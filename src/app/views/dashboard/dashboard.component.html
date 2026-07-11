@@ -11,7 +11,7 @@
 
   <!-- Apps grid - scrollable -->
   <div class="flex-1 overflow-y-auto px-6 md:px-8 pb-14">
-    @if (filteredApps$ | async; as apps) {
+    @if (filteredApps(); as apps) {
       @if (apps.length > 0) {
         <ul
           aria-label="Applications"
@@ -31,7 +31,7 @@
           <div class="text-6xl mb-4">🔍</div>
           <h2 class="text-2xl font-semibold text-white mb-2">No applications found</h2>
           <p class="text-white/70">
-            @if (searchQuery$ | async) {
+            @if (searchQuery()) {
               Try adjusting your search query or select a different category.
             } @else {
               Add some applications to your dashboard.yaml configuration.

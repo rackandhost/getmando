@@ -24,19 +24,19 @@ export class AppClockComponent implements OnInit, OnDestroy {
   currentDate = signal<number>(Date.now());
 
   get dateFormat(): string {
-    return this.settingsService.settingsSubject.value.dateFormat;
+    return this.settingsService.settings().dateFormat;
   }
 
   get dateOnBottom(): boolean {
-    return this.showDate && this.settingsService.settingsSubject.value.datePosition === 'bottom';
+    return this.showDate && this.settingsService.settings().datePosition === 'bottom';
   }
 
   get dateOnTop(): boolean {
-    return this.showDate && this.settingsService.settingsSubject.value.datePosition === 'top';
+    return this.showDate && this.settingsService.settings().datePosition === 'top';
   }
 
   get showSeconds(): boolean {
-    return this.settingsService.settingsSubject.value.showSeconds;
+    return this.settingsService.settings().showSeconds;
   }
 
   ngOnInit(): void {
@@ -50,6 +50,6 @@ export class AppClockComponent implements OnInit, OnDestroy {
   }
 
   private get showDate(): boolean {
-    return this.settingsService.settingsSubject.value.showDate;
+    return this.settingsService.settings().showDate;
   }
 }

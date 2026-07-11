@@ -1,6 +1,5 @@
-import { Component, inject, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { Component, effect, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { combineLatest, Subject, takeUntil } from 'rxjs';
 
 import { AppService } from '../../core/services/app.service';
 import { SearchService } from '../../core/services/search.service';
@@ -31,30 +30,25 @@ import { ThemeService } from '../../core/services/theme.service';
   templateUrl: 'dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardComponent implements OnDestroy {
+export class DashboardComponent {
   private readonly appService = inject(AppService);
   private readonly searchService = inject(SearchService);
   private readonly settingsService = inject(SettingsService);
   private readonly themeService = inject(ThemeService);
 
-  private destroy$: Subject<void> = new Subject<void>();
-
-  // Observable streams
-  readonly filteredApps$ = this.appService.filteredApps$;
-  readonly searchQuery$ = this.searchService.searchQuery$;
-  readonly settings$ = this.settingsService.settings$;
-  readonly theme$ = this.themeService.themeSubject;
+  readonly filteredApps = this.appService.filteredApps;
+  readonly searchQuery = this.searchService.searchQuery;
 
   get itemsPerRow(): number {
-    return this.settingsService.settingsSubject.value.itemsPerRow;
+    return this.settingsService.settings().itemsPerRow;
   }
 
   constructor() {
-    combineLatest([this.settings$, this.theme$])
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(([{ lightBackgroundImage, darkBackgroundImage }]) =>
-        this.setBackgroundImage({ lightBackgroundImage, darkBackgroundImage }),
-      );
+    effect(() => {
+      const { lightBackgroundImage, darkBackgroundImage } = this.settingsService.settings();
+      this.themeService.currentTheme();
+      this.setBackgroundImage({ lightBackgroundImage, darkBackgroundImage });
+    });
   }
 
   /**
@@ -79,9 +73,5 @@ export class DashboardComponent implements OnDestroy {
     const isImageAnUrl = selectedImage.startsWith('https') || selectedImage.startsWith('http');
 
     bgLayer.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/'}${selectedImage})`;
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
   }
 }
