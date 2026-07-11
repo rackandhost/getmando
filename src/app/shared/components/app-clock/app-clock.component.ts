@@ -1,13 +1,20 @@
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+} from '@angular/core';
 
 import { SettingsService } from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-clock',
-  standalone: true,
   imports: [CommonModule, NgTemplateOutlet],
   templateUrl: 'app-clock.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppClockComponent implements OnInit, OnDestroy {
   private readonly settingsService = inject(SettingsService);

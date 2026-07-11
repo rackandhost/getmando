@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/angular';
+import { signal } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
 
 import { DashboardComponent } from './dashboard.component';
@@ -39,6 +40,7 @@ describe('DashboardComponent', () => {
   const selectedCategorySubject = new BehaviorSubject<string>(APP_CATEGORY.id);
   const haveSearchSubject = new BehaviorSubject<boolean>(false);
   const themeSubject = new BehaviorSubject<'light' | 'dark' | 'auto'>('dark');
+  const isDark = signal(true);
 
   const appServiceMock = {
     appVersion: '0.2.0-test',
@@ -87,6 +89,7 @@ describe('DashboardComponent', () => {
     haveSearchSubject.next(false);
     selectedCategorySubject.next(APP_CATEGORY.id);
     themeSubject.next(isDarkMode ? 'dark' : 'light');
+    isDark.set(isDarkMode);
     appServiceMock.filteredApps$ = filteredApps$;
 
     await render(DashboardComponent, {
@@ -114,6 +117,7 @@ describe('DashboardComponent', () => {
           provide: ThemeService,
           useValue: {
             themeSubject,
+            isDark,
             isDarkMode: () => themeSubject.value === 'dark',
             toggleTheme: vi.fn(),
           },
@@ -188,6 +192,7 @@ describe('DashboardComponent', () => {
           provide: ThemeService,
           useValue: {
             themeSubject,
+            isDark,
             isDarkMode: () => themeSubject.value === 'dark',
             toggleTheme: vi.fn(),
           },
@@ -246,6 +251,7 @@ describe('DashboardComponent', () => {
           provide: ThemeService,
           useValue: {
             themeSubject,
+            isDark,
             isDarkMode: () => themeSubject.value === 'dark',
             toggleTheme: vi.fn(),
           },

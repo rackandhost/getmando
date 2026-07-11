@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/angular';
+import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { Mock } from 'vitest';
 import { CommonModule } from '@angular/common';
+import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { AppHeaderComponent } from './app-header.component';
@@ -12,14 +13,14 @@ import { MetadataService } from '../../../core/services/metadata.service';
 import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models';
 
 describe('AppHeader', () => {
-  const setup = async (toggleThemeMock?: Mock): Promise<void> => {
+  const setup = async (toggleThemeMock?: Mock, isDark = signal(true)): Promise<void> => {
     await render(AppHeaderComponent, {
       imports: [CommonModule],
       providers: [
         {
           provide: ThemeService,
           useValue: {
-            isDarkMode: () => true,
+            isDark,
             toggleTheme: toggleThemeMock || vi.fn(),
           },
         },
@@ -56,6 +57,20 @@ describe('AppHeader', () => {
 
       expect(toggleThemeMock).toBeCalled();
       expect(toggleThemeMock).toBeCalledTimes(1);
+    });
+
+    it('should update the presented theme when the active theme changes', async () => {
+      const isDark = signal(true);
+      await setup(undefined, isDark);
+
+      expect(screen.getByText('🌙')).toBeInTheDocument();
+
+      isDark.set(false);
+
+      await waitFor(() => {
+        expect(screen.getByText('☀️')).toBeInTheDocument();
+        expect(screen.queryByText('🌙')).not.toBeInTheDocument();
+      });
     });
   });
 });

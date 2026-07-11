@@ -1,5 +1,6 @@
 import { Component, inject, input, output, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { SelfhostedApp } from '../../../core/models/dashboard.models';
 
@@ -18,6 +19,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 })
 export class AppCardComponent {
   private readonly settingsService = inject(SettingsService);
+  private readonly settings = toSignal(this.settingsService.settingsSubject, { requireSync: true });
 
   // Inputs
   readonly app = input.required<SelfhostedApp>();
@@ -32,13 +34,8 @@ export class AppCardComponent {
    */
   readonly iconUrl = computed(() => this.iconService.getIconUrl(this.app()));
 
-  get showDescriptions(): boolean {
-    return this.settingsService.settingsSubject.value.showDescriptions;
-  }
-
-  get showLabels(): boolean {
-    return this.settingsService.settingsSubject.value.showLabels;
-  }
+  readonly showDescriptions = computed(() => this.settings().showDescriptions);
+  readonly showLabels = computed(() => this.settings().showLabels);
 
   /**
    * Open application

@@ -22,7 +22,7 @@
       {{ app().name }}
     </p>
 
-    @if (showDescriptions) {
+    @if (showDescriptions()) {
       <p
         class="text-sm text-neutral-800/70 dark:text-white/70 line-clamp-2 group-hover:text-neutral-800/80 dark:group-hover:text-white/80 transition-all duration-300"
       >
@@ -30,7 +30,7 @@
       </p>
     }
 
-    @if (showLabels && app().tags.length > 0) {
+    @if (showLabels() && app().tags.length > 0) {
       <div class="flex flex-wrap gap-1 mt-3 justify-center">
         @for (tag of app().tags; track tag) {
           <span
