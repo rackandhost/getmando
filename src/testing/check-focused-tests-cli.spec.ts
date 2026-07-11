@@ -19,30 +19,35 @@ type CliResult = {
 
 async function runFocusedTestsCli() {
   return new Promise<CliResult>((resolve, reject) => {
-    execFile(process.execPath, [cliPath], {
-      cwd: repositoryRoot,
-      env: process.env,
-    }, (error, stdout, stderr) => {
-      if (error && typeof error === 'object' && 'code' in error) {
+    execFile(
+      process.execPath,
+      [cliPath],
+      {
+        cwd: repositoryRoot,
+        env: process.env,
+      },
+      (error, stdout, stderr) => {
+        if (error && typeof error === 'object' && 'code' in error) {
+          resolve({
+            exitCode: Number(error.code),
+            stdout,
+            stderr,
+          });
+          return;
+        }
+
+        if (error) {
+          reject(error);
+          return;
+        }
+
         resolve({
-          exitCode: Number(error.code),
+          exitCode: 0,
           stdout,
           stderr,
         });
-        return;
-      }
-
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve({
-        exitCode: 0,
-        stdout,
-        stderr,
-      });
-    });
+      },
+    );
   });
 }
 

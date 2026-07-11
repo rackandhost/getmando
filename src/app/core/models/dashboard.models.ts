@@ -1,4 +1,4 @@
-import {z} from 'zod';
+import { z } from 'zod';
 
 /**
  * Icon configuration schema
@@ -76,9 +76,11 @@ export const DashboardSettingsSchema = z.object({
   showAllCategory: z.boolean().default(true),
   showDescriptions: z.boolean().default(true),
   showLabels: z.boolean().default(true),
-  searchEngines: z.array(z.enum(['google', 'duckduckgo', 'startpage', 'youtube'] as const)).default([]),
+  searchEngines: z
+    .array(z.enum(['google', 'duckduckgo', 'startpage', 'youtube'] as const))
+    .default([]),
   lightBackgroundImage: z.string().default('background-light.jpg'),
-  darkBackgroundImage: z.string().default('background.jpg')
+  darkBackgroundImage: z.string().default('background.jpg'),
 });
 
 /**
@@ -143,7 +145,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
     showLabels: true,
     searchEngines: [],
     lightBackgroundImage: 'background-light.jpg',
-    darkBackgroundImage: 'background.jpg'
+    darkBackgroundImage: 'background.jpg',
   },
 };
 

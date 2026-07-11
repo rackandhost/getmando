@@ -1,19 +1,19 @@
-import {Component, inject, ChangeDetectionStrategy, OnDestroy} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {combineLatest, Subject, takeUntil} from 'rxjs';
+import { Component, inject, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { combineLatest, Subject, takeUntil } from 'rxjs';
 
-import {AppService} from '../../core/services/app.service';
-import {SearchService} from '../../core/services/search.service';
-import {SettingsService} from '../../core/services/settings.service';
+import { AppService } from '../../core/services/app.service';
+import { SearchService } from '../../core/services/search.service';
+import { SettingsService } from '../../core/services/settings.service';
 
-import {AppCardComponent} from '../../shared/components/app-card/app-card.component';
-import {AppHeaderComponent} from '../../shared/components/app-header/app-header.component';
-import {AppFinderComponent} from '../../shared/components/app-finder/app-finder.component';
-import {AppCategoriesComponent} from '../../shared/components/app-categories/app-categories.component';
-import {AppLoadingComponent} from '../../shared/components/app-loading/app-loading.component';
-import {AppFooterComponent} from '../../shared/components/app-footer/app-footer.component';
-import {AppClockComponent} from '../../shared/components/app-clock/app-clock.component';
-import {ThemeService} from '../../core/services/theme.service';
+import { AppCardComponent } from '../../shared/components/app-card/app-card.component';
+import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
+import { AppFinderComponent } from '../../shared/components/app-finder/app-finder.component';
+import { AppCategoriesComponent } from '../../shared/components/app-categories/app-categories.component';
+import { AppLoadingComponent } from '../../shared/components/app-loading/app-loading.component';
+import { AppFooterComponent } from '../../shared/components/app-footer/app-footer.component';
+import { AppClockComponent } from '../../shared/components/app-clock/app-clock.component';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -50,13 +50,10 @@ export class DashboardComponent implements OnDestroy {
   }
 
   constructor() {
-    combineLatest([
-      this.settings$,
-      this.theme$,
-    ])
+    combineLatest([this.settings$, this.theme$])
       .pipe(takeUntil(this.destroy$))
       .subscribe(([{ lightBackgroundImage, darkBackgroundImage }]) =>
-        this.setBackgroundImage({ lightBackgroundImage, darkBackgroundImage })
+        this.setBackgroundImage({ lightBackgroundImage, darkBackgroundImage }),
       );
   }
 
@@ -65,17 +62,23 @@ export class DashboardComponent implements OnDestroy {
    */
   onAppClick(_app: unknown): void {}
 
-  private setBackgroundImage(
-    { lightBackgroundImage, darkBackgroundImage }: { lightBackgroundImage: string, darkBackgroundImage: string }
-  ): void {
+  private setBackgroundImage({
+    lightBackgroundImage,
+    darkBackgroundImage,
+  }: {
+    lightBackgroundImage: string;
+    darkBackgroundImage: string;
+  }): void {
     const bgLayer = document.getElementById('app-background');
     if (!bgLayer) return;
 
-    const selectedImage: string = this.themeService.isDarkMode() ? darkBackgroundImage : lightBackgroundImage;
+    const selectedImage: string = this.themeService.isDarkMode()
+      ? darkBackgroundImage
+      : lightBackgroundImage;
 
     const isImageAnUrl = selectedImage.startsWith('https') || selectedImage.startsWith('http');
 
-    bgLayer.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/' }${selectedImage})`;
+    bgLayer.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/'}${selectedImage})`;
   }
 
   ngOnDestroy(): void {

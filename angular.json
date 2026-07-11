@@ -70,6 +70,13 @@
           "options": {
             "setupFiles": ["test-setup.ts"]
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "eslintConfig": "eslint.config.js",
+            "lintFilePatterns": ["src/**/*.ts", "test-setup.ts"]
+          }
         }
       }
     }

@@ -1,18 +1,23 @@
-import {render, screen} from '@testing-library/angular';
-import {BehaviorSubject, Observable, Subject, of} from 'rxjs';
+import { render, screen } from '@testing-library/angular';
+import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
 
-import {DashboardComponent} from './dashboard.component';
+import { DashboardComponent } from './dashboard.component';
 
-import {AppService} from '../../core/services/app.service';
-import {SearchService} from '../../core/services/search.service';
-import {SettingsService} from '../../core/services/settings.service';
-import {ThemeService} from '../../core/services/theme.service';
-import {MetadataService} from '../../core/services/metadata.service';
-import {CategoryService} from '../../core/services/category.service';
-import {IconService} from '../../core/services/icon.service';
+import { AppService } from '../../core/services/app.service';
+import { SearchService } from '../../core/services/search.service';
+import { SettingsService } from '../../core/services/settings.service';
+import { ThemeService } from '../../core/services/theme.service';
+import { MetadataService } from '../../core/services/metadata.service';
+import { CategoryService } from '../../core/services/category.service';
+import { IconService } from '../../core/services/icon.service';
 
-import {APP_CATEGORY, DEFAULT_DASHBOARD_CONFIG, DashboardSettings, SelfhostedApp} from '../../core/models/dashboard.models';
-import {expectNoAxeViolations} from '../../../testing/a11y';
+import {
+  APP_CATEGORY,
+  DEFAULT_DASHBOARD_CONFIG,
+  DashboardSettings,
+  SelfhostedApp,
+} from '../../core/models/dashboard.models';
+import { expectNoAxeViolations } from '../../../testing/a11y';
 
 describe('DashboardComponent', () => {
   const appFixture: SelfhostedApp = {
@@ -51,7 +56,9 @@ describe('DashboardComponent', () => {
     const bgLayer = document.getElementById('app-background');
 
     expect(bgLayer).not.toBeNull();
-    expect(bgLayer!.style.backgroundImage).toMatch(new RegExp(`^url\\(["']?${escapedUrl}["']?\\)$`));
+    expect(bgLayer!.style.backgroundImage).toMatch(
+      new RegExp(`^url\\(["']?${escapedUrl}["']?\\)$`),
+    );
     expect(bgLayer!.style.backgroundImage.match(/url\(/g)).toHaveLength(1);
   };
 
@@ -140,7 +147,7 @@ describe('DashboardComponent', () => {
     });
 
     expect(screen.getByText('Loading dashboard...')).toBeInTheDocument();
-    expect(screen.queryByRole('list', {name: 'Applications'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Applications' })).not.toBeInTheDocument();
     expect(screen.queryByText('No applications found')).not.toBeInTheDocument();
   });
 
@@ -301,13 +308,13 @@ describe('DashboardComponent', () => {
       },
     });
 
-    const grid = screen.getByRole('list', {name: 'Applications'});
+    const grid = screen.getByRole('list', { name: 'Applications' });
 
     expect(grid).toBeInTheDocument();
     expect(grid).toHaveClass('grid', 'xl:grid-cols-5');
-    expect(screen.getAllByRole('button', {name: /^Open /})).toHaveLength(2);
-    expect(screen.getByRole('button', {name: 'Open Plex'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Open Radarr'})).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Open / })).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Radarr' })).toBeInTheDocument();
     expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
     expect(screen.queryByText('No applications found')).not.toBeInTheDocument();
   });
@@ -319,8 +326,10 @@ describe('DashboardComponent', () => {
     });
 
     expect(screen.getByText('No applications found')).toBeInTheDocument();
-    expect(screen.getByText('Try adjusting your search query or select a different category.')).toBeInTheDocument();
-    expect(screen.queryByRole('list', {name: 'Applications'})).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Try adjusting your search query or select a different category.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Applications' })).not.toBeInTheDocument();
     expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
   });
 
@@ -331,8 +340,10 @@ describe('DashboardComponent', () => {
     });
 
     expect(screen.getByText('No applications found')).toBeInTheDocument();
-    expect(screen.getByText('Add some applications to your dashboard.yaml configuration.')).toBeInTheDocument();
-    expect(screen.queryByRole('list', {name: 'Applications'})).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Add some applications to your dashboard.yaml configuration.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Applications' })).not.toBeInTheDocument();
     expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
   });
 
@@ -376,7 +387,9 @@ describe('DashboardComponent', () => {
     });
 
     expectBackgroundImageToBe('https://cdn.example.com/dark.jpg');
-    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain('/img/https://cdn.example.com/dark.jpg');
+    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain(
+      '/img/https://cdn.example.com/dark.jpg',
+    );
   });
 
   it('should not prefix http background image URLs with /img/', async () => {
@@ -391,7 +404,9 @@ describe('DashboardComponent', () => {
     });
 
     expectBackgroundImageToBe('http://cdn.example.com/light.jpg');
-    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain('/img/http://cdn.example.com/light.jpg');
+    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain(
+      '/img/http://cdn.example.com/light.jpg',
+    );
   });
 
   it('should update the background image when the theme changes after render', async () => {

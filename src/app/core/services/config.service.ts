@@ -1,8 +1,8 @@
-import {Injectable, OnDestroy} from '@angular/core';
-import {BehaviorSubject, Subject, takeUntil} from 'rxjs';
-import {filter} from 'rxjs/operators';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
-import {DashboardConfig} from '../models/dashboard.models';
+import { DashboardConfig } from '../models/dashboard.models';
 
 @Injectable({ providedIn: 'root' })
 export class ConfigService implements OnDestroy {
@@ -12,7 +12,7 @@ export class ConfigService implements OnDestroy {
 
   readonly config$ = this.configSubject.asObservable().pipe(
     takeUntil(this.destroy$),
-    filter((config) => !!config)
+    filter((config) => !!config),
   );
 
   get subject(): BehaviorSubject<DashboardConfig | undefined> {

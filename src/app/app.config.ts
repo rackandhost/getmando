@@ -9,6 +9,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    DASHBOARD_INITIALIZER_PROVIDER
-  ]
+    DASHBOARD_INITIALIZER_PROVIDER,
+  ],
 };

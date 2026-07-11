@@ -1,8 +1,8 @@
-import {TestBed} from '@angular/core/testing';
-import {BehaviorSubject, firstValueFrom} from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
 
-import {CategoryService} from './category.service';
-import {ConfigService} from './config.service';
+import { CategoryService } from './category.service';
+import { ConfigService } from './config.service';
 
 import {
   APP_CATEGORY,
@@ -49,7 +49,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -61,9 +61,7 @@ describe('CategoryService', () => {
             showAllCategory: true,
             allowBookmarks: false,
           },
-          categories: [
-            {id: 'media', name: 'Media'},
-          ],
+          categories: [{ id: 'media', name: 'Media' }],
         }),
       );
 
@@ -81,7 +79,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -93,9 +91,7 @@ describe('CategoryService', () => {
             showAllCategory: true,
             allowBookmarks: false,
           },
-          categories: [
-            {id: 'media', name: 'Media'},
-          ],
+          categories: [{ id: 'media', name: 'Media' }],
         }),
       );
 
@@ -113,7 +109,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -126,8 +122,8 @@ describe('CategoryService', () => {
             allowBookmarks: true,
           },
           categories: [
-            {id: 'media', name: 'Media'},
-            {id: 'dev', name: 'Development'},
+            { id: 'media', name: 'Media' },
+            { id: 'dev', name: 'Development' },
           ],
         }),
       );
@@ -151,7 +147,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -163,9 +159,7 @@ describe('CategoryService', () => {
             showAllCategory: false,
             allowBookmarks: false,
           },
-          categories: [
-            {id: 'media', name: 'Media'},
-          ],
+          categories: [{ id: 'media', name: 'Media' }],
         }),
       );
 
@@ -183,7 +177,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -195,9 +189,7 @@ describe('CategoryService', () => {
             showAllCategory: false,
             allowBookmarks: false,
           },
-          categories: [
-            {id: 'media', name: 'Media'},
-          ],
+          categories: [{ id: 'media', name: 'Media' }],
         }),
       );
 
@@ -216,7 +208,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -228,9 +220,7 @@ describe('CategoryService', () => {
             showAllCategory: false,
             allowBookmarks: false,
           },
-          categories: [
-            {id: 'media', name: 'Media'},
-          ],
+          categories: [{ id: 'media', name: 'Media' }],
         }),
       );
 
@@ -249,7 +239,7 @@ describe('CategoryService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -261,9 +251,7 @@ describe('CategoryService', () => {
             showAllCategory: false,
             allowBookmarks: false,
           },
-          categories: [
-            {id: 'media', name: 'Media'},
-          ],
+          categories: [{ id: 'media', name: 'Media' }],
         }),
       );
 

@@ -1,7 +1,7 @@
-import {inject, Injectable} from '@angular/core';
-import {map} from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { map } from 'rxjs';
 
-import {ConfigService} from './config.service';
+import { ConfigService } from './config.service';
 
 @Injectable({ providedIn: 'root' })
 export class MetadataService {

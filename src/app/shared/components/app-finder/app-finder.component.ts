@@ -1,30 +1,42 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {toSignal} from '@angular/core/rxjs-interop';
-import {NgIcon, provideIcons} from '@ng-icons/core';
-import {heroChevronDown, heroMagnifyingGlass, heroXMark, heroArrowRight} from '@ng-icons/heroicons/outline';
-import {simpleYoutube, simpleGoogle, simpleDuckduckgo, simpleStartpage} from '@ng-icons/simple-icons';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  heroChevronDown,
+  heroMagnifyingGlass,
+  heroXMark,
+  heroArrowRight,
+} from '@ng-icons/heroicons/outline';
+import {
+  simpleYoutube,
+  simpleGoogle,
+  simpleDuckduckgo,
+  simpleStartpage,
+} from '@ng-icons/simple-icons';
 
-import {AppService} from '../../../core/services/app.service';
-import {SearchService} from '../../../core/services/search.service';
+import { AppService } from '../../../core/services/app.service';
+import { SearchService } from '../../../core/services/search.service';
 
-import {SearchEngine} from '../../../core/models/dashboard.models';
+import { SearchEngine } from '../../../core/models/dashboard.models';
 
 @Component({
   selector: 'app-finder',
   standalone: true,
   imports: [CommonModule, NgIcon],
   templateUrl: 'app-finder.component.html',
-  viewProviders: [provideIcons({
-    heroMagnifyingGlass,
-    heroXMark,
-    heroChevronDown,
-    simpleYoutube,
-    simpleGoogle,
-    simpleDuckduckgo,
-    simpleStartpage,
-    heroArrowRight
-  })],
+  viewProviders: [
+    provideIcons({
+      heroMagnifyingGlass,
+      heroXMark,
+      heroChevronDown,
+      simpleYoutube,
+      simpleGoogle,
+      simpleDuckduckgo,
+      simpleStartpage,
+      heroArrowRight,
+    }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppFinderComponent {
@@ -41,9 +53,7 @@ export class AppFinderComponent {
 
   protected readonly haveSearch = computed(() => this.searchQuery().trim() !== '');
   protected readonly availableEngines = computed(() => this.searchEngines());
-  protected readonly currentEngine = computed(
-    () => this.selectedEngine() ?? null,
-  );
+  protected readonly currentEngine = computed(() => this.selectedEngine() ?? null);
 
   get inputPlaceholder(): string {
     if (this.currentEngine()) {

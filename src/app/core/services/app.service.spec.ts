@@ -1,12 +1,12 @@
-import {TestBed} from '@angular/core/testing';
-import {BehaviorSubject, firstValueFrom} from 'rxjs';
+import { TestBed } from '@angular/core/testing';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
 
-import {AppService} from './app.service';
-import {ConfigService} from './config.service';
-import {BookmarkService} from './bookmark.service';
-import {SearchService} from './search.service';
-import {CategoryService} from './category.service';
-import {YamlLoaderService} from './yaml-loader.service';
+import { AppService } from './app.service';
+import { ConfigService } from './config.service';
+import { BookmarkService } from './bookmark.service';
+import { SearchService } from './search.service';
+import { CategoryService } from './category.service';
+import { YamlLoaderService } from './yaml-loader.service';
 
 import {
   APP_CATEGORY,
@@ -67,13 +67,13 @@ describe('AppService', () => {
   describe('apps$', () => {
     it('should assign favorite: false to bookmarks when allowBookmarks is true', async () => {
       const bookmarkServiceMock = TestBed.inject(BookmarkService);
-      (bookmarkServiceMock as unknown as {bookmarks: unknown[]}).bookmarks = [
+      (bookmarkServiceMock as unknown as { bookmarks: unknown[] }).bookmarks = [
         {
           id: 'google',
           name: 'Google',
           description: 'Search engine',
           url: 'https://google.com',
-          icon: {type: 'name', value: 'google'},
+          icon: { type: 'name', value: 'google' },
           openNewTab: true,
           tags: [],
         },
@@ -88,7 +88,7 @@ describe('AppService', () => {
               name: 'Google',
               description: 'Search engine',
               url: 'https://google.com',
-              icon: {type: 'name', value: 'google'},
+              icon: { type: 'name', value: 'google' },
               openNewTab: true,
               tags: [],
             },
@@ -117,7 +117,7 @@ describe('AppService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -128,7 +128,7 @@ describe('AppService', () => {
               name: 'Radarr',
               description: '',
               url: 'https://radarr.example.com',
-              icon: {type: 'name', value: 'radarr'},
+              icon: { type: 'name', value: 'radarr' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -152,7 +152,7 @@ describe('AppService', () => {
               name: 'Plex',
               description: '',
               url: 'https://plex.example.com',
-              icon: {type: 'name', value: 'plex'},
+              icon: { type: 'name', value: 'plex' },
               category: 'media',
               openNewTab: true,
               tags: [],
@@ -163,7 +163,7 @@ describe('AppService', () => {
               name: 'Radarr',
               description: '',
               url: 'https://radarr.example.com',
-              icon: {type: 'name', value: 'radarr'},
+              icon: { type: 'name', value: 'radarr' },
               category: 'media',
               openNewTab: true,
               tags: [],

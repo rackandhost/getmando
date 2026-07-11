@@ -1,9 +1,9 @@
-import {Component, computed, inject} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {toSignal} from '@angular/core/rxjs-interop';
+import { Component, computed, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { toSignal } from '@angular/core/rxjs-interop';
 
-import {ThemeService} from '../../../core/services/theme.service';
-import {MetadataService} from '../../../core/services/metadata.service';
+import { ThemeService } from '../../../core/services/theme.service';
+import { MetadataService } from '../../../core/services/metadata.service';
 
 @Component({
   selector: 'app-header',

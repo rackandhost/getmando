@@ -1,7 +1,7 @@
-import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject, map} from 'rxjs';
+import { inject, Injectable } from '@angular/core';
+import { BehaviorSubject, map } from 'rxjs';
 
-import {ConfigService} from './config.service';
+import { ConfigService } from './config.service';
 
 import {
   APP_CATEGORY,
@@ -9,7 +9,7 @@ import {
   FAVORITES_CATEGORY,
   DEFAULT_DASHBOARD_SEARCH_ENGINES,
   SearchEngine,
-  SelfhostedApp
+  SelfhostedApp,
 } from '../models/dashboard.models';
 
 /**

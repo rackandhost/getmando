@@ -1,14 +1,14 @@
-import {render, screen} from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import {BehaviorSubject} from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
-import {AppCardComponent} from './app-card.component';
+import { AppCardComponent } from './app-card.component';
 
-import {IconService} from '../../../core/services/icon.service';
-import {SettingsService} from '../../../core/services/settings.service';
+import { IconService } from '../../../core/services/icon.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
-import {DEFAULT_DASHBOARD_CONFIG, SelfhostedApp} from '../../../core/models/dashboard.models';
-import {expectNoAxeViolations} from '../../../../testing/a11y';
+import { DEFAULT_DASHBOARD_CONFIG, SelfhostedApp } from '../../../core/models/dashboard.models';
+import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppCardComponent', () => {
   const settingsSubject = new BehaviorSubject(DEFAULT_DASHBOARD_CONFIG.settings);
@@ -67,12 +67,15 @@ describe('AppCardComponent', () => {
     await setup();
 
     expect(iconServiceMock.getIconUrl).toHaveBeenCalledWith(appFixture);
-    expect(screen.getByRole('button', {name: 'Open Plex'})).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
     expect(screen.getByText('Plex')).toBeInTheDocument();
     expect(screen.getByText('Media server')).toBeInTheDocument();
     expect(screen.getByText('video')).toBeInTheDocument();
     expect(screen.getByText('streaming')).toBeInTheDocument();
-    expect(screen.getByAltText('Plex icon')).toHaveAttribute('src', 'https://example.com/icons/plex.png');
+    expect(screen.getByAltText('Plex icon')).toHaveAttribute(
+      'src',
+      'https://example.com/icons/plex.png',
+    );
   });
 
   it('should have no accessibility violations', async () => {
@@ -108,7 +111,7 @@ describe('AppCardComponent', () => {
 
     view.fixture.componentInstance.appClick.subscribe(appClickSpy);
 
-    await user.click(screen.getByRole('button', {name: 'Open Plex'}));
+    await user.click(screen.getByRole('button', { name: 'Open Plex' }));
 
     expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
     expect(appClickSpy).toHaveBeenCalledWith(appFixture);
@@ -123,7 +126,7 @@ describe('AppCardComponent', () => {
       openNewTab: false,
     });
 
-    await user.click(screen.getByRole('button', {name: 'Open Plex'}));
+    await user.click(screen.getByRole('button', { name: 'Open Plex' }));
 
     expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_self');
   });
@@ -136,7 +139,7 @@ describe('AppCardComponent', () => {
 
     view.fixture.componentInstance.appClick.subscribe(appClickSpy);
 
-    const appCard = screen.getByRole('button', {name: 'Open Plex'});
+    const appCard = screen.getByRole('button', { name: 'Open Plex' });
     appCard.focus();
 
     await user.keyboard('{Enter}');
@@ -155,7 +158,7 @@ describe('AppCardComponent', () => {
 
     view.fixture.componentInstance.appClick.subscribe(appClickSpy);
 
-    const appCard = screen.getByRole('button', {name: 'Open Plex'});
+    const appCard = screen.getByRole('button', { name: 'Open Plex' });
     appCard.focus();
 
     await user.keyboard(' ');

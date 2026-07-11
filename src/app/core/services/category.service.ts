@@ -1,10 +1,15 @@
-import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject} from 'rxjs';
-import {map} from 'rxjs/operators';
+import { inject, Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
+import { map } from 'rxjs/operators';
 
-import {APP_CATEGORY, BOOKMARKS_CATEGORY, FAVORITES_CATEGORY, Category} from '../models/dashboard.models';
+import {
+  APP_CATEGORY,
+  BOOKMARKS_CATEGORY,
+  FAVORITES_CATEGORY,
+  Category,
+} from '../models/dashboard.models';
 
-import {ConfigService} from './config.service';
+import { ConfigService } from './config.service';
 
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
@@ -28,10 +33,7 @@ export class CategoryService {
         categories.push(BOOKMARKS_CATEGORY);
       }
 
-      return [
-        ...categories,
-        ...config.categories.sort((a, b) => a.name.localeCompare(b.name)),
-      ];
+      return [...categories, ...config.categories.sort((a, b) => a.name.localeCompare(b.name))];
     }),
   );
   readonly selectedCategory$ = this.selectedCategorySubject.asObservable();

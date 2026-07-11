@@ -1,10 +1,10 @@
-import {inject, Injectable, OnDestroy} from '@angular/core';
-import {BehaviorSubject, Subject, takeUntil} from 'rxjs';
-import {map} from 'rxjs/operators';
+import { inject, Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Subject, takeUntil } from 'rxjs';
+import { map } from 'rxjs/operators';
 
-import {DashboardSettings, DEFAULT_DASHBOARD_CONFIG} from '../models/dashboard.models';
+import { DashboardSettings, DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
-import {ConfigService} from './config.service';
+import { ConfigService } from './config.service';
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService implements OnDestroy {
@@ -16,7 +16,7 @@ export class SettingsService implements OnDestroy {
 
   readonly settings$ = this.configService.config$.pipe(
     takeUntil(this.destroy$),
-    map((config) => config.settings)
+    map((config) => config.settings),
   );
 
   constructor() {

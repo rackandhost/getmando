@@ -26,5 +26,14 @@ jobs:
       - name: Check focused tests
         run: npm run check:focused-tests
 
+      - name: Run lint
+        run: npm run lint
+
+      - name: Check source formatting
+        run: npm run format:check
+
       - name: Run tests
         run: npm test
+
+      - name: Build production application
+        run: npm run build -- --configuration production

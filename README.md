@@ -509,11 +509,19 @@ npm start
 # Build for production
 npm run build
 
+# Run lint checks
+npm run lint
+
+# Check source formatting
+npm run format:check
+
 # Run tests
 npm test
 ```
 
 `npm test` includes axe-core accessibility assertions for the rendered `app-finder`, `app-card`, `app-categories`, and `dashboard` states covered by the component specs, so the existing CI test job fails on violations found in those checks. The shared jsdom helper currently disables axe's `color-contrast` rule because that rule needs browser APIs that are not reliably available in this test environment.
+
+`npm install` runs the Husky `prepare` script automatically. The pre-commit hook uses `lint-staged` to lint staged TypeScript and format staged TypeScript, HTML, and SCSS files under `src/`. The formatting scripts and CI check use that same source-only scope.
 
 ### Development Server
 
@@ -586,6 +594,8 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 - Use TypeScript strict mode
 - Write tests for new features
 - Do not commit focused tests such as `.only`, `fit`, or `fdescribe`; CI fails fast on them
+- Run `npm run lint` before opening a pull request
+- Run `npm run format:check` to verify source formatting before opening a pull request
 - Ensure accessibility (WCAG AA)
 - Keep axe-core component accessibility checks passing; they run as part of `npm test` for the covered component states, with `color-contrast` excluded in jsdom
 - Keep components small and focused

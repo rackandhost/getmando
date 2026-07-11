@@ -1,11 +1,11 @@
-import {Injectable, inject} from '@angular/core';
-import {signal, computed, Signal} from '@angular/core';
-import {DOCUMENT} from '@angular/common';
-import {Observable, fromEvent, BehaviorSubject} from 'rxjs';
-import {startWith, map} from 'rxjs/operators';
-import {toSignal} from '@angular/core/rxjs-interop';
+import { Injectable, inject } from '@angular/core';
+import { signal, computed, Signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Observable, fromEvent, BehaviorSubject } from 'rxjs';
+import { startWith, map } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
 
-import {SettingsService} from './settings.service';
+import { SettingsService } from './settings.service';
 
 /**
  * Theme type options
@@ -37,7 +37,9 @@ export class ThemeService {
 
   private readonly settings = toSignal(this.settingsService.settings$);
 
-  themeSubject: BehaviorSubject<ThemeMode> = new BehaviorSubject<ThemeMode>(this.currentThemeSignal());
+  themeSubject: BehaviorSubject<ThemeMode> = new BehaviorSubject<ThemeMode>(
+    this.currentThemeSignal(),
+  );
 
   /**
    * Observable streams for component consumption
@@ -193,7 +195,11 @@ export class ThemeService {
    * @returns Theme mode or 'auto' if not set
    */
   private getStoredThemeMode(): ThemeMode {
-    return localStorage.getItem(this.STORAGE_KEY) as ThemeMode || this.settings()?.theme || this.currentThemeSignal();
+    return (
+      (localStorage.getItem(this.STORAGE_KEY) as ThemeMode) ||
+      this.settings()?.theme ||
+      this.currentThemeSignal()
+    );
   }
 
   /**

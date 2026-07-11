@@ -10,17 +10,16 @@
       <button
         class="px-2 py-1 rounded-xl font-medium transition-all duration-300 hover:bg-white/10 border-b-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
         type="button"
-        [attr.aria-pressed]="selectedCategory()=== category.id"
-        [class.bg-white/10]="selectedCategory()=== category.id"
-        [class.border-white/50]="selectedCategory()=== category.id"
+        [attr.aria-pressed]="selectedCategory() === category.id"
+        [class.bg-white/10]="selectedCategory() === category.id"
+        [class.border-white/50]="selectedCategory() === category.id"
         [class.cursor-not-allowed]="haveSearch()"
         [class.cursor-pointer]="!haveSearch()"
         (click)="onCategoryChange(category.id)"
         [disabled]="haveSearch()"
-        >
-      {{ category.name }}
+      >
+        {{ category.name }}
       </button>
     }
   </div>
 </nav>
-

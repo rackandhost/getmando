@@ -1,6 +1,6 @@
-import {TestBed} from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 
-import {YamlParserService} from './yaml-parser.service';
+import { YamlParserService } from './yaml-parser.service';
 
 describe('YamlParserService', () => {
   let service: YamlParserService;

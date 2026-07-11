@@ -1,8 +1,8 @@
-import {Injectable, inject} from '@angular/core';
-import {Observable, combineLatest} from 'rxjs';
-import {map, tap, distinctUntilChanged} from 'rxjs/operators';
+import { Injectable, inject } from '@angular/core';
+import { Observable, combineLatest } from 'rxjs';
+import { map, distinctUntilChanged } from 'rxjs/operators';
 
-import {version} from '../../../../package.json';
+import { version } from '../../../../package.json';
 
 import {
   DashboardConfig,
@@ -12,12 +12,12 @@ import {
   FAVORITES_CATEGORY,
 } from '../models/dashboard.models';
 
-import {YamlLoaderService} from './yaml-loader.service';
-import {ConfigService} from './config.service';
-import {SearchService} from './search.service';
-import {CategoryService} from './category.service';
-import {BookmarkService} from './bookmark.service';
-import {LoggerService} from './logger.service';
+import { YamlLoaderService } from './yaml-loader.service';
+import { ConfigService } from './config.service';
+import { SearchService } from './search.service';
+import { CategoryService } from './category.service';
+import { BookmarkService } from './bookmark.service';
+import { LoggerService } from './logger.service';
 
 /**
  * Service for managing dashboard application state
@@ -51,9 +51,10 @@ export class AppService {
     ]),
   );
 
-
   constructor() {
-    this.yamlLoader.loadDashboardConfig().subscribe((config) => this.configService.fireNewSubject(config));
+    this.yamlLoader
+      .loadDashboardConfig()
+      .subscribe((config) => this.configService.fireNewSubject(config));
   }
 
   /**
@@ -64,7 +65,9 @@ export class AppService {
     this.searchService.searchQuery$,
     this.categoryService.selectedCategory$,
   ]).pipe(
-    map(([apps, query, category]) => this.searchService.filterApps(apps, query, category, query.trim() !== '')),
+    map(([apps, query, category]) =>
+      this.searchService.filterApps(apps, query, category, query.trim() !== ''),
+    ),
     distinctUntilChanged(),
   );
 
