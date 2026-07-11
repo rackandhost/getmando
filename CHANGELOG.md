@@ -7,6 +7,10 @@
 - **Sticky Header and Finder**: Header, finder, and categories now stay fixed while only the apps area scrolls, improving navigation when dealing with many applications.
 - **Production Logging Cleanup**: Replaced development-only `console.log` usage in dashboard initialization and config loading flows with a centralized logger service, while removing the dashboard click debug log from production code.
 
+### Performance
+
+- **OnPush Change Detection**: Enabled `ChangeDetectionStrategy.OnPush` across all application components and made theme and card visibility state signal-reactive so their rendered values remain current without unnecessary tree-wide change detection.
+
 ### CI / Tooling
 
 - **Release Notes Template**: Fixed the `create-release.yml` workflow to respect the `.github/release.yml` configuration when generating release notes. Previously the workflow called the GitHub API directly without passing `configuration_file_path` and `configuration_file_name`, causing the custom categories and exclusions to be ignored.
@@ -41,11 +45,18 @@
 - `src/app/core/services/logger.service.ts`
 - `src/app/core/services/logger.service.spec.ts`
 - `src/app/core/services/yaml-loader.service.ts`
+- `src/app/app.ts`
 - `src/app/shared/components/app-card/app-card.component.html`
 - `src/app/shared/components/app-card/app-card.component.spec.ts`
 - `src/app/shared/components/app-card/app-card.component.ts`
+- `src/app/shared/components/app-clock/app-clock.component.spec.ts`
+- `src/app/shared/components/app-clock/app-clock.component.ts`
 - `src/app/shared/components/app-categories/app-categories.component.spec.ts`
 - `src/app/shared/components/app-finder/app-finder.component.spec.ts`
+- `src/app/shared/components/app-footer/app-footer.component.ts`
+- `src/app/shared/components/app-header/app-header.component.spec.ts`
+- `src/app/shared/components/app-header/app-header.component.ts`
+- `src/app/shared/components/app-loading/app-loading.component.ts`
 - `src/app/views/dashboard/dashboard.component.html`
 - `src/app/views/dashboard/dashboard.component.spec.ts`
 - `src/app/views/dashboard/dashboard.component.ts`

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/angular';
+import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { BehaviorSubject } from 'rxjs';
 
@@ -101,6 +101,25 @@ describe('AppCardComponent', () => {
 
     expect(screen.queryByText('video')).not.toBeInTheDocument();
     expect(screen.queryByText('streaming')).not.toBeInTheDocument();
+  });
+
+  it('should update description and tag visibility when settings change after render', async () => {
+    await setup();
+
+    expect(screen.getByText('Media server')).toBeInTheDocument();
+    expect(screen.getByText('video')).toBeInTheDocument();
+
+    settingsSubject.next({
+      ...DEFAULT_DASHBOARD_CONFIG.settings,
+      showDescriptions: false,
+      showLabels: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Media server')).not.toBeInTheDocument();
+      expect(screen.queryByText('video')).not.toBeInTheDocument();
+      expect(screen.queryByText('streaming')).not.toBeInTheDocument();
+    });
   });
 
   it('should open the app in a new tab and emit appClick on click', async () => {

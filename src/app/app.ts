@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { DashboardComponent } from './views/dashboard/dashboard.component';
 
@@ -7,5 +7,6 @@ import { DashboardComponent } from './views/dashboard/dashboard.component';
   imports: [DashboardComponent],
   templateUrl: 'app.html',
   styleUrl: 'app.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {}
