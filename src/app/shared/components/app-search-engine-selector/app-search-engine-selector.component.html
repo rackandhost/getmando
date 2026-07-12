@@ -1,0 +1,61 @@
+<div class="app-search-engine-selector" (click)="close()">
+  <button
+    #trigger
+    aria-label="Select search engine"
+    aria-haspopup="listbox"
+    class="absolute z-10 top-4.5 left-4 flex items-center gap-2 text-neutral-900 dark:text-white/70 hover:text-neutral-950 dark:hover:text-white transition-colors cursor-pointer group"
+    [attr.aria-expanded]="isOpen()"
+    [disabled]="validEngines().length === 0"
+    (click)="toggle($event)"
+    (keydown)="onTriggerKeydown($event)"
+  >
+    @if (selectedEngine(); as engine) {
+      <ng-icon
+        class="text-lg transition-transform"
+        [class.text-white]="isOpen()"
+        [name]="engine.icon"
+      />
+    } @else {
+      <ng-icon class="text-2xl opacity-50 relative bottom-1" name="heroMagnifyingGlass" />
+    }
+  </button>
+
+  @if (engines().length > 0 && isOpen()) {
+    <ul
+      aria-label="Search engines"
+      class="absolute z-20 top-full left-4 mt-2 bg-white/95 text-black backdrop-blur-md border border-white/30 rounded-2xl shadow-2xl px-1 py-2 min-w-48"
+      role="listbox"
+      (keydown)="onListboxKeydown($event)"
+    >
+      <li
+        #option
+        class="px-4 py-2 cursor-pointer transition-colors hover:bg-black/5 focus-visible:outline-neutral-500! rounded-2xl flex items-center gap-2"
+        role="option"
+        [attr.aria-selected]="selectedEngine() === null"
+        [tabindex]="activeIndex() === 0 ? 0 : -1"
+        (click)="select(null)"
+        (keydown.enter)="select(null, $event)"
+        (keydown.space)="select(null, $event)"
+      >
+        <ng-icon name="heroMagnifyingGlass" />
+        <span class="text-gray-700">Search on your apps</span>
+      </li>
+
+      @for (engine of validEngines(); track engine.id; let index = $index) {
+        <li
+          #option
+          class="px-4 py-2 cursor-pointer transition-colors hover:bg-black/5 focus-visible:outline-neutral-500! rounded-2xl flex items-center gap-2"
+          role="option"
+          [attr.aria-selected]="selectedEngine()?.id === engine.id"
+          [tabindex]="activeIndex() === index + 1 ? 0 : -1"
+          (click)="select(engine)"
+          (keydown.enter)="select(engine, $event)"
+          (keydown.space)="select(engine, $event)"
+        >
+          <ng-icon [name]="engine.icon" />
+          <span class="text-gray-700">{{ engine.name }}</span>
+        </li>
+      }
+    </ul>
+  }
+</div>

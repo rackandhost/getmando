@@ -6,6 +6,7 @@
 
 - **Sticky Header and Finder**: Header, finder, and categories now stay fixed while only the apps area scrolls, improving navigation when dealing with many applications.
 - **Production Logging Cleanup**: Replaced development-only `console.log` usage in dashboard initialization and config loading flows with a centralized logger service, while removing the dashboard click debug log from production code.
+- **Accessible Search Engine Selector**: Extracted the selector into a focused component with keyboard navigation and predictable focus-based closing, while preserving the search query when a popup is blocked.
 
 ### Performance
 
