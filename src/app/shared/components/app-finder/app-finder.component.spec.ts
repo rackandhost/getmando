@@ -129,7 +129,7 @@ describe('AppFinderComponent', () => {
   it('should search with the selected engine on Enter and clear the query afterwards', async () => {
     const user = userEvent.setup();
     const googleEngine = DEFAULT_DASHBOARD_SEARCH_ENGINES[0];
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => window);
 
     await setup([googleEngine]);
 
@@ -145,6 +145,32 @@ describe('AppFinderComponent', () => {
       'https://www.google.com/search?q=home%20assistant',
       '_blank',
     );
+    expect(searchInput).toHaveValue('');
+  });
+
+  it('should preserve the query when an external search is blocked and clear it after retry', async () => {
+    const user = userEvent.setup();
+    const googleEngine = DEFAULT_DASHBOARD_SEARCH_ENGINES[0];
+    const windowOpenSpy = vi
+      .spyOn(window, 'open')
+      .mockImplementationOnce(() => null)
+      .mockImplementationOnce(() => window);
+
+    await setup([googleEngine]);
+
+    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('option', { name: googleEngine.name }));
+
+    const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
+
+    await user.type(searchInput, 'home assistant');
+    await user.keyboard('{Enter}');
+
+    expect(searchInput).toHaveValue('home assistant');
+
+    await user.keyboard('{Enter}');
+
+    expect(windowOpenSpy).toHaveBeenCalledTimes(2);
     expect(searchInput).toHaveValue('');
   });
 
