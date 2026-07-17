@@ -2,6 +2,8 @@ import { effect, Injectable, inject } from '@angular/core';
 import { signal, computed, Signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 
+import { LoggerService } from './logger.service';
+import { NotificationService } from './notification.service';
 import { SettingsService } from './settings.service';
 
 /**
@@ -25,6 +27,8 @@ export interface ThemeState {
 export class ThemeService {
   private readonly settingsService = inject(SettingsService);
   private readonly document = inject(DOCUMENT);
+  private readonly logger = inject(LoggerService);
+  private readonly notifications = inject(NotificationService);
 
   private readonly STORAGE_KEY = 'dashboard-theme';
 
@@ -180,7 +184,10 @@ export class ThemeService {
     try {
       localStorage.setItem(this.STORAGE_KEY, mode);
     } catch (error) {
-      console.warn('[ThemeService] Failed to save theme to localStorage:', error);
+      this.logger.warn('[ThemeService] Failed to save theme to localStorage', error);
+      this.notifications.warning(
+        'Unable to save your theme preference. Your selection will apply for this session.',
+      );
     }
   }
 
@@ -192,7 +199,10 @@ export class ThemeService {
     try {
       return (localStorage.getItem(this.STORAGE_KEY) as ThemeMode) || undefined;
     } catch (error) {
-      console.warn('[ThemeService] Failed to read theme from localStorage:', error);
+      this.logger.warn('[ThemeService] Failed to read theme from localStorage', error);
+      this.notifications.warning(
+        'Unable to load your saved theme preference. Using the configured theme.',
+      );
       return undefined;
     }
   }
