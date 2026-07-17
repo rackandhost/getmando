@@ -57,3 +57,10 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Design services around a single responsibility
 - Use the `providedIn: 'root'` option for singleton services
 - Use the `inject()` function instead of constructor injection
+
+## Error Handling
+
+- Send diagnostics through `LoggerService`; show concise, user-safe copy through `NotificationService`.
+- Retry only transient operations. The final fallback owns one notification, and producers must not duplicate it.
+- Treat the global error handler as a last resort for uncaught errors, not a replacement for local recovery.
+- Do not use raw `console` calls except for the documented last-resort fallback in the global error handler.
