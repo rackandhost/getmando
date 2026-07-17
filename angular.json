@@ -68,7 +68,17 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "setupFiles": ["test-setup.ts"]
+            "setupFiles": ["test-setup.ts"],
+            "coverage": true,
+            "coverageInclude": [
+              "src/app/core/services/**/*.ts",
+              "src/app/core/initializers/**/*.ts"
+            ],
+            "coverageExclude": ["**/*.spec.ts"],
+            "coverageReporters": ["text", "lcov", "html"],
+            "coverageThresholds": {
+              "statements": 70
+            }
           }
         },
         "lint": {
