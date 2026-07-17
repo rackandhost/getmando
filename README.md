@@ -590,6 +590,8 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ### Development Guidelines
 
+- Read [ARCHITECTURE.md](ARCHITECTURE.md) for the current system flows, ownership boundaries, and
+  change map.
 - Follow Angular best practices
 - Use TypeScript strict mode
 - Write tests for new features

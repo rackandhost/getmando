@@ -25,6 +25,8 @@
 
 ### Documentation
 
+- **Architecture Guide**: Added a current contributor architecture guide and linked it from the
+  README.
 - **Accessibility Testing Policy**: Documented that `npm test` includes axe-core accessibility checks for the covered component states, and that the jsdom helper excludes `color-contrast` until browser-level support is available.
 - **Linting Workflow**: Documented local linting, source-only formatting, and staged-file pre-commit automation.
 
