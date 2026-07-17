@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
 
 import { AppService } from './app.service';
 import { ConfigService } from './config.service';
@@ -23,6 +22,7 @@ describe('AppService', () => {
   let configState: ReturnType<typeof signal<DashboardConfig | undefined>>;
   let searchService: SearchService;
   let categoryService: CategoryService;
+  let loadDashboardConfig: ReturnType<typeof vi.fn>;
 
   const createConfig = (overrides: Partial<DashboardConfig> = {}): DashboardConfig => ({
     ...DEFAULT_DASHBOARD_CONFIG,
@@ -31,6 +31,7 @@ describe('AppService', () => {
 
   beforeEach(() => {
     configState = signal<DashboardConfig | undefined>(createConfig());
+    loadDashboardConfig = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
@@ -46,9 +47,7 @@ describe('AppService', () => {
         },
         {
           provide: YamlLoaderService,
-          useValue: {
-            loadDashboardConfig: () => of(createConfig()),
-          },
+          useValue: { loadDashboardConfig },
         },
         {
           provide: BookmarkService,
@@ -62,6 +61,11 @@ describe('AppService', () => {
     service = TestBed.inject(AppService);
     searchService = TestBed.inject(SearchService);
     categoryService = TestBed.inject(CategoryService);
+  });
+
+  it('performs no YAML I/O when constructed', () => {
+    expect(service).toBeTruthy();
+    expect(loadDashboardConfig).not.toHaveBeenCalled();
   });
 
   describe('apps$', () => {

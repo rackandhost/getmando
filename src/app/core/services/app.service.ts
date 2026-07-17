@@ -10,7 +10,6 @@ import {
   FAVORITES_CATEGORY,
 } from '../models/dashboard.models';
 
-import { YamlLoaderService } from './yaml-loader.service';
 import { ConfigService } from './config.service';
 import { SearchService } from './search.service';
 import { CategoryService } from './category.service';
@@ -24,7 +23,6 @@ import { LoggerService } from './logger.service';
 @Injectable({ providedIn: 'root' })
 export class AppService {
   private configService = inject(ConfigService);
-  private yamlLoader = inject(YamlLoaderService);
   private searchService = inject(SearchService);
   private categoryService = inject(CategoryService);
   private bookmarkService = inject(BookmarkService);
@@ -50,12 +48,6 @@ export class AppService {
       ).sort((a, b) => a.name.localeCompare(b.name)),
     ];
   });
-
-  constructor() {
-    this.yamlLoader
-      .loadDashboardConfig()
-      .subscribe((config) => this.configService.fireNewSubject(config));
-  }
 
   /**
    * Computed: Filtered apps based on search and category

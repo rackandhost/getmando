@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom, of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { defer, firstValueFrom, of, throwError } from 'rxjs';
 
 import { YamlLoaderService } from './yaml-loader.service';
 import { YamlParserService } from './yaml-parser.service';
 import { LoggerService } from './logger.service';
+import { NotificationService } from './notification.service';
 
 import { DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
@@ -21,6 +23,7 @@ describe('YamlLoaderService', () => {
     warn: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
+  let notifications: { warning: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     httpClient = {
@@ -37,6 +40,7 @@ describe('YamlLoaderService', () => {
       warn: vi.fn(),
       error: vi.fn(),
     };
+    notifications = { warning: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -44,11 +48,14 @@ describe('YamlLoaderService', () => {
         { provide: HttpClient, useValue: httpClient },
         { provide: YamlParserService, useValue: yamlParser },
         { provide: LoggerService, useValue: logger },
+        { provide: NotificationService, useValue: notifications },
       ],
     });
 
     service = TestBed.inject(YamlLoaderService);
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it('should log debug and info on successful config load', async () => {
     const config = {
@@ -73,6 +80,7 @@ describe('YamlLoaderService', () => {
 
     await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(config);
 
+    expect(httpClient.get).toHaveBeenCalledOnce();
     expect(logger.debug).toHaveBeenCalledWith('[YamlLoader] YAML content loaded successfully');
     expect(logger.info).toHaveBeenCalledWith('[YamlLoader] Dashboard config loaded:', {
       title: config.metadata.title,
@@ -83,8 +91,9 @@ describe('YamlLoaderService', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it('should log error and warn before falling back to default config', async () => {
-    const loadError = new Error('missing dashboard.yaml');
+  it('falls back immediately for a non-retryable HTTP error', async () => {
+    vi.useFakeTimers();
+    const loadError = new HttpErrorResponse({ status: 404 });
 
     httpClient.get.mockReturnValue(throwError(() => loadError));
 
@@ -98,26 +107,82 @@ describe('YamlLoaderService', () => {
     );
     expect(logger.warn).toHaveBeenCalledWith('[YamlLoader] Falling back to default configuration');
     expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
+    expect(notifications.warning).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it('falls back when parsing loaded YAML fails', async () => {
-    const parseError = new Error('invalid dashboard config');
-    httpClient.get.mockReturnValue(of('invalid-yaml'));
-    yamlParser.parseYamlOrThrow.mockImplementation(() => {
-      throw parseError;
-    });
+  it('retries transient HTTP failures after 250ms and 500ms before succeeding', async () => {
+    vi.useFakeTimers();
+    let attempts = 0;
+    httpClient.get.mockReturnValue(
+      defer(() => {
+        attempts++;
+        return attempts < 3
+          ? throwError(() => new HttpErrorResponse({ status: 503 }))
+          : of('yaml-content');
+      }),
+    );
+    yamlParser.parseYamlOrThrow.mockReturnValue(DEFAULT_DASHBOARD_CONFIG);
 
-    await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(
-      DEFAULT_DASHBOARD_CONFIG,
+    const result = firstValueFrom(service.loadDashboardConfig());
+    expect(attempts).toBe(1);
+    await vi.advanceTimersByTimeAsync(249);
+    expect(attempts).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(attempts).toBe(2);
+    await vi.advanceTimersByTimeAsync(499);
+    expect(attempts).toBe(2);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toEqual(DEFAULT_DASHBOARD_CONFIG);
+    expect(attempts).toBe(3);
+    expect(notifications.warning).not.toHaveBeenCalled();
+  });
+
+  it('retries transient HTTP failures three times before one fallback', async () => {
+    vi.useFakeTimers();
+    let attempts = 0;
+    httpClient.get.mockReturnValue(
+      defer(() => {
+        attempts++;
+        return throwError(() => new HttpErrorResponse({ status: 0 }));
+      }),
     );
 
-    expect(yamlParser.parseYamlOrThrow).toHaveBeenCalledWith('invalid-yaml');
-    expect(logger.error).toHaveBeenCalledWith(
-      '[YamlLoader] Failed to load dashboard config:',
-      parseError,
-    );
+    const result = firstValueFrom(service.loadDashboardConfig());
+    await vi.advanceTimersByTimeAsync(250 + 500 + 999);
+    expect(attempts).toBe(3);
+    expect(notifications.warning).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toEqual(DEFAULT_DASHBOARD_CONFIG);
+    expect(attempts).toBe(4);
+    expect(notifications.warning).toHaveBeenCalledOnce();
     expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
   });
+
+  it.each([new Error('invalid YAML syntax'), new Error('invalid Zod schema')])(
+    'does not retry parser failure: %s',
+    async (parseError) => {
+      httpClient.get.mockReturnValue(of('invalid-yaml'));
+      yamlParser.parseYamlOrThrow.mockImplementation(() => {
+        throw parseError;
+      });
+
+      await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(
+        DEFAULT_DASHBOARD_CONFIG,
+      );
+
+      expect(yamlParser.parseYamlOrThrow).toHaveBeenCalledWith('invalid-yaml');
+      expect(logger.error).toHaveBeenCalledWith(
+        '[YamlLoader] Failed to load dashboard config:',
+        parseError,
+      );
+      expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
+      expect(notifications.warning).toHaveBeenCalledOnce();
+      expect(httpClient.get).toHaveBeenCalledOnce();
+    },
+  );
 
   it('reports whether the config resource exists', async () => {
     httpClient.head.mockReturnValueOnce(of(undefined));
@@ -128,21 +193,5 @@ describe('YamlLoaderService', () => {
 
     expect(httpClient.head).toHaveBeenCalledTimes(2);
     expect(httpClient.head).toHaveBeenCalledWith('/config/dashboard.yaml');
-  });
-
-  it('uses the outer fallback if the delegated load unexpectedly errors', async () => {
-    const outerError = new Error('unexpected outer failure');
-    vi.spyOn(service, 'loadDashboardConfig').mockReturnValue(throwError(() => outerError));
-
-    await expect(firstValueFrom(service.loadDashboardConfigWithFallback())).resolves.toEqual(
-      DEFAULT_DASHBOARD_CONFIG,
-    );
-
-    expect(logger.error).toHaveBeenCalledWith(
-      '[YamlLoader] All attempts failed, using default config:',
-      outerError,
-    );
-    expect(httpClient.get).not.toHaveBeenCalled();
-    expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
   });
 });
