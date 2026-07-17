@@ -3,10 +3,14 @@ import { TestBed } from '@angular/core/testing';
 
 import { DashboardSettings, DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
+import { LoggerService } from './logger.service';
+import { NotificationService } from './notification.service';
 import { SettingsService } from './settings.service';
 import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
+  const logger = { warn: vi.fn() };
+  const notifications = { warning: vi.fn() };
   let settings: ReturnType<typeof signal<DashboardSettings>>;
   let mediaQuery: MediaQueryList;
   let systemThemeChange: ((event: MediaQueryListEvent) => void) | undefined;
@@ -23,6 +27,7 @@ describe('ThemeService', () => {
   });
 
   beforeEach(() => {
+    vi.clearAllMocks();
     originalMatchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
     localStorage.clear();
     document.documentElement.classList.remove('dark');
@@ -53,6 +58,8 @@ describe('ThemeService', () => {
           provide: SettingsService,
           useValue: { settings: settings.asReadonly() },
         },
+        { provide: LoggerService, useValue: logger },
+        { provide: NotificationService, useValue: notifications },
       ],
     });
   });
@@ -62,7 +69,6 @@ describe('ThemeService', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('Access denied', 'SecurityError');
     });
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const service = TestBed.inject(ThemeService);
     TestBed.flushEffects();
@@ -70,10 +76,17 @@ describe('ThemeService', () => {
     expect(service.getThemeMode()).toBe('dark');
     expect(service.getCurrentTheme()).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(warn).toHaveBeenCalledWith(
-      '[ThemeService] Failed to read theme from localStorage:',
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[ThemeService] Failed to read theme from localStorage',
       expect.objectContaining({ name: 'SecurityError' }),
     );
+    expect(notifications.warning).toHaveBeenCalledOnce();
+    expect(notifications.warning).toHaveBeenCalledWith(
+      'Unable to load your saved theme preference. Using the configured theme.',
+    );
+    expect(notifications.warning.mock.calls[0][0]).not.toContain('Access denied');
   });
 
   it('reconciles a delayed configured theme when no preference is stored', () => {
@@ -115,6 +128,8 @@ describe('ThemeService', () => {
     expect(localStorage.getItem('dashboard-theme')).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(notifications.warning).not.toHaveBeenCalled();
   });
 
   it('toggles explicit and resolved auto themes', () => {
@@ -154,15 +169,23 @@ describe('ThemeService', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw failure;
     });
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     service.setThemeMode('dark');
 
+    expect(service.getThemeMode()).toBe('dark');
     expect(service.getCurrentTheme()).toBe('dark');
-    expect(warn).toHaveBeenCalledWith(
-      '[ThemeService] Failed to save theme to localStorage:',
-      failure,
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[ThemeService] Failed to save theme to localStorage',
+      expect.objectContaining({ name: 'QuotaExceededError' }),
     );
+    expect(notifications.warning).toHaveBeenCalledOnce();
+    expect(notifications.warning).toHaveBeenCalledWith(
+      'Unable to save your theme preference. Your selection will apply for this session.',
+    );
+    expect(notifications.warning.mock.calls[0][0]).not.toContain('Quota exceeded');
   });
 
   it('watches system changes and removes the exact listener during cleanup', () => {
