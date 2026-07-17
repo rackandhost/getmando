@@ -99,4 +99,50 @@ describe('YamlLoaderService', () => {
     expect(logger.warn).toHaveBeenCalledWith('[YamlLoader] Falling back to default configuration');
     expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
   });
+
+  it('falls back when parsing loaded YAML fails', async () => {
+    const parseError = new Error('invalid dashboard config');
+    httpClient.get.mockReturnValue(of('invalid-yaml'));
+    yamlParser.parseYamlOrThrow.mockImplementation(() => {
+      throw parseError;
+    });
+
+    await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(
+      DEFAULT_DASHBOARD_CONFIG,
+    );
+
+    expect(yamlParser.parseYamlOrThrow).toHaveBeenCalledWith('invalid-yaml');
+    expect(logger.error).toHaveBeenCalledWith(
+      '[YamlLoader] Failed to load dashboard config:',
+      parseError,
+    );
+    expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
+  });
+
+  it('reports whether the config resource exists', async () => {
+    httpClient.head.mockReturnValueOnce(of(undefined));
+    await expect(firstValueFrom(service.configExists())).resolves.toBe(true);
+
+    httpClient.head.mockReturnValueOnce(throwError(() => new Error('not found')));
+    await expect(firstValueFrom(service.configExists())).resolves.toBe(false);
+
+    expect(httpClient.head).toHaveBeenCalledTimes(2);
+    expect(httpClient.head).toHaveBeenCalledWith('/config/dashboard.yaml');
+  });
+
+  it('uses the outer fallback if the delegated load unexpectedly errors', async () => {
+    const outerError = new Error('unexpected outer failure');
+    vi.spyOn(service, 'loadDashboardConfig').mockReturnValue(throwError(() => outerError));
+
+    await expect(firstValueFrom(service.loadDashboardConfigWithFallback())).resolves.toEqual(
+      DEFAULT_DASHBOARD_CONFIG,
+    );
+
+    expect(logger.error).toHaveBeenCalledWith(
+      '[YamlLoader] All attempts failed, using default config:',
+      outerError,
+    );
+    expect(httpClient.get).not.toHaveBeenCalled();
+    expect(yamlParser.getDefaultConfig).toHaveBeenCalledOnce();
+  });
 });
