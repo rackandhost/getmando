@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { ApplicationInitStatus, provideAppInitializer } from '@angular/core';
+import { firstValueFrom, of, throwError } from 'rxjs';
 
 import { initializeDashboard } from './dashboard.initializer';
 import { YamlLoaderService } from '../services/yaml-loader.service';
 import { AppService } from '../services/app.service';
 import { LoggerService } from '../services/logger.service';
+import { NotificationService } from '../services/notification.service';
 import { DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
 describe('initializeDashboard', () => {
@@ -19,6 +21,7 @@ describe('initializeDashboard', () => {
   let appService: {
     initializeConfig: ReturnType<typeof vi.fn>;
   };
+  let notifications: { error: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     logger = {
@@ -32,24 +35,29 @@ describe('initializeDashboard', () => {
     appService = {
       initializeConfig: vi.fn(),
     };
+    notifications = { error: vi.fn() };
 
     TestBed.configureTestingModule({
-      providers: [{ provide: LoggerService, useValue: logger }],
+      providers: [
+        { provide: LoggerService, useValue: logger },
+        { provide: YamlLoaderService, useValue: yamlLoader },
+        { provide: AppService, useValue: appService },
+        { provide: NotificationService, useValue: notifications },
+      ],
     });
   });
 
-  it('should initialize config and log success when the dashboard loads', async () => {
+  it('registers a supported initializer and initializes config exactly once', async () => {
     yamlLoader.loadDashboardConfig.mockReturnValue(of(DEFAULT_DASHBOARD_CONFIG));
+    TestBed.configureTestingModule({ providers: [provideAppInitializer(initializeDashboard)] });
 
-    const initializer = TestBed.runInInjectionContext(() =>
-      initializeDashboard(
-        yamlLoader as unknown as YamlLoaderService,
-        appService as unknown as AppService,
-      ),
-    );
+    const status = TestBed.inject(ApplicationInitStatus) as ApplicationInitStatus & {
+      runInitializers(): void;
+    };
+    status.runInitializers();
+    await status.donePromise;
 
-    await initializer();
-
+    expect(yamlLoader.loadDashboardConfig).toHaveBeenCalledOnce();
     expect(logger.debug).toHaveBeenCalledWith(
       '[AppInitializer] Starting dashboard initialization...',
     );
@@ -58,20 +66,17 @@ describe('initializeDashboard', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
-  it('should log and rethrow when dashboard initialization fails', async () => {
+  it('installs defaults and completes when an unexpected loader error escapes', async () => {
     const initError = new Error('load failed');
     yamlLoader.loadDashboardConfig.mockReturnValue(throwError(() => initError));
 
-    const initializer = TestBed.runInInjectionContext(() =>
-      initializeDashboard(
-        yamlLoader as unknown as YamlLoaderService,
-        appService as unknown as AppService,
-      ),
-    );
+    const result = TestBed.runInInjectionContext(() => firstValueFrom(initializeDashboard()));
 
-    await expect(initializer()).rejects.toThrow(initError);
+    await expect(result).resolves.toBeUndefined();
 
-    expect(appService.initializeConfig).not.toHaveBeenCalled();
+    expect(appService.initializeConfig).toHaveBeenCalledOnce();
+    expect(appService.initializeConfig).toHaveBeenCalledWith(DEFAULT_DASHBOARD_CONFIG);
+    expect(notifications.error).toHaveBeenCalledOnce();
     expect(logger.error).toHaveBeenCalledWith(
       '[AppInitializer] Failed to initialize dashboard:',
       initError,

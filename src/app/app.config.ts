@@ -1,14 +1,20 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import {
+  ApplicationConfig,
+  provideAppInitializer,
+  provideBrowserGlobalErrorListeners,
+} from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
 
-import { DASHBOARD_INITIALIZER_PROVIDER } from './core/initializers/dashboard.initializer';
+import { initializeDashboard } from './core/initializers/dashboard.initializer';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    provideHttpClient(),
     provideRouter(routes),
-    DASHBOARD_INITIALIZER_PROVIDER,
+    provideAppInitializer(initializeDashboard),
   ],
 };

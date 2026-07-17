@@ -1,9 +1,10 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { catchError, map, Observable, of, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { catchError, map, Observable, of, retry, tap, throwError, timer } from 'rxjs';
 
 import { YamlParserService } from './yaml-parser.service';
 import { LoggerService } from './logger.service';
+import { NotificationService } from './notification.service';
 
 import { DashboardConfig } from '../models/dashboard.models';
 
@@ -16,6 +17,7 @@ export class YamlLoaderService {
   private readonly http = inject(HttpClient);
   private readonly yamlParser = inject(YamlParserService);
   private readonly logger = inject(LoggerService);
+  private readonly notifications = inject(NotificationService);
 
   private readonly CONFIG_PATH = '/config/dashboard.yaml';
 
@@ -25,6 +27,13 @@ export class YamlLoaderService {
    */
   loadDashboardConfig(): Observable<DashboardConfig> {
     return this.http.get(this.CONFIG_PATH, { responseType: 'text' }).pipe(
+      retry({
+        count: 3,
+        delay: (error: unknown, retryCount) =>
+          this.isTransientHttpError(error)
+            ? timer(250 * 2 ** (retryCount - 1))
+            : throwError(() => error),
+      }),
       tap(() => {
         this.logger.debug('[YamlLoader] YAML content loaded successfully');
       }),
@@ -42,19 +51,7 @@ export class YamlLoaderService {
       catchError((error) => {
         this.logger.error('[YamlLoader] Failed to load dashboard config:', error);
         this.logger.warn('[YamlLoader] Falling back to default configuration');
-        return of(this.yamlParser.getDefaultConfig());
-      }),
-    );
-  }
-
-  /**
-   * Load dashboard configuration with explicit error handling
-   * @returns Observable of DashboardConfig
-   */
-  loadDashboardConfigWithFallback(): Observable<DashboardConfig> {
-    return this.loadDashboardConfig().pipe(
-      catchError((error) => {
-        this.logger.error('[YamlLoader] All attempts failed, using default config:', error);
+        this.notifications.warning('Dashboard configuration could not be loaded. Using defaults.');
         return of(this.yamlParser.getDefaultConfig());
       }),
     );
@@ -68,6 +65,16 @@ export class YamlLoaderService {
     return this.http.head(this.CONFIG_PATH).pipe(
       map(() => true),
       catchError(() => of(false)),
+    );
+  }
+
+  private isTransientHttpError(error: unknown): error is HttpErrorResponse {
+    return (
+      error instanceof HttpErrorResponse &&
+      (error.status === 0 ||
+        error.status === 408 ||
+        error.status === 429 ||
+        (error.status >= 500 && error.status < 600))
     );
   }
 }
