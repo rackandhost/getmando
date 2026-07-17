@@ -12,6 +12,7 @@
     "prepare": "husky",
     "pretest": "npm run test:focused-tests",
     "test": "ng test",
+    "test:coverage": "ng test --coverage --watch=false",
     "check:focused-tests": "node scripts/check-focused-tests.mjs",
     "test:focused-tests": "vitest run scripts/check-focused-tests.test.mjs"
   },
@@ -53,10 +54,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@angular-eslint/builder": "^21.4.0",
     "@angular/build": "^21.1.4",
     "@angular/cli": "^21.1.4",
     "@angular/compiler-cli": "^21.1.0",
-    "@angular-eslint/builder": "^21.4.0",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@testing-library/angular": "^19.1.0",
@@ -65,8 +66,9 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.0.7",
-    "axe-core": "^4.11.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "angular-eslint": "^21.4.0",
+    "axe-core": "^4.11.0",
     "eslint": "^9.39.1",
     "husky": "^9.1.7",
     "jsdom": "^27.1.0",
