@@ -40,6 +40,26 @@ describe('CategoryService', () => {
   });
 
   describe('categories$', () => {
+    it('publishes no categories before config is available', () => {
+      configSubject.set(undefined);
+
+      expect(service.categories()).toEqual([]);
+    });
+
+    it('publishes bookmarks first when it is the only enabled virtual category', () => {
+      configSubject.set(
+        createConfig({
+          categories: [],
+          settings: {
+            ...DEFAULT_DASHBOARD_CONFIG.settings,
+            showAllCategory: false,
+            allowBookmarks: true,
+          },
+        }),
+      );
+
+      expect(service.categories()).toEqual([BOOKMARKS_CATEGORY]);
+    });
     it('should prepend FAVORITES_CATEGORY as the first category when at least one app is favorited', async () => {
       configSubject.set(
         createConfig({
@@ -138,6 +158,11 @@ describe('CategoryService', () => {
   });
 
   describe('selectedCategory$ fallback', () => {
+    it('publishes direct selections while they remain valid', () => {
+      service.setSelectedCategory(APP_CATEGORY.id);
+
+      expect(service.selectedCategory()).toBe(APP_CATEGORY.id);
+    });
     it('should auto-select the first visible category when the current selection disappears', async () => {
       configSubject.set(
         createConfig({

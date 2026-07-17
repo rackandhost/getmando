@@ -65,6 +65,23 @@ describe('AppService', () => {
   });
 
   describe('apps$', () => {
+    it('publishes configured applications without bookmarks when bookmarks are disabled', () => {
+      const app = {
+        id: 'plex',
+        name: 'Plex',
+        description: '',
+        url: 'https://plex.example.com',
+        icon: { type: 'name' as const, value: 'plex' },
+        category: 'media',
+        openNewTab: true,
+        tags: [],
+        favorite: false,
+      };
+      configState.set(createConfig({ applications: [app] }));
+
+      expect(service.apps()).toEqual([app]);
+      expect(service.config).toBe(configState());
+    });
     it('should assign favorite: false to bookmarks when allowBookmarks is true', async () => {
       const bookmarkServiceMock = TestBed.inject(BookmarkService);
       (
@@ -107,6 +124,45 @@ describe('AppService', () => {
       expect(apps[0].favorite).toBe(false);
       expect(apps[0].category).toBe(BOOKMARKS_CATEGORY.id);
     });
+  });
+
+  it('delegates search and category setters', () => {
+    const searchSpy = vi.spyOn(searchService, 'setSearchQuery');
+    const categorySpy = vi.spyOn(categoryService, 'setSelectedCategory');
+
+    service.setSearchQuery('plex');
+    service.setSelectedCategory('media');
+
+    expect(searchSpy).toHaveBeenCalledWith('plex');
+    expect(categorySpy).toHaveBeenCalledWith('media');
+  });
+
+  it('delegates filtering with the current app, query, category, and search state', () => {
+    const filterSpy = vi.spyOn(searchService, 'filterApps').mockReturnValue([]);
+    searchService.setSearchQuery('plex');
+    categoryService.setSelectedCategory('media');
+
+    expect(service.filteredApps()).toEqual([]);
+    expect(filterSpy).toHaveBeenCalledWith(service.apps(), 'plex', 'media', true);
+  });
+
+  it('finds configured apps by id and returns undefined for missing ids', () => {
+    const app = {
+      id: 'plex',
+      name: 'Plex',
+      description: '',
+      url: 'https://plex.example.com',
+      icon: { type: 'name' as const, value: 'plex' },
+      category: 'media',
+      openNewTab: true,
+      tags: [],
+      favorite: false,
+    };
+    configState.set(createConfig({ applications: [app] }));
+
+    expect(service.getAppById('plex')).toBe(app);
+    expect(service.getAppById('missing')).toBeUndefined();
+    expect(service.getAppsByCategory('media')).toEqual([app]);
   });
 
   describe('getAppsByCategory', () => {
