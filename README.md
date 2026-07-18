@@ -6,13 +6,12 @@
   <em>A simply and beautiful dashboard</em>
 </p>
 
-![Version](https://img.shields.io/badge/version-1.0.1-blue)
+![Version](https://badgen.net/github/release/rackandhost/getmando/stable)
 ![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
+![Github stars](https://badgen.net/github/stars/rackandhost/getmando?icon=github&label=stars)
+![Github last-commit](https://img.shields.io/github/last-commit/rackandhost/getmando)
 ![Github last-commit](https://badgen.net/github/license/rackandhost/getmando)
-
-> **✅ STABLE RELEASE**  
-> This project has reached **v1.0.1** and is considered stable for production use. The core API is now finalized. Feedback and bug reports are still highly appreciated!
 
 ---
 
@@ -489,8 +488,10 @@ settings:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22 LTS (recommended; matches the version used in CI)
 - npm 11+
+
+GitHub Actions CI runs on Node.js 22 LTS, and using the same version locally is recommended.
 
 ### Setup
 
@@ -508,9 +509,19 @@ npm start
 # Build for production
 npm run build
 
+# Run lint checks
+npm run lint
+
+# Check source formatting
+npm run format:check
+
 # Run tests
 npm test
 ```
+
+`npm test` includes axe-core accessibility assertions for the rendered `app-finder`, `app-card`, `app-categories`, and `dashboard` states covered by the component specs, so the existing CI test job fails on violations found in those checks. The shared jsdom helper currently disables axe's `color-contrast` rule because that rule needs browser APIs that are not reliably available in this test environment.
+
+`npm install` runs the Husky `prepare` script automatically. The pre-commit hook uses `lint-staged` to lint staged TypeScript and format staged TypeScript, HTML, and SCSS files under `src/`. The formatting scripts and CI check use that same source-only scope.
 
 ### Development Server
 
@@ -553,7 +564,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Release (v1.0.1)
+### Current Release (v1.1.0)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering
@@ -579,10 +590,16 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ### Development Guidelines
 
+- Read [ARCHITECTURE.md](ARCHITECTURE.md) for the current system flows, ownership boundaries, and
+  change map.
 - Follow Angular best practices
 - Use TypeScript strict mode
 - Write tests for new features
+- Do not commit focused tests such as `.only`, `fit`, or `fdescribe`; CI fails fast on them
+- Run `npm run lint` before opening a pull request
+- Run `npm run format:check` to verify source formatting before opening a pull request
 - Ensure accessibility (WCAG AA)
+- Keep axe-core component accessibility checks passing; they run as part of `npm test` for the covered component states, with `color-contrast` excluded in jsdom
 - Keep components small and focused
 
 ---
@@ -607,6 +624,17 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
 
+---
+
+## ⭐ Star History
+
+<a href="https://www.star-history.com/?type=date&legend=top-left&repos=rackandhost%2Fgetmando">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&theme=dark&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
+ </picture>
+</a>
 ---
 
 <div align="center">

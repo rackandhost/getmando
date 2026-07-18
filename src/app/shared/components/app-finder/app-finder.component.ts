@@ -1,30 +1,23 @@
-import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {toSignal} from '@angular/core/rxjs-interop';
-import {NgIcon, provideIcons} from '@ng-icons/core';
-import {heroChevronDown, heroMagnifyingGlass, heroXMark, heroArrowRight} from '@ng-icons/heroicons/outline';
-import {simpleYoutube, simpleGoogle, simpleDuckduckgo, simpleStartpage} from '@ng-icons/simple-icons';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowRight, heroXMark } from '@ng-icons/heroicons/outline';
 
-import {AppService} from '../../../core/services/app.service';
-import {SearchService} from '../../../core/services/search.service';
+import { AppService } from '../../../core/services/app.service';
+import { SearchService } from '../../../core/services/search.service';
 
-import {SearchEngine} from '../../../core/models/dashboard.models';
+import { SearchEngine } from '../../../core/models/dashboard.models';
+import { AppSearchEngineSelectorComponent } from '../app-search-engine-selector/app-search-engine-selector.component';
 
 @Component({
   selector: 'app-finder',
-  standalone: true,
-  imports: [CommonModule, NgIcon],
+  imports: [NgIcon, AppSearchEngineSelectorComponent],
   templateUrl: 'app-finder.component.html',
-  viewProviders: [provideIcons({
-    heroMagnifyingGlass,
-    heroXMark,
-    heroChevronDown,
-    simpleYoutube,
-    simpleGoogle,
-    simpleDuckduckgo,
-    simpleStartpage,
-    heroArrowRight
-  })],
+  viewProviders: [
+    provideIcons({
+      heroXMark,
+      heroArrowRight,
+    }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppFinderComponent {
@@ -33,17 +26,10 @@ export class AppFinderComponent {
 
   protected readonly searchQuery = signal('');
   protected readonly selectedEngine = signal<SearchEngine | null>(null);
-  protected readonly isEngineDropdownOpen = signal(false);
-
-  private readonly searchEngines = toSignal(this.searchService.searchEngines$, {
-    initialValue: [],
-  });
 
   protected readonly haveSearch = computed(() => this.searchQuery().trim() !== '');
-  protected readonly availableEngines = computed(() => this.searchEngines());
-  protected readonly currentEngine = computed(
-    () => this.selectedEngine() ?? null,
-  );
+  protected readonly availableEngines = computed(() => this.searchService.searchEngines());
+  protected readonly currentEngine = computed(() => this.selectedEngine() ?? null);
 
   get inputPlaceholder(): string {
     if (this.currentEngine()) {
@@ -71,8 +57,12 @@ export class AppFinderComponent {
 
     if (!query || !engine) return;
 
-    window.open(engine.searchUrl.replace('{query}', encodeURIComponent(query)), '_blank');
-    this.onHandleResetSearch();
+    const openedWindow = window.open(
+      engine.searchUrl.replace('{query}', encodeURIComponent(query)),
+      '_blank',
+    );
+
+    if (openedWindow) this.onHandleResetSearch();
   }
 
   /**
@@ -85,34 +75,12 @@ export class AppFinderComponent {
   }
 
   /**
-   * Toggle engine dropdown
-   */
-  onToggleEngineDropdown(event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.isEngineDropdownOpen.update((isOpen) => !isOpen);
-  }
-
-  /**
    * Select a search engine
    */
-  onSelectEngine(engine?: SearchEngine): void {
+  onSelectEngine(engine: SearchEngine | null): void {
     this.onHandleResetSearch();
 
-    if (!engine) {
-      this.selectedEngine.set(null);
-    } else {
-      this.selectedEngine.set(engine);
-    }
-
-    this.isEngineDropdownOpen.set(false);
-  }
-
-  /**
-   * Close dropdown
-   */
-  onCloseDropdown(): void {
-    this.isEngineDropdownOpen.set(false);
+    this.selectedEngine.set(engine);
   }
 
   /**

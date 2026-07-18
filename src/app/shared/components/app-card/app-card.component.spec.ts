@@ -1,17 +1,17 @@
-import {render, screen} from '@testing-library/angular';
+import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import {BehaviorSubject} from 'rxjs';
+import { signal } from '@angular/core';
 
-import {AppCardComponent} from './app-card.component';
+import { AppCardComponent } from './app-card.component';
 
-import {AppService} from '../../../core/services/app.service';
-import {IconService} from '../../../core/services/icon.service';
-import {SettingsService} from '../../../core/services/settings.service';
+import { IconService } from '../../../core/services/icon.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
-import {DEFAULT_DASHBOARD_CONFIG, SelfhostedApp} from '../../../core/models/dashboard.models';
+import { DEFAULT_DASHBOARD_CONFIG, SelfhostedApp } from '../../../core/models/dashboard.models';
+import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppCardComponent', () => {
-  const settingsSubject = new BehaviorSubject(DEFAULT_DASHBOARD_CONFIG.settings);
+  const settingsState = signal(DEFAULT_DASHBOARD_CONFIG.settings);
   const iconServiceMock = {
     getIconUrl: vi.fn((app: SelfhostedApp) => `https://example.com/icons/${app.id}.png`),
   };
@@ -35,7 +35,7 @@ describe('AppCardComponent', () => {
     app: SelfhostedApp = appFixture,
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
   ) => {
-    settingsSubject.next(settings);
+    settingsState.set(settings);
     iconServiceMock.getIconUrl.mockClear();
 
     const view = await render(AppCardComponent, {
@@ -44,17 +44,13 @@ describe('AppCardComponent', () => {
       },
       providers: [
         {
-          provide: AppService,
-          useValue: {},
-        },
-        {
           provide: IconService,
           useValue: iconServiceMock,
         },
         {
           provide: SettingsService,
           useValue: {
-            settingsSubject,
+            settings: settingsState,
           },
         },
       ],
@@ -71,12 +67,21 @@ describe('AppCardComponent', () => {
     await setup();
 
     expect(iconServiceMock.getIconUrl).toHaveBeenCalledWith(appFixture);
-    expect(screen.getByRole('button', {name: 'Open Plex'})).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
     expect(screen.getByText('Plex')).toBeInTheDocument();
     expect(screen.getByText('Media server')).toBeInTheDocument();
     expect(screen.getByText('video')).toBeInTheDocument();
     expect(screen.getByText('streaming')).toBeInTheDocument();
-    expect(screen.getByAltText('Plex icon')).toHaveAttribute('src', 'https://example.com/icons/plex.png');
+    expect(screen.getByAltText('Plex icon')).toHaveAttribute(
+      'src',
+      'https://example.com/icons/plex.png',
+    );
+  });
+
+  it('should have no accessibility violations', async () => {
+    const view = await setup();
+
+    await expectNoAxeViolations(view.container);
   });
 
   it('should not render the description when showDescriptions is disabled', async () => {
@@ -98,6 +103,25 @@ describe('AppCardComponent', () => {
     expect(screen.queryByText('streaming')).not.toBeInTheDocument();
   });
 
+  it('should update description and tag visibility when settings change after render', async () => {
+    await setup();
+
+    expect(screen.getByText('Media server')).toBeInTheDocument();
+    expect(screen.getByText('video')).toBeInTheDocument();
+
+    settingsState.set({
+      ...DEFAULT_DASHBOARD_CONFIG.settings,
+      showDescriptions: false,
+      showLabels: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Media server')).not.toBeInTheDocument();
+      expect(screen.queryByText('video')).not.toBeInTheDocument();
+      expect(screen.queryByText('streaming')).not.toBeInTheDocument();
+    });
+  });
+
   it('should open the app in a new tab and emit appClick on click', async () => {
     const user = userEvent.setup();
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
@@ -106,7 +130,7 @@ describe('AppCardComponent', () => {
 
     view.fixture.componentInstance.appClick.subscribe(appClickSpy);
 
-    await user.click(screen.getByRole('button', {name: 'Open Plex'}));
+    await user.click(screen.getByRole('button', { name: 'Open Plex' }));
 
     expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
     expect(appClickSpy).toHaveBeenCalledWith(appFixture);
@@ -121,7 +145,7 @@ describe('AppCardComponent', () => {
       openNewTab: false,
     });
 
-    await user.click(screen.getByRole('button', {name: 'Open Plex'}));
+    await user.click(screen.getByRole('button', { name: 'Open Plex' }));
 
     expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_self');
   });
@@ -134,7 +158,7 @@ describe('AppCardComponent', () => {
 
     view.fixture.componentInstance.appClick.subscribe(appClickSpy);
 
-    const appCard = screen.getByRole('button', {name: 'Open Plex'});
+    const appCard = screen.getByRole('button', { name: 'Open Plex' });
     appCard.focus();
 
     await user.keyboard('{Enter}');
@@ -146,17 +170,17 @@ describe('AppCardComponent', () => {
   });
 
   it('should support keyboard activation with Space', async () => {
+    const user = userEvent.setup();
     const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     const view = await setup();
     const appClickSpy = vi.fn();
 
     view.fixture.componentInstance.appClick.subscribe(appClickSpy);
 
-    const appCard = screen.getByRole('button', {name: 'Open Plex'});
+    const appCard = screen.getByRole('button', { name: 'Open Plex' });
     appCard.focus();
 
-    appCard.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', code: 'Space', bubbles: true, cancelable: true}));
-    appCard.dispatchEvent(new KeyboardEvent('keyup', {key: ' ', code: 'Space', bubbles: true}));
+    await user.keyboard(' ');
 
     expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
     expect(windowOpenSpy).toHaveBeenCalledTimes(1);

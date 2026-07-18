@@ -1,46 +1,46 @@
-import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject} from 'rxjs';
-import {map} from 'rxjs/operators';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 
-import {APP_CATEGORY, BOOKMARKS_CATEGORY, FAVORITES_CATEGORY, Category} from '../models/dashboard.models';
+import {
+  APP_CATEGORY,
+  BOOKMARKS_CATEGORY,
+  FAVORITES_CATEGORY,
+  Category,
+} from '../models/dashboard.models';
 
-import {ConfigService} from './config.service';
+import { ConfigService } from './config.service';
 
 @Injectable({ providedIn: 'root' })
 export class CategoryService {
   private configService = inject(ConfigService);
 
-  private readonly selectedCategorySubject = new BehaviorSubject<string>(APP_CATEGORY.id);
+  private readonly selectedCategoryState = signal(APP_CATEGORY.id);
+  readonly selectedCategory = this.selectedCategoryState.asReadonly();
+  readonly categories = computed(() => {
+    const config = this.configService.config();
+    if (!config) return [];
+    const categories: Category[] = [];
 
-  readonly categories$ = this.configService.config$.pipe(
-    map((config) => {
-      const categories: Category[] = [];
+    if (config.applications.some((app) => app.favorite)) {
+      categories.push(FAVORITES_CATEGORY);
+    }
 
-      if (config.applications.some((app) => app.favorite)) {
-        categories.push(FAVORITES_CATEGORY);
-      }
+    if (config.settings.showAllCategory) {
+      categories.push(APP_CATEGORY);
+    }
 
-      if (config.settings.showAllCategory) {
-        categories.push(APP_CATEGORY);
-      }
+    if (config.settings.allowBookmarks) {
+      categories.push(BOOKMARKS_CATEGORY);
+    }
 
-      if (config.settings.allowBookmarks) {
-        categories.push(BOOKMARKS_CATEGORY);
-      }
-
-      return [
-        ...categories,
-        ...config.categories.sort((a, b) => a.name.localeCompare(b.name)),
-      ];
-    }),
-  );
-  readonly selectedCategory$ = this.selectedCategorySubject.asObservable();
+    return [...categories, ...config.categories.sort((a, b) => a.name.localeCompare(b.name))];
+  });
 
   constructor() {
-    this.categories$.subscribe((categories) => {
+    effect(() => {
+      const categories = this.categories();
       const ids = categories.map((c) => c.id);
-      if (!ids.includes(this.selectedCategorySubject.value) && categories.length > 0) {
-        this.selectedCategorySubject.next(categories[0].id);
+      if (!ids.includes(this.selectedCategory()) && categories.length > 0) {
+        this.selectedCategoryState.set(categories[0].id);
       }
     });
   }
@@ -50,6 +50,6 @@ export class CategoryService {
    * @param categoryId - Category ID
    */
   setSelectedCategory(categoryId: string): void {
-    this.selectedCategorySubject.next(categoryId);
+    this.selectedCategoryState.set(categoryId);
   }
 }

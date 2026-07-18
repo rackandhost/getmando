@@ -1,0 +1,158 @@
+:host {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  width: min(24rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.toast-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.toast {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.125rem;
+  color: #171717;
+  background: rgb(255 255 255 / 82%);
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 18%);
+  backdrop-filter: blur(24px);
+  pointer-events: auto;
+  transition:
+    transform 200ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease;
+}
+
+.toast::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 auto 0 0;
+  width: 0.3rem;
+  background: var(--toast-accent);
+  box-shadow: 0 0 1.5rem var(--toast-accent);
+  content: '';
+}
+
+.toast:hover {
+  transform: translateY(-0.125rem);
+  border-color: rgb(255 255 255 / 65%);
+  background: rgb(255 255 255 / 88%);
+}
+
+.toast-error {
+  --toast-accent: #b91c1c;
+}
+
+.toast-warning {
+  --toast-accent: #92400e;
+}
+
+.toast-info {
+  --toast-accent: #0369a1;
+}
+
+.toast-success {
+  --toast-accent: #166534;
+}
+
+.toast-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.toast-level {
+  display: inline-flex;
+  margin-bottom: 0.3rem;
+  color: currentcolor;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.toast-message {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.toast-dismiss {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.toast-dismiss:hover {
+  border-color: rgb(0 0 0 / 8%);
+  background: rgb(255 255 255 / 25%);
+}
+
+.toast-dismiss:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 2px;
+}
+
+:host-context(.dark) .toast {
+  color: rgb(255 255 255 / 92%);
+  background: rgb(255 255 255 / 10%);
+  border-color: rgb(255 255 255 / 20%);
+}
+
+:host-context(.dark) .toast-error {
+  --toast-accent: #f87171;
+}
+
+:host-context(.dark) .toast-warning {
+  --toast-accent: #facc15;
+}
+
+:host-context(.dark) .toast-info {
+  --toast-accent: #38bdf8;
+}
+
+:host-context(.dark) .toast-success {
+  --toast-accent: #4ade80;
+}
+
+:host-context(.dark) .toast:hover {
+  border-color: rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 15%);
+}
+
+:host-context(.dark) .toast-dismiss:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  :host {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: calc(100vw - 1.5rem);
+  }
+}

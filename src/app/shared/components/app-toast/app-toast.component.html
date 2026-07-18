@@ -1,0 +1,28 @@
+<div class="toast-stack" aria-label="Notifications">
+  @for (notification of notifications(); track notification.id) {
+    <div
+      class="toast"
+      [class.toast-error]="notification.level === 'error'"
+      [class.toast-warning]="notification.level === 'warning'"
+      [class.toast-info]="notification.level === 'info'"
+      [class.toast-success]="notification.level === 'success'"
+      [attr.role]="notification.level === 'error' ? 'alert' : 'status'"
+    >
+      <div class="toast-content">
+        <strong class="toast-level">{{ notification.level }}</strong>
+        <p class="toast-message">{{ notification.message }}</p>
+      </div>
+      <button
+        #dismissButton
+        class="toast-dismiss"
+        type="button"
+        [attr.aria-label]="
+          'Dismiss ' + notification.level + ' notification: ' + notification.message
+        "
+        (click)="dismiss(notification.id)"
+      >
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+  }
+</div>

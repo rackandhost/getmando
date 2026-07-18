@@ -36,10 +36,13 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 
 ## State Management
 
-- Use signals for local component state
+- Use signals for component-local state, derived state, and synchronous application or UI state
 - Use `computed()` for derived state
 - Keep state transformations pure and predictable
 - Do NOT use `mutate` on signals, use `update` or `set` instead
+- Use RxJS for genuinely asynchronous streams such as HTTP, browser events, debouncing, or multi-source async orchestration
+- Do not use `BehaviorSubject` as a general-purpose state container; expose readonly signals and update state through service methods
+- Use `toSignal()` only at a component or service boundary that consumes a genuine RxJS stream
 
 ## Templates
 
@@ -54,3 +57,10 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Design services around a single responsibility
 - Use the `providedIn: 'root'` option for singleton services
 - Use the `inject()` function instead of constructor injection
+
+## Error Handling
+
+- Send diagnostics through `LoggerService`; show concise, user-safe copy through `NotificationService`.
+- Retry only transient operations. The final fallback owns one notification, and producers must not duplicate it.
+- Treat the global error handler as a last resort for uncaught errors, not a replacement for local recovery.
+- Do not use raw `console` calls except for the documented last-resort fallback in the global error handler.

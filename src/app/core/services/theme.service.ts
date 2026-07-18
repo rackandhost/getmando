@@ -1,11 +1,10 @@
-import {Injectable, inject} from '@angular/core';
-import {signal, computed, Signal} from '@angular/core';
-import {DOCUMENT} from '@angular/common';
-import {Observable, fromEvent, BehaviorSubject} from 'rxjs';
-import {startWith, map} from 'rxjs/operators';
-import {toSignal} from '@angular/core/rxjs-interop';
+import { effect, Injectable, inject } from '@angular/core';
+import { signal, computed, Signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 
-import {SettingsService} from './settings.service';
+import { LoggerService } from './logger.service';
+import { NotificationService } from './notification.service';
+import { SettingsService } from './settings.service';
 
 /**
  * Theme type options
@@ -28,28 +27,15 @@ export interface ThemeState {
 export class ThemeService {
   private readonly settingsService = inject(SettingsService);
   private readonly document = inject(DOCUMENT);
+  private readonly logger = inject(LoggerService);
+  private readonly notifications = inject(NotificationService);
 
   private readonly STORAGE_KEY = 'dashboard-theme';
 
   // Reactive state with signals
   private readonly themeModeSignal = signal<ThemeMode>('auto');
   private readonly currentThemeSignal = signal<'light' | 'dark'>('light');
-
-  private readonly settings = toSignal(this.settingsService.settings$);
-
-  themeSubject: BehaviorSubject<ThemeMode> = new BehaviorSubject<ThemeMode>(this.currentThemeSignal());
-
-  /**
-   * Observable streams for component consumption
-   */
-  readonly themeMode$: Observable<ThemeMode> = fromEvent<StorageEvent>(window, 'storage').pipe(
-    startWith({ key: this.STORAGE_KEY } as StorageEvent),
-    map(() => this.getStoredThemeMode() || 'auto'),
-  );
-
-  readonly isDark$: Observable<boolean> = this.themeMode$.pipe(
-    map((mode) => this.isDarkMode(mode)),
-  );
+  private hasUserPreference = false;
 
   // Signal-based API (preferred in Angular 21)
   readonly themeMode: Signal<ThemeMode> = this.themeModeSignal.asReadonly();
@@ -66,8 +52,22 @@ export class ThemeService {
    */
   private initializeTheme(): void {
     const storedMode = this.getStoredThemeMode();
-    this.themeModeSignal.set(storedMode);
-    this.applyTheme(storedMode);
+
+    if (storedMode) {
+      this.hasUserPreference = true;
+      this.themeModeSignal.set(storedMode);
+      this.applyTheme(storedMode);
+      return;
+    }
+
+    effect(() => {
+      const configuredMode = this.settingsService.settings().theme;
+
+      if (!this.hasUserPreference) {
+        this.themeModeSignal.set(configuredMode);
+        this.applyTheme(configuredMode);
+      }
+    });
   }
 
   /**
@@ -91,8 +91,8 @@ export class ThemeService {
    * @param mode - Theme mode to set
    */
   setThemeMode(mode: ThemeMode): void {
+    this.hasUserPreference = true;
     this.themeModeSignal.set(mode);
-    this.themeSubject.next(mode);
     this.saveThemeMode(mode);
     this.applyTheme(mode);
   }
@@ -184,7 +184,10 @@ export class ThemeService {
     try {
       localStorage.setItem(this.STORAGE_KEY, mode);
     } catch (error) {
-      console.warn('[ThemeService] Failed to save theme to localStorage:', error);
+      this.logger.warn('[ThemeService] Failed to save theme to localStorage', error);
+      this.notifications.warning(
+        'Unable to save your theme preference. Your selection will apply for this session.',
+      );
     }
   }
 
@@ -192,8 +195,16 @@ export class ThemeService {
    * Get stored theme mode from localStorage
    * @returns Theme mode or 'auto' if not set
    */
-  private getStoredThemeMode(): ThemeMode {
-    return localStorage.getItem(this.STORAGE_KEY) as ThemeMode || this.settings()?.theme || this.currentThemeSignal();
+  private getStoredThemeMode(): ThemeMode | undefined {
+    try {
+      return (localStorage.getItem(this.STORAGE_KEY) as ThemeMode) || undefined;
+    } catch (error) {
+      this.logger.warn('[ThemeService] Failed to read theme from localStorage', error);
+      this.notifications.warning(
+        'Unable to load your saved theme preference. Using the configured theme.',
+      );
+      return undefined;
+    }
   }
 
   /**

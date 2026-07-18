@@ -1,5 +1,134 @@
 # Changelog
 
+## v1.1.0
+
+### New Features
+
+- **Accessible Search Engine Selector**: Added a focused search engine selector with arrow, Home, End, and Escape keyboard navigation, predictable focus management, and focus-based closing.
+- **Resilient Error Feedback**: Added a signal-based notification service and accessible toast UI, bounded retries for transient dashboard loading failures, warnings when theme preferences cannot be persisted, and a safe fallback for uncaught application errors.
+
+### Bug Fixes
+
+- **Sticky Header and Finder**: Header, finder, and categories now stay fixed while only the apps area scrolls, improving navigation when dealing with many applications.
+- **Toast Styling**: Aligned notification toasts with the application card design through consistent borders, shadows, spacing, and status accents.
+- **Dashboard App Grid Spacing**: Added spacing above the application grid so cards no longer sit directly against the dashboard controls.
+- **Production Logging Cleanup**: Replaced development-only `console.log` usage in dashboard initialization and config loading flows with a centralized logger service, while removing the dashboard click debug log from production code.
+- **Search Popup Query Preservation**: Preserved the current search query when the browser blocks an external search popup.
+
+### Performance
+
+- **OnPush Change Detection**: Enabled `ChangeDetectionStrategy.OnPush` across all application components and made theme and card visibility state signal-reactive so their rendered values remain current without unnecessary tree-wide change detection.
+- **Signal-Based Application State**: Migrated synchronous configuration, settings, search, category, bookmark, metadata, filtering, and theme state to Angular signals while retaining RxJS only for asynchronous YAML loading. Theme initialization now tolerates unavailable browser storage and reconciles delayed YAML configuration without overriding user preferences.
+
+### CI / Tooling
+
+- **Release Notes Template**: Updated the `create-release.yml` workflow to generate notes for a new tag from the pushed commit and load the custom categories and exclusions through `configuration_file_path=.github/release.yml`.
+- **Node 22 LTS CI Runtime**: Pinned the GitHub Actions Node.js test workflow to Node 22 LTS and documented Node 22 LTS in the README as the recommended local version because it matches CI.
+- **Focused Test CI Guard**: Added a repository-level guard that fails pull request CI when committed focused tests such as `.only`, `fit`, `fdescribe`, or `.only.each(...)` are present, with regression coverage for the checker and its CLI contract.
+- **ESLint and Scoped Source Formatting**: Added lint-staged ESLint autofixes for staged TypeScript, including `test-setup.ts`, and Prettier formatting for staged TypeScript, HTML, and SCSS. Pull request CI now enforces focused-test detection, linting, scoped formatting, tests, and the production build.
+
+### Testing & Quality
+
+- **Automated Axe Accessibility Checks**: Added reusable axe-core assertions for covered `app-finder`, `app-card`, `app-categories`, and `dashboard` render states. Because CI already runs `npm test`, violations found by those checks now fail the existing test workflow automatically.
+- **Core Coverage CI Gate**: Added behavior coverage for core services and initializers, reaching 97.31% statement coverage with a 70% CI threshold and uploaded coverage reports.
+
+### Documentation
+
+- **Architecture Guide**: Added a current contributor architecture guide and linked it from the
+  README.
+- **Accessibility Testing Policy**: Documented that `npm test` includes axe-core accessibility checks for the covered component states, and that the jsdom helper excludes `color-contrast` until browser-level support is available.
+- **Linting Workflow**: Documented local linting, source-only formatting, and staged-file pre-commit automation.
+
+### Changed Files
+
+- `.github/workflows/create-release.yml`
+- `.github/workflows/test.yml`
+- `.husky/pre-commit`
+- `AGENTS.md`
+- `ARCHITECTURE.md`
+- `CHANGELOG.md`
+- `README.md`
+- `angular.json`
+- `eslint.config.js`
+- `package-lock.json`
+- `package.json`
+- `scripts/check-focused-tests.mjs`
+- `scripts/check-focused-tests.test.mjs`
+- `src/app/app.config.spec.ts`
+- `src/app/app.config.ts`
+- `src/app/app.html`
+- `src/app/app.spec.ts`
+- `src/app/app.ts`
+- `src/app/core/errors/global-error-handler.spec.ts`
+- `src/app/core/errors/global-error-handler.ts`
+- `src/app/core/initializers/dashboard.initializer.spec.ts`
+- `src/app/core/initializers/dashboard.initializer.ts`
+- `src/app/core/models/dashboard.models.ts`
+- `src/app/core/services/app.service.spec.ts`
+- `src/app/core/services/app.service.ts`
+- `src/app/core/services/bookmark.service.spec.ts`
+- `src/app/core/services/bookmark.service.ts`
+- `src/app/core/services/category.service.spec.ts`
+- `src/app/core/services/category.service.ts`
+- `src/app/core/services/config.service.spec.ts`
+- `src/app/core/services/config.service.ts`
+- `src/app/core/services/icon.service.spec.ts`
+- `src/app/core/services/icon.service.ts`
+- `src/app/core/services/logger.service.spec.ts`
+- `src/app/core/services/logger.service.ts`
+- `src/app/core/services/metadata.service.spec.ts`
+- `src/app/core/services/metadata.service.ts`
+- `src/app/core/services/notification.service.spec.ts`
+- `src/app/core/services/notification.service.ts`
+- `src/app/core/services/search.service.spec.ts`
+- `src/app/core/services/search.service.ts`
+- `src/app/core/services/settings.service.spec.ts`
+- `src/app/core/services/settings.service.ts`
+- `src/app/core/services/theme.service.spec.ts`
+- `src/app/core/services/theme.service.ts`
+- `src/app/core/services/yaml-loader.service.spec.ts`
+- `src/app/core/services/yaml-loader.service.ts`
+- `src/app/core/services/yaml-parser.service.spec.ts`
+- `src/app/core/services/yaml-parser.service.ts`
+- `src/app/shared/components/app-card/app-card.component.html`
+- `src/app/shared/components/app-card/app-card.component.spec.ts`
+- `src/app/shared/components/app-card/app-card.component.ts`
+- `src/app/shared/components/app-categories/app-categories.component.html`
+- `src/app/shared/components/app-categories/app-categories.component.spec.ts`
+- `src/app/shared/components/app-categories/app-categories.component.ts`
+- `src/app/shared/components/app-clock/app-clock.component.html`
+- `src/app/shared/components/app-clock/app-clock.component.spec.ts`
+- `src/app/shared/components/app-clock/app-clock.component.ts`
+- `src/app/shared/components/app-finder/app-finder.component.html`
+- `src/app/shared/components/app-finder/app-finder.component.spec.ts`
+- `src/app/shared/components/app-finder/app-finder.component.ts`
+- `src/app/shared/components/app-footer/app-footer.component.html`
+- `src/app/shared/components/app-footer/app-footer.component.ts`
+- `src/app/shared/components/app-header/app-header.component.spec.ts`
+- `src/app/shared/components/app-header/app-header.component.ts`
+- `src/app/shared/components/app-loading/app-loading.component.ts`
+- `src/app/shared/components/app-search-engine-selector/app-search-engine-selector.component.html`
+- `src/app/shared/components/app-search-engine-selector/app-search-engine-selector.component.spec.ts`
+- `src/app/shared/components/app-search-engine-selector/app-search-engine-selector.component.ts`
+- `src/app/shared/components/app-toast/app-toast.component.css`
+- `src/app/shared/components/app-toast/app-toast.component.html`
+- `src/app/shared/components/app-toast/app-toast.component.spec.ts`
+- `src/app/shared/components/app-toast/app-toast.component.ts`
+- `src/app/views/dashboard/dashboard.component.html`
+- `src/app/views/dashboard/dashboard.component.spec.ts`
+- `src/app/views/dashboard/dashboard.component.ts`
+- `src/index.html`
+- `src/main.ts`
+- `src/testing/a11y.ts`
+- `src/testing/check-focused-tests-cli.spec.ts`
+- `src/testing/node-test-harness.d.ts`
+- `src/testing/tooling-setup.spec.ts`
+- `tsconfig.spec.json`
+
+### Summary
+
+Minor release introducing new user-facing accessibility and error-feedback capabilities, alongside substantial reliability, performance, testing, and contributor-tooling improvements. There are no intentional breaking changes.
+
 ## v1.0.1
 
 ### Bug Fixes

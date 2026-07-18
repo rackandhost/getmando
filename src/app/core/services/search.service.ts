@@ -1,7 +1,6 @@
-import {inject, Injectable} from '@angular/core';
-import {BehaviorSubject, map} from 'rxjs';
+import { computed, inject, Injectable, signal } from '@angular/core';
 
-import {ConfigService} from './config.service';
+import { ConfigService } from './config.service';
 
 import {
   APP_CATEGORY,
@@ -9,7 +8,7 @@ import {
   FAVORITES_CATEGORY,
   DEFAULT_DASHBOARD_SEARCH_ENGINES,
   SearchEngine,
-  SelfhostedApp
+  SelfhostedApp,
 } from '../models/dashboard.models';
 
 /**
@@ -19,15 +18,12 @@ import {
 export class SearchService {
   private configService = inject(ConfigService);
 
-  private readonly searchQuerySubject = new BehaviorSubject<string>('');
-
-  haveSearchSubject = new BehaviorSubject<boolean>(false);
-
-  readonly searchEngines$ = this.configService.config$.pipe(
-    map((config) => config.settings.searchEngines),
-    map((searchEngines) => searchEngines.map(this.getSearchEngineById)),
+  private readonly searchQueryState = signal('');
+  readonly searchQuery = this.searchQueryState.asReadonly();
+  readonly haveSearch = computed(() => this.searchQuery().trim() !== '');
+  readonly searchEngines = computed(() =>
+    (this.configService.config()?.settings.searchEngines ?? []).map(this.getSearchEngineById),
   );
-  readonly searchQuery$ = this.searchQuerySubject.asObservable();
 
   /**
    * Get search engine by ID
@@ -43,8 +39,7 @@ export class SearchService {
    * @param query - Search query string
    */
   setSearchQuery(query: string): void {
-    this.searchQuerySubject.next(query);
-    this.haveSearchSubject.next(query.trim() !== '');
+    this.searchQueryState.set(query);
   }
 
   /**

@@ -1,25 +1,28 @@
-<main class="pb-14">
-  <app-header />
+<main class="flex flex-col h-screen overflow-hidden">
+  <app-header class="shrink-0" />
 
-  <div class="p-6 md:p-8 md:pt-0 flex flex-col justify-center">
+  <div class="shrink-0 p-6 md:p-8 md:pt-0 flex flex-col justify-center">
     <app-clock />
 
     <app-finder />
 
     <app-categories class="flex items-center justify-center" />
+  </div>
 
-    <!-- Apps grid -->
-    @if (filteredApps$ | async; as apps) {
+  <!-- Apps grid - scrollable -->
+  <div class="flex-1 overflow-y-auto px-6 md:px-8 pt-3 md:pt-6 pb-14">
+    @if (filteredApps(); as apps) {
       @if (apps.length > 0) {
-        <section
+        <ul
           aria-label="Applications"
-          role="list"
           [class]="`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${itemsPerRow} gap-4 md:gap-6`"
         >
           @for (app of apps; track app.id) {
-            <app-card [app]="app" (appClick)="onAppClick(app)"></app-card>
+            <li>
+              <app-card [app]="app" (appClick)="onAppClick(app)"></app-card>
+            </li>
           }
-        </section>
+        </ul>
       } @else {
         <!-- Empty state -->
         <section
@@ -28,7 +31,7 @@
           <div class="text-6xl mb-4">🔍</div>
           <h2 class="text-2xl font-semibold text-white mb-2">No applications found</h2>
           <p class="text-white/70">
-            @if (searchQuery$ | async) {
+            @if (searchQuery()) {
               Try adjusting your search query or select a different category.
             } @else {
               Add some applications to your dashboard.yaml configuration.
@@ -41,5 +44,5 @@
     }
   </div>
 
-  <app-footer />
+  <app-footer class="shrink-0" />
 </main>

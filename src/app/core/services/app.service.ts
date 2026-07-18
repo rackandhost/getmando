@@ -1,8 +1,6 @@
-import {Injectable, inject} from '@angular/core';
-import {Observable, combineLatest} from 'rxjs';
-import {map, tap, distinctUntilChanged} from 'rxjs/operators';
+import { computed, Injectable, inject } from '@angular/core';
 
-import {version} from '../../../../package.json';
+import { version } from '../../../../package.json';
 
 import {
   DashboardConfig,
@@ -12,65 +10,63 @@ import {
   FAVORITES_CATEGORY,
 } from '../models/dashboard.models';
 
-import {YamlLoaderService} from './yaml-loader.service';
-import {ConfigService} from './config.service';
-import {SearchService} from './search.service';
-import {CategoryService} from './category.service';
-import {BookmarkService} from './bookmark.service';
+import { ConfigService } from './config.service';
+import { SearchService } from './search.service';
+import { CategoryService } from './category.service';
+import { BookmarkService } from './bookmark.service';
+import { LoggerService } from './logger.service';
 
 /**
  * Service for managing dashboard application state
- * Uses BehaviorSubjects for reactive state management
+ * Uses signals for synchronous application state.
  */
 @Injectable({ providedIn: 'root' })
 export class AppService {
   private configService = inject(ConfigService);
-  private yamlLoader = inject(YamlLoaderService);
   private searchService = inject(SearchService);
   private categoryService = inject(CategoryService);
   private bookmarkService = inject(BookmarkService);
+  private logger = inject(LoggerService);
 
   appVersion = version;
 
   /**
    * Observable streams for component consumption
    */
-  readonly apps$ = this.configService.config$.pipe(
-    map((config) => [
+  readonly apps = computed(() => {
+    const config = this.configService.config();
+    if (!config) return [];
+    return [
       ...config.applications,
       ...(config.settings.allowBookmarks
-        ? this.bookmarkService.bookmarks.map((bookmark) => ({
+        ? this.bookmarkService.bookmarks().map((bookmark) => ({
             ...bookmark,
             category: BOOKMARKS_CATEGORY.id,
             favorite: false,
           }))
         : []
       ).sort((a, b) => a.name.localeCompare(b.name)),
-    ]),
-  );
-
-
-  constructor() {
-    this.yamlLoader.loadDashboardConfig().subscribe((config) => this.configService.fireNewSubject(config));
-  }
+    ];
+  });
 
   /**
    * Computed: Filtered apps based on search and category
    */
-  readonly filteredApps$: Observable<SelfhostedApp[]> = combineLatest([
-    this.apps$,
-    this.searchService.searchQuery$,
-    this.categoryService.selectedCategory$,
-  ]).pipe(
-    map(([apps, query, category]) => this.searchService.filterApps(apps, query, category, query.trim() !== '')),
-    distinctUntilChanged(),
-  );
+  readonly filteredApps = computed<SelfhostedApp[] | undefined>(() => {
+    if (!this.configService.config()) return undefined;
+    return this.searchService.filterApps(
+      this.apps(),
+      this.searchService.searchQuery(),
+      this.categoryService.selectedCategory(),
+      this.searchService.haveSearch(),
+    );
+  });
 
   /**
    * Current config value (synchronous access)
    */
   get config(): DashboardConfig | undefined {
-    return this.configService.subject.value;
+    return this.configService.config();
   }
 
   /**
@@ -78,8 +74,8 @@ export class AppService {
    * @param config - Dashboard configuration
    */
   initializeConfig(config: DashboardConfig): void {
-    this.configService.subject.next(config);
-    console.log('[AppService] Dashboard config initialized');
+    this.configService.fireNewSubject(config);
+    this.logger.info('[AppService] Dashboard config initialized');
   }
 
   /**
