@@ -48,15 +48,15 @@ jobs:
           if [ -n "$PREV_TAG" ]; then
             BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes \
               -f tag_name="v${{ steps.pkg.outputs.version }}" \
+              -f target_commitish="$GITHUB_SHA" \
               -f previous_tag_name="$PREV_TAG" \
-              -f configuration_file_path=".github" \
-              -f configuration_file_name="release.yml" \
+              -f configuration_file_path=".github/release.yml" \
               --jq '.body')
           else
             BODY=$(gh api repos/${{ github.repository }}/releases/generate-notes \
               -f tag_name="v${{ steps.pkg.outputs.version }}" \
-              -f configuration_file_path=".github" \
-              -f configuration_file_name="release.yml" \
+              -f target_commitish="$GITHUB_SHA" \
+              -f configuration_file_path=".github/release.yml" \
               --jq '.body')
           fi
           {
@@ -69,6 +69,7 @@ jobs:
         if: steps.check-tag.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.body }}
         run: |
           VERSION="${{ steps.pkg.outputs.version }}"
           PREV_TAG="${{ steps.prev-tag.outputs.tag }}"
@@ -77,7 +78,7 @@ jobs:
           {
             echo "## What's New in v$VERSION"
             echo ""
-            echo "${{ steps.notes.outputs.body }}"
+            printf '%s\n' "$RELEASE_NOTES"
             echo ""
             echo "### 🐳 Docker"
             echo '```bash'

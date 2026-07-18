@@ -10,6 +10,8 @@
 ### Bug Fixes
 
 - **Sticky Header and Finder**: Header, finder, and categories now stay fixed while only the apps area scrolls, improving navigation when dealing with many applications.
+- **Toast Styling**: Aligned notification toasts with the application card design through consistent borders, shadows, spacing, and status accents.
+- **Dashboard App Grid Spacing**: Added spacing above the application grid so cards no longer sit directly against the dashboard controls.
 - **Production Logging Cleanup**: Replaced development-only `console.log` usage in dashboard initialization and config loading flows with a centralized logger service, while removing the dashboard click debug log from production code.
 - **Search Popup Query Preservation**: Preserved the current search query when the browser blocks an external search popup.
 
@@ -20,7 +22,7 @@
 
 ### CI / Tooling
 
-- **Release Notes Template**: Fixed the `create-release.yml` workflow to respect the `.github/release.yml` configuration when generating release notes. Previously the workflow called the GitHub API directly without passing `configuration_file_path` and `configuration_file_name`, causing the custom categories and exclusions to be ignored.
+- **Release Notes Template**: Updated the `create-release.yml` workflow to generate notes for a new tag from the pushed commit and load the custom categories and exclusions through `configuration_file_path=.github/release.yml`.
 - **Node 22 LTS CI Runtime**: Pinned the GitHub Actions Node.js test workflow to Node 22 LTS and documented Node 22 LTS in the README as the recommended local version because it matches CI.
 - **Focused Test CI Guard**: Added a repository-level guard that fails pull request CI when committed focused tests such as `.only`, `fit`, `fdescribe`, or `.only.each(...)` are present, with regression coverage for the checker and its CLI contract.
 - **ESLint and Scoped Source Formatting**: Added lint-staged ESLint autofixes for staged TypeScript, including `test-setup.ts`, and Prettier formatting for staged TypeScript, HTML, and SCSS. Pull request CI now enforces focused-test detection, linting, scoped formatting, tests, and the production build.
