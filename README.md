@@ -564,7 +564,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Release (v1.0.1)
+### Current Release (v1.1.0)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering
