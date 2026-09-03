@@ -1,5 +1,65 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Browser-Based YAML Configurator**: Added a lazy `/configure` route with typed reactive forms for building and editing dashboard configuration (metadata, settings, categories, applications, bookmarks) without hand-authoring YAML. Users can start from an empty draft, load the currently mounted `dashboard.yaml`, or import a local YAML file, then copy or download a validated, canonically-serialized result. Export happens entirely in the browser and never writes to the mounted configuration or a server.
+- **Header Navigation to Configurator**: Added a link next to the theme toggle so users can jump into the configurator (gear icon) and back to the dashboard (arrow icon) without editing the URL by hand. The header tracks the active route to decide which icon, label, and target to show.
+
+### Changed
+
+- **Shared Configuration Validation**: Extended the dashboard schema with cross-collection validation shared by the loader and configurator: unique IDs across categories, applications, and bookmarks, application `category` values that must match a declared category ID, and category IDs reserved for virtual categories (`apps`, `bookmarks`, `favorites`).
+- **YAML Loader Outcomes**: Reworked `YamlLoaderService` to preserve distinguishable outcomes (mounted config, runtime fallback, parse/validation errors) so the configurator can accurately offer a "load mounted YAML" entry point.
+
+### Testing & Quality
+
+- **Configurator Test Coverage**: Added unit and component tests for the configurator routes, store, collection editor, and page component, plus expanded coverage for dashboard model validation, the YAML codec, and the export service.
+
+### Documentation
+
+- **Configurator Export Guidance**: Documented the `/configure` export flow, browser-only validation, and normalization behavior in the README, along with the ID-uniqueness and category-reference constraints for categories, applications, and bookmarks.
+
+### Changed Files
+
+- `README.md`
+- `config/dashboard.example.yaml`
+- `src/app/app.html`
+- `src/app/app.routes.spec.ts`
+- `src/app/app.routes.ts`
+- `src/app/app.spec.ts`
+- `src/app/app.ts`
+- `src/app/core/models/dashboard.models.spec.ts`
+- `src/app/core/models/dashboard.models.ts`
+- `src/app/core/services/config-export.service.spec.ts`
+- `src/app/core/services/config-export.service.ts`
+- `src/app/core/services/yaml-codec.service.spec.ts`
+- `src/app/core/services/yaml-codec.service.ts`
+- `src/app/core/services/yaml-loader.service.spec.ts`
+- `src/app/core/services/yaml-loader.service.ts`
+- `src/app/features/configurator/components/collection-editor.component.html`
+- `src/app/features/configurator/components/collection-editor.component.spec.ts`
+- `src/app/features/configurator/components/collection-editor.component.ts`
+- `src/app/features/configurator/configurator-page.component.html`
+- `src/app/features/configurator/configurator-page.component.spec.ts`
+- `src/app/features/configurator/configurator-page.component.ts`
+- `src/app/features/configurator/configurator.routes.ts`
+- `src/app/features/configurator/configurator.store.spec.ts`
+- `src/app/features/configurator/configurator.store.ts`
+- `src/app/shared/components/app-header/app-header.component.html`
+- `src/app/shared/components/app-header/app-header.component.spec.ts`
+- `src/app/shared/components/app-header/app-header.component.ts`
+- `src/app/shared/components/app-shell/app-shell.component.html`
+- `src/app/shared/components/app-shell/app-shell.component.ts`
+- `src/app/views/dashboard/dashboard.component.html`
+- `src/app/views/dashboard/dashboard.component.spec.ts`
+- `src/app/views/dashboard/dashboard.component.ts`
+- `test-setup.ts`
+
+### Summary
+
+Adds a browser-based visual configurator for building and editing `dashboard.yaml` through accessible forms, plus header navigation between the dashboard and the new `/configure` route. Deployments remain read-only: exports are validated and canonically serialized entirely in the browser. There are no intentional breaking changes.
+
 ## v1.1.0
 
 ### New Features

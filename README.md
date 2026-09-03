@@ -34,6 +34,7 @@
 - **♿ Accessible** - WCAG AA compliant with keyboard navigation
 - **🐳 Docker Ready** - Easy deployment with pre-built containers
 - **⚙️ YAML Configuration** - Simple, declarative configuration file
+- **🛠️ Visual Configurator** - Build and edit `dashboard.yaml` through accessible forms at `/configure`, no hand-editing required
 
 ---
 
@@ -643,19 +644,6 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
-
----
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/?type=date&legend=top-left&repos=rackandhost%2Fgetmando">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&theme=dark&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
- </picture>
-</a>
----
 
 <div align="center">
   Built with ❤️ for the homelab community
