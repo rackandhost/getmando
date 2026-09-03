@@ -14,14 +14,25 @@
       </div>
     </div>
 
-    <!-- Theme toggle button -->
-    <button
-      aria-label="Toggle theme"
-      class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-2 text-white font-medium hover:bg-white/20 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
-      type="button"
-      (click)="onToggleTheme()"
-    >
-      <span class="text-lg">{{ themeIcon() }}</span>
-    </button>
+    <div class="flex items-center gap-2">
+      <!-- Configurator navigation -->
+      <a
+        [attr.aria-label]="navLabel()"
+        class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-95"
+        [routerLink]="navTarget()"
+      >
+        <span aria-hidden="true" class="text-lg">{{ navIcon() }}</span>
+      </a>
+
+      <!-- Theme toggle button -->
+      <button
+        aria-label="Toggle theme"
+        class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-95"
+        type="button"
+        (click)="onToggleTheme()"
+      >
+        <span class="text-lg">{{ themeIcon() }}</span>
+      </button>
+    </div>
   </div>
 </header>

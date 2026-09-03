@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { Mock } from 'vitest';
 import { CommonModule } from '@angular/common';
 import { signal } from '@angular/core';
+import { provideRouter, Router } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
 
 import { AppHeaderComponent } from './app-header.component';
 
@@ -12,10 +14,18 @@ import { MetadataService } from '../../../core/services/metadata.service';
 import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models';
 
 describe('AppHeader', () => {
-  const setup = async (toggleThemeMock?: Mock, isDark = signal(true)): Promise<void> => {
+  const setup = async (
+    toggleThemeMock?: Mock,
+    isDark = signal(true),
+    initialUrl = '/',
+  ): Promise<void> => {
     await render(AppHeaderComponent, {
       imports: [CommonModule],
       providers: [
+        provideRouter([
+          { path: '', children: [] },
+          { path: 'configure', children: [] },
+        ]),
         {
           provide: ThemeService,
           useValue: {
@@ -31,6 +41,10 @@ describe('AppHeader', () => {
         },
       ],
     });
+
+    if (initialUrl !== '/') {
+      await TestBed.inject(Router).navigateByUrl(initialUrl);
+    }
   };
 
   describe('initial state', () => {
@@ -69,6 +83,26 @@ describe('AppHeader', () => {
       await waitFor(() => {
         expect(screen.getByText('☀️')).toBeInTheDocument();
         expect(screen.queryByText('🌙')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('configurator navigation', () => {
+    it('links to the configurator when on the dashboard', async () => {
+      await setup();
+
+      const navLink = screen.getByRole('link', { name: 'Open configurator' });
+      expect(navLink).toHaveAttribute('href', '/configure');
+    });
+
+    it('links back to the dashboard when on the configurator', async () => {
+      await setup(undefined, undefined, '/configure');
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Back to dashboard' })).toHaveAttribute(
+          'href',
+          '/',
+        );
       });
     });
   });

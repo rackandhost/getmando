@@ -91,6 +91,8 @@ describe('App', () => {
     });
 
     await user.tab();
+    expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
+    await user.tab();
     expect(screen.getByRole('button', { name: 'Toggle theme' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'Stub action' })).toHaveFocus();
