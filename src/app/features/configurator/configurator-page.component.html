@@ -38,14 +38,15 @@
         >
           Start empty
         </button>
-        <button
-          class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
-          type="button"
-          [disabled]="!canLoadMountedConfig()"
-          (click)="loadMountedConfig()"
-        >
-          Load mounted YAML
-        </button>
+        @if (canLoadMountedConfig()) {
+          <button
+            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+            type="button"
+            (click)="loadMountedConfig()"
+          >
+            Load mounted YAML
+          </button>
+        }
         <label class="block text-sm font-medium text-neutral-900 dark:text-white">
           Import local YAML
           <input

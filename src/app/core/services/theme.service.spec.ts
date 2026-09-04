@@ -66,7 +66,7 @@ describe('ThemeService', () => {
 
   it('falls back to configured settings when localStorage cannot be read', () => {
     settings.set({ ...DEFAULT_DASHBOARD_CONFIG.settings, theme: 'dark' });
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new DOMException('Access denied', 'SecurityError');
     });
 
@@ -166,7 +166,7 @@ describe('ThemeService', () => {
     const service = TestBed.inject(ThemeService);
     TestBed.flushEffects();
     const failure = new DOMException('Quota exceeded', 'QuotaExceededError');
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw failure;
     });
 

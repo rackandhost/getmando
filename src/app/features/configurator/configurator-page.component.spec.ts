@@ -102,6 +102,16 @@ describe('ConfiguratorPageComponent', () => {
     ];
   }
 
+  it('does not offer load mounted YAML when mounted configuration is unavailable', async () => {
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }],
+    });
+
+    expect(screen.queryByRole('button', { name: 'Load mounted YAML' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start empty' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Import local YAML')).toBeInTheDocument();
+  });
+
   it('starts empty, loads mounted YAML, and imports a local YAML file from explicit entry controls', async () => {
     const user = userEvent.setup();
     store.canLoadMountedConfig.mockReturnValue(true);
