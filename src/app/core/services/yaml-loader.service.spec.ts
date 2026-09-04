@@ -195,3 +195,70 @@ describe('YamlLoaderService', () => {
     expect(httpClient.head).toHaveBeenCalledWith('/config/dashboard.yaml');
   });
 });
+
+describe('YamlLoaderService mounted configuration outcome', () => {
+  let service: YamlLoaderService;
+  let httpClient: { get: ReturnType<typeof vi.fn> };
+  let yamlParser: { parseYamlOrThrow: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    httpClient = { get: vi.fn() };
+    yamlParser = { parseYamlOrThrow: vi.fn() };
+    TestBed.configureTestingModule({
+      providers: [
+        YamlLoaderService,
+        { provide: HttpClient, useValue: httpClient },
+        { provide: YamlParserService, useValue: yamlParser },
+        {
+          provide: LoggerService,
+          useValue: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        },
+        { provide: NotificationService, useValue: { warning: vi.fn() } },
+      ],
+    });
+    service = TestBed.inject(YamlLoaderService);
+  });
+  it('retains a valid mounted configuration without a fallback', async () => {
+    httpClient.get.mockReturnValue(of('yaml-content'));
+    yamlParser.parseYamlOrThrow.mockReturnValue(DEFAULT_DASHBOARD_CONFIG);
+
+    await expect(firstValueFrom(service.loadMountedConfig())).resolves.toEqual({
+      status: 'valid',
+      config: DEFAULT_DASHBOARD_CONFIG,
+    });
+    expect(service.mountedConfigResult()).toEqual({
+      status: 'valid',
+      config: DEFAULT_DASHBOARD_CONFIG,
+    });
+  });
+
+  it('retains a missing outcome for a missing mounted file', async () => {
+    httpClient.get.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+
+    await expect(firstValueFrom(service.loadMountedConfig())).resolves.toEqual({
+      status: 'missing',
+    });
+    expect(service.mountedConfigResult()).toEqual({ status: 'missing' });
+  });
+
+  it('retains an invalid outcome when mounted YAML cannot be parsed', async () => {
+    yamlParser.parseYamlOrThrow.mockImplementation(() => {
+      throw new Error('invalid YAML');
+    });
+    httpClient.get.mockReturnValue(of('invalid-content'));
+
+    await expect(firstValueFrom(service.loadMountedConfig())).resolves.toEqual({
+      status: 'invalid',
+      errors: [{ path: [], message: 'invalid YAML' }],
+    });
+  });
+
+  it('retains an unavailable outcome after non-missing request failure', async () => {
+    httpClient.get.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+    await expect(firstValueFrom(service.loadMountedConfig())).resolves.toEqual({
+      status: 'unavailable',
+      message: 'The mounted configuration is unavailable.',
+    });
+  });
+});

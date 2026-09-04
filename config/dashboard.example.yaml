@@ -1,3 +1,7 @@
+# This example satisfies the semantic export constraints:
+# IDs are unique across categories, applications, and bookmarks; application categories exist;
+# category IDs never use the reserved apps, bookmarks, or favorites values.
+# The configurator exports normalized dashboard.yaml without comments, source formatting, or unknown keys.
 metadata:
   title: 'My dashboard'
   description: 'Simply and lovelly'

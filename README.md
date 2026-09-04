@@ -34,6 +34,7 @@
 - **♿ Accessible** - WCAG AA compliant with keyboard navigation
 - **🐳 Docker Ready** - Easy deployment with pre-built containers
 - **⚙️ YAML Configuration** - Simple, declarative configuration file
+- **🛠️ Visual Configurator** - Build and edit `dashboard.yaml` through accessible forms at `/configure`, no hand-editing required
 
 ---
 
@@ -274,6 +275,18 @@ docker run -d \
 
 The dashboard is configured via a single `dashboard.yaml` file. This file is automatically loaded when the application starts.
 
+### Configurator export
+
+The `/configure` editor validates a draft before copying it to the clipboard or downloading it as
+`dashboard.yaml`. Export happens entirely in the browser; it never writes the mounted configuration
+or sends generated YAML to a server.
+
+Valid configurations must use IDs that are unique across categories, applications, and bookmarks.
+Application `category` values must refer to an existing category ID, and category IDs must not be
+`apps`, `bookmarks`, or `favorites` because those are reserved virtual categories. Exported YAML is
+normalized to the supported schema and field order. Comments, original formatting, and unknown keys
+are not preserved, and schema defaults can be written explicitly in the output.
+
 ### YAML Structure Overview
 
 ```yaml
@@ -312,6 +325,9 @@ Each category needs:
 | `id` | `string` | ✅ Yes | - | Unique identifier (used by apps) |
 | `name` | `string` | ✅ Yes | - | Display name |
 
+Category IDs must be unique across the whole configuration. Do not use `apps`, `bookmarks`, or
+`favorites`; the dashboard reserves those IDs for virtual categories.
+
 **Example:**
 ```yaml
 categories:
@@ -342,6 +358,9 @@ Each application supports:
 | `openNewTab` | `boolean` | No | `true` | Open in new tab or same window |
 | `tags` | `array[string]` | No | `[]` | Searchable tags |
 | `favorite` | `boolean` | No | `false` | Mark as favorite and show in Favorites category |
+
+Application IDs must be unique across the whole configuration, and every `category` value must
+match a declared category ID.
 
 **Icon Configuration:**
 
@@ -411,6 +430,8 @@ Bookmarks work exactly like applications but don't require a category.
 | `icon` | `object` | ✅ Yes | - | Icon configuration (same as apps) |
 | `openNewTab` | `boolean` | No | `true` | Open in new tab |
 | `tags` | `array[string]` | No | `[]` | Searchable tags |
+
+Bookmark IDs must also be unique across categories, applications, and bookmarks.
 
 **Example:**
 ```yaml
@@ -623,19 +644,6 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
-
----
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/?type=date&legend=top-left&repos=rackandhost%2Fgetmando">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&theme=dark&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
- </picture>
-</a>
----
 
 <div align="center">
   Built with ❤️ for the homelab community
