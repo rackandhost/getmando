@@ -5,9 +5,11 @@
 /tmp
 /out-tsc
 /bazel-out
+server/dist
 
 # Node
 /node_modules
+server/node_modules
 npm-debug.log
 yarn-error.log
 
@@ -49,6 +51,7 @@ Thumbs.db
 # Dashboard configuration
 # DO NOT commit your actual dashboard.yaml - it contains your personal URLs
 config/dashboard.yaml
+config/dashboard.yaml.bak
 !config/dashboard.yaml.example
 
 public/config
