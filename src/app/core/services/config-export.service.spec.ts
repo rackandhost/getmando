@@ -9,11 +9,21 @@ describe('ConfigExportService', () => {
   let logger: { error: ReturnType<typeof vi.fn> };
   let notifications: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
 
-  afterEach(() => vi.unstubAllGlobals());
+  let originalClipboardDescriptor: PropertyDescriptor | undefined;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    if (originalClipboardDescriptor) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboardDescriptor);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
 
   beforeEach(() => {
     logger = { error: vi.fn() };
     notifications = { success: vi.fn(), error: vi.fn() };
+    originalClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
     TestBed.configureTestingModule({
       providers: [
         ConfigExportService,
@@ -24,9 +34,15 @@ describe('ConfigExportService', () => {
     service = TestBed.inject(ConfigExportService);
   });
 
+  function stubClipboard(clipboard: { writeText: (text: string) => Promise<void> }): void {
+    // navigator.clipboard can be a getter-only accessor in jsdom, so Object.assign
+    // throws; redefine the property instead.
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
+  }
+
   it('copies canonical YAML to the clipboard and confirms success', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
+    stubClipboard({ writeText });
 
     await expect(service.copy('metadata: {}\n')).resolves.toBe(true);
     expect(writeText).toHaveBeenCalledWith('metadata: {}\n');
@@ -35,7 +51,7 @@ describe('ConfigExportService', () => {
 
   it('reports a clipboard failure once without throwing', async () => {
     const failure = new Error('Denied');
-    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockRejectedValue(failure) } });
+    stubClipboard({ writeText: vi.fn().mockRejectedValue(failure) });
 
     await expect(service.copy('metadata: {}\n')).resolves.toBe(false);
     expect(logger.error).toHaveBeenCalledWith('[ConfigExport] Failed to copy YAML:', failure);
