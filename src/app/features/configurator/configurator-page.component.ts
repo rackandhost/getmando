@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 
 import {
   Bookmark,
@@ -9,6 +10,8 @@ import {
   SelfhostedApp,
 } from '../../core/models/dashboard.models';
 import { ConfigExportService } from '../../core/services/config-export.service';
+import { ConfigWriteService } from '../../core/services/config-write.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
 
@@ -38,10 +41,15 @@ type BooleanSetting = Extract<
 export class ConfiguratorPageComponent {
   protected readonly store = inject(ConfiguratorStore);
   private readonly configExport = inject(ConfigExportService);
+  private readonly configWrite = inject(ConfigWriteService);
+  private readonly notifications = inject(NotificationService);
   private readonly yamlCodec = inject(YamlCodecService);
 
   protected readonly draft = this.store.draft;
   protected readonly validationErrors = this.store.validationErrors;
+  protected readonly isSavingToServer = signal(false);
+  protected readonly showTokenPrompt = signal(false);
+  protected readonly pendingToken = signal('');
   protected readonly searchEngineOptions: readonly DashboardSettings['searchEngines'][number][] = [
     'google',
     'duckduckgo',
@@ -228,6 +236,65 @@ export class ConfiguratorPageComponent {
     if (!yaml) return;
 
     this.configExport.download(yaml);
+  }
+
+  protected async saveToServer(): Promise<void> {
+    const config = this.store.toDashboardConfig();
+    if (!config) return;
+
+    if (!this.configWrite.hasToken()) {
+      this.showTokenPrompt.set(true);
+      return;
+    }
+
+    await this.performSave(config);
+  }
+
+  protected async confirmToken(): Promise<void> {
+    const token = this.pendingToken().trim();
+    if (!token) return;
+
+    this.configWrite.setToken(token);
+    this.pendingToken.set('');
+    this.showTokenPrompt.set(false);
+
+    const config = this.store.toDashboardConfig();
+    if (!config) return;
+
+    await this.performSave(config);
+  }
+
+  protected cancelTokenPrompt(): void {
+    this.showTokenPrompt.set(false);
+    this.pendingToken.set('');
+  }
+
+  protected updatePendingToken(event: Event): void {
+    this.pendingToken.set(this.inputValue(event));
+  }
+
+  private async performSave(config: DashboardConfig): Promise<void> {
+    this.isSavingToServer.set(true);
+    const result = await firstValueFrom(this.configWrite.save(config));
+    this.isSavingToServer.set(false);
+
+    if (result.status === 'saved') {
+      this.store.markSaved();
+      this.notifications.success('Configuration saved to the server.');
+      return;
+    }
+
+    if (result.status === 'invalid') {
+      this.store.reportServerValidationErrors(result.errors);
+      this.notifications.error('The server rejected the configuration. Check the errors below.');
+      return;
+    }
+
+    if (result.status === 'unauthorized') {
+      this.showTokenPrompt.set(true);
+    }
+
+    this.notifications.error(result.message);
   }
 
   private serializeExportableDraft(): string | undefined {

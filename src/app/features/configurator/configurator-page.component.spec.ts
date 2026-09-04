@@ -1,9 +1,11 @@
 import { signal } from '@angular/core';
 import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
+import { of } from 'rxjs';
 
 import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../../core/models/dashboard.models';
 import { ConfigExportService } from '../../core/services/config-export.service';
+import { ConfigWriteService } from '../../core/services/config-write.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
@@ -40,6 +42,11 @@ describe('ConfiguratorPageComponent', () => {
   const yamlCodec = { serialize: vi.fn(() => 'metadata:\n  title: Mando\n') };
   const logger = { error: vi.fn() };
   const notifications = { success: vi.fn(), error: vi.fn() };
+  const configWrite = {
+    hasToken: vi.fn(() => false),
+    setToken: vi.fn(),
+    save: vi.fn(),
+  };
 
   const store = {
     draft,
@@ -59,11 +66,13 @@ describe('ConfiguratorPageComponent', () => {
     moveApplication: vi.fn(),
     moveBookmark: vi.fn(),
     validate: vi.fn(() => false),
-    toDashboardConfig: vi.fn(() => undefined),
+    toDashboardConfig: vi.fn((): DashboardConfig | undefined => undefined),
     canLoadMountedConfig: vi.fn(() => false),
     startEmpty: vi.fn(),
     loadMountedConfig: vi.fn(),
     importLocalYaml: vi.fn(),
+    markSaved: vi.fn(),
+    reportServerValidationErrors: vi.fn(),
   };
 
   afterEach(() => {
@@ -91,6 +100,7 @@ describe('ConfiguratorPageComponent', () => {
     store.validate.mockReturnValue(false);
     store.toDashboardConfig.mockReturnValue(undefined);
     store.canLoadMountedConfig.mockReturnValue(false);
+    configWrite.hasToken.mockReturnValue(false);
   });
 
   function exportProviders() {
@@ -98,6 +108,7 @@ describe('ConfiguratorPageComponent', () => {
       { provide: YamlCodecService, useValue: yamlCodec },
       { provide: LoggerService, useValue: logger },
       { provide: NotificationService, useValue: notifications },
+      { provide: ConfigWriteService, useValue: configWrite },
       ConfigExportService,
     ];
   }
@@ -218,6 +229,138 @@ describe('ConfiguratorPageComponent', () => {
     expect(click).toHaveBeenCalledOnce();
     expect(notifications.success).toHaveBeenCalledWith('YAML downloaded as dashboard.yaml.');
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not attempt a server save or prompt for a token when the draft is invalid', async () => {
+    const user = userEvent.setup();
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(configWrite.save).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+  });
+
+  it('prompts for a write token before the first server save', async () => {
+    const user = userEvent.setup();
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.getByLabelText('Write token')).toBeInTheDocument();
+    expect(configWrite.save).not.toHaveBeenCalled();
+  });
+
+  it('keeps the write-token prompt free of detectable AXE violations', async () => {
+    const user = userEvent.setup();
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    const view = await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByLabelText('Write token')).toBeInTheDocument();
+
+    await expectNoAxeViolations(view.container);
+  });
+
+  it('stores the entered token and saves once confirmed', async () => {
+    const user = userEvent.setup();
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    configWrite.save.mockReturnValue(of({ status: 'saved' }));
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.type(screen.getByLabelText('Write token'), 'shared-secret');
+    await user.click(screen.getByRole('button', { name: 'Save token & save' }));
+
+    expect(configWrite.setToken).toHaveBeenCalledWith('shared-secret');
+    expect(configWrite.save).toHaveBeenCalledWith(draft());
+    await waitFor(() => expect(store.markSaved).toHaveBeenCalledOnce());
+    expect(notifications.success).toHaveBeenCalledWith('Configuration saved to the server.');
+    expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+  });
+
+  it('saves directly without prompting when a token is already stored', async () => {
+    const user = userEvent.setup();
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    configWrite.hasToken.mockReturnValue(true);
+    configWrite.save.mockReturnValue(of({ status: 'saved' }));
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+    await waitFor(() => expect(configWrite.save).toHaveBeenCalledWith(draft()));
+    await waitFor(() => expect(store.markSaved).toHaveBeenCalledOnce());
+  });
+
+  it('reopens the token prompt and surfaces the rejection when the server refuses the token', async () => {
+    const user = userEvent.setup();
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    configWrite.hasToken.mockReturnValue(true);
+    configWrite.save.mockReturnValue(
+      of({ status: 'unauthorized', message: 'The write token was rejected.' }),
+    );
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(notifications.error).toHaveBeenCalledWith('The write token was rejected.'),
+    );
+    await waitFor(() => expect(screen.getByLabelText('Write token')).toBeInTheDocument());
+    expect(store.markSaved).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a plain save error notification without touching the draft', async () => {
+    const user = userEvent.setup();
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    configWrite.hasToken.mockReturnValue(true);
+    configWrite.save.mockReturnValue(of({ status: 'error', message: 'Disk full.' }));
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(notifications.error).toHaveBeenCalledWith('Disk full.'));
+    expect(store.markSaved).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+  });
+
+  it('reports server-side validation errors through the same error summary', async () => {
+    const user = userEvent.setup();
+    const errors = [{ path: ['applications', '0', 'category'], message: "Category 'x' missing." }];
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    configWrite.hasToken.mockReturnValue(true);
+    configWrite.save.mockReturnValue(of({ status: 'invalid', errors }));
+    await render(ConfiguratorPageComponent, {
+      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(store.reportServerValidationErrors).toHaveBeenCalledWith(errors));
+    expect(notifications.error).toHaveBeenCalled();
   });
 
   it('associates application icon validation feedback with the selected icon value field', async () => {

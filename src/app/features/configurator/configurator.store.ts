@@ -225,6 +225,16 @@ export class ConfiguratorStore {
     return this.toDashboardConfig() !== undefined;
   }
 
+  /** Marks the current draft as persisted (e.g. after a successful "Save to server"). */
+  markSaved(): void {
+    this.dirtyState.set(false);
+  }
+
+  /** Surfaces a server-side validation rejection through the same error summary as a local one. */
+  reportServerValidationErrors(errors: readonly ParseError[]): void {
+    this.validationErrorState.set(errors);
+  }
+
   private updateDraft(update: (draft: ConfiguratorDraft) => ConfiguratorDraft): void {
     this.draftState.update((draft) => update(cloneConfig(draft)));
     this.validationErrorState.set([]);
