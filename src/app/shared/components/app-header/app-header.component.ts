@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowLeft, heroCog6Tooth, heroMoon, heroSun } from '@ng-icons/heroicons/outline';
 import { filter, map } from 'rxjs';
 
 import { ThemeService } from '../../../core/services/theme.service';
@@ -9,8 +11,9 @@ import { MetadataService } from '../../../core/services/metadata.service';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, NgIcon, RouterLink],
   templateUrl: 'app-header.component.html',
+  viewProviders: [provideIcons({ heroArrowLeft, heroCog6Tooth, heroMoon, heroSun })],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppHeaderComponent {
@@ -20,7 +23,7 @@ export class AppHeaderComponent {
 
   readonly metadata = this.metadataService.metadata;
 
-  readonly themeIcon = computed(() => (this.themeService.isDark() ? '🌙' : '☀️'));
+  readonly themeIcon = computed(() => (this.themeService.isDark() ? 'heroMoon' : 'heroSun'));
   readonly themeText = computed(() => (this.themeService.isDark() ? 'Dark' : 'Light'));
 
   private readonly currentUrl = toSignal(
@@ -40,7 +43,9 @@ export class AppHeaderComponent {
   readonly navLabel = computed(() =>
     this.isConfiguratorRoute() ? 'Back to dashboard' : 'Open configurator',
   );
-  readonly navIcon = computed(() => (this.isConfiguratorRoute() ? '⬅️' : '⚙️'));
+  readonly navIcon = computed(() =>
+    this.isConfiguratorRoute() ? 'heroArrowLeft' : 'heroCog6Tooth',
+  );
 
   onToggleTheme(): void {
     this.themeService.toggleTheme();

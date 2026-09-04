@@ -9,6 +9,7 @@
 
 ### Changed
 
+- **Themed Header Icons**: Replaced the header emoji controls with Heroicons outline so the configurator gear, back arrow, and theme sun/moon inherit light and dark text color instead of staying platform-colored.
 - **Shared Configuration Validation**: Extended the dashboard schema with cross-collection validation shared by the loader and configurator: unique IDs across categories, applications, and bookmarks, application `category` values that must match a declared category ID, and category IDs reserved for virtual categories (`apps`, `bookmarks`, `favorites`).
 - **YAML Loader Outcomes**: Reworked `YamlLoaderService` to preserve distinguishable outcomes (mounted config, runtime fallback, parse/validation errors) so the configurator can accurately offer a "load mounted YAML" entry point.
 
@@ -58,7 +59,7 @@
 
 ### Summary
 
-Adds a browser-based visual configurator for building and editing `dashboard.yaml` through accessible forms, plus header navigation between the dashboard and the new `/configure` route. Deployments remain read-only: exports are validated and canonically serialized entirely in the browser. There are no intentional breaking changes.
+Adds a browser-based visual configurator for building and editing `dashboard.yaml` through accessible forms, plus header navigation between the dashboard and the new `/configure` route with theme-aware header icons. Deployments remain read-only: exports are validated and canonically serialized entirely in the browser. There are no intentional breaking changes.
 
 ## v1.1.0
 

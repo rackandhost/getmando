@@ -76,13 +76,29 @@ describe('AppHeader', () => {
       const isDark = signal(true);
       await setup(undefined, isDark);
 
-      expect(screen.getByText('🌙')).toBeInTheDocument();
+      const themeButton = screen.getByRole('button', { name: 'Toggle theme' });
+      const darkIcon = themeButton.querySelector('ng-icon');
+      const darkSvg = darkIcon?.querySelector('svg');
+
+      expect(darkIcon).toHaveAttribute('aria-hidden', 'true');
+      expect(darkSvg).toHaveAttribute('stroke', 'currentColor');
+      expect(darkSvg?.querySelector('path')).toHaveAttribute(
+        'd',
+        expect.stringContaining('M21.752 15.002'),
+      );
+      expect(themeButton).not.toHaveTextContent('🌙');
 
       isDark.set(false);
 
       await waitFor(() => {
-        expect(screen.getByText('☀️')).toBeInTheDocument();
-        expect(screen.queryByText('🌙')).not.toBeInTheDocument();
+        const lightSvg = themeButton.querySelector('svg');
+        expect(lightSvg).toHaveAttribute('stroke', 'currentColor');
+        expect(lightSvg?.querySelector('path')).toHaveAttribute(
+          'd',
+          expect.stringContaining('M12 3v2.25'),
+        );
+        expect(themeButton).not.toHaveTextContent('☀️');
+        expect(themeButton).not.toHaveTextContent('🌙');
       });
     });
   });
@@ -95,6 +111,19 @@ describe('AppHeader', () => {
       expect(navLink).toHaveAttribute('href', '/configure');
     });
 
+    it('renders a currentColor Heroicon instead of an emoji on the dashboard', async () => {
+      await setup();
+
+      const navLink = screen.getByRole('link', { name: 'Open configurator' });
+      const icon = navLink.querySelector('ng-icon');
+      const svg = icon?.querySelector('svg');
+
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(svg).toHaveAttribute('stroke', 'currentColor');
+      expect(svg?.querySelectorAll('path')).toHaveLength(2);
+      expect(navLink).not.toHaveTextContent('⚙️');
+    });
+
     it('links back to the dashboard when on the configurator', async () => {
       await setup(undefined, undefined, '/configure');
 
@@ -103,6 +132,21 @@ describe('AppHeader', () => {
           'href',
           '/',
         );
+      });
+    });
+
+    it('renders a currentColor Heroicon instead of an emoji on the configurator', async () => {
+      await setup(undefined, undefined, '/configure');
+
+      await waitFor(() => {
+        const navLink = screen.getByRole('link', { name: 'Back to dashboard' });
+        const icon = navLink.querySelector('ng-icon');
+        const svg = icon?.querySelector('svg');
+
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+        expect(svg).toHaveAttribute('stroke', 'currentColor');
+        expect(svg?.querySelectorAll('path')).toHaveLength(1);
+        expect(navLink).not.toHaveTextContent('⬅️');
       });
     });
   });
