@@ -105,6 +105,7 @@ describe('AppCardComponent', () => {
 
     const badge = screen.getByRole('img', { name: 'Plex is up' });
     expect(badge.className).toContain('bg-emerald-500');
+    expect(badge.className).not.toContain('bg-red-500');
     await expectNoAxeViolations(view.container);
   });
 
@@ -114,6 +115,7 @@ describe('AppCardComponent', () => {
     });
 
     const badge = screen.getByRole('img', { name: 'Plex is down' });
+    expect(badge.className).not.toContain('bg-emerald-500');
     expect(badge.className).toContain('bg-red-500');
   });
 
