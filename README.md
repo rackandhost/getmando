@@ -233,12 +233,17 @@ services:
     ports:
       - '8080:80'
     volumes:
-      # Mount your local dashboard.yaml config
-      - ./config/dashboard.yaml:/app/config/dashboard.yaml:ro
+      # Mount your local dashboard.yaml config. Use :rw to enable the configurator's "Save"
+      # action; keep :ro to stay read-only (the dashboard still works, only the save action
+      # fails).
+      - ./config/dashboard.yaml:/app/config/dashboard.yaml:rw
       - ./my-custom-image.jpg:/app/img/my-custom-image.jpg:ro # Use this if you want to set a custom background
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      # Required for the configurator's "Save" action to work — pick your own secret value.
+      # Omit this variable (and keep the volume :ro above) to run fully read-only.
+      - CONFIG_WRITE_TOKEN=change-me
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost/health']
       interval: 30s
@@ -264,10 +269,16 @@ networks:
 docker run -d \
   --name getmando-dashboard \
   -p 8080:80 \
-  -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:ro \
+  -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:rw \
+  -e CONFIG_WRITE_TOKEN=change-me \
   --restart unless-stopped \
   ghcr.io/rackandhost/getmando:latest
 ```
+
+> **⚠️ Upgrading from an earlier version?** Prior releases mounted `dashboard.yaml` `:ro` and had no
+> `CONFIG_WRITE_TOKEN`. Your existing setup keeps working exactly as before — the dashboard runs
+> read-only and the new configurator "Save" action simply fails with a clear notification.
+> Change the volume to `:rw` and set `CONFIG_WRITE_TOKEN` only when you want that action to work.
 
 ---
 
@@ -275,11 +286,20 @@ docker run -d \
 
 The dashboard is configured via a single `dashboard.yaml` file. This file is automatically loaded when the application starts.
 
-### Configurator export
+### Configurator export and save
 
-The `/configure` editor validates a draft before copying it to the clipboard or downloading it as
-`dashboard.yaml`. Export happens entirely in the browser; it never writes the mounted configuration
-or sends generated YAML to a server.
+The `/configure` editor validates a draft before copying it to the clipboard, downloading it as
+`dashboard.yaml`, or saving it to the server. Copy and download happen entirely in the browser and
+never touch the mounted file.
+
+**Save** additionally writes the validated draft to the mounted `dashboard.yaml` over
+`POST /api/config`, so the running dashboard reflects it immediately without a manual copy. It
+requires the volume to be mounted `:rw` and `CONFIG_WRITE_TOKEN` to be set on the container (see
+"Quick Start (Docker)" above); the first save prompts for that same token value, which is
+then kept in this browser's `localStorage` for subsequent saves. This is a single shared secret, not
+a user account — anyone who knows it (or who already has write access to your deployment) can save
+changes, and it's not a substitute for keeping the dashboard off the public internet or behind your
+own access control.
 
 Valid configurations must use IDs that are unique across categories, applications, and bookmarks.
 Application `category` values must refer to an existing category ID, and category IDs must not be
@@ -502,6 +522,7 @@ settings:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NODE_ENV` | `production` | Environment mode |
+| `CONFIG_WRITE_TOKEN` | *(unset)* | Shared secret required by the configurator's "Save" action. Unset means the dashboard runs read-only; the write endpoint returns 401 for every request. |
 
 ---
 
@@ -548,6 +569,22 @@ npm test
 
 The dev server runs on `http://localhost:4200` with hot-reload enabled.
 
+### Local Development with the Write API
+
+`npm start` alone serves a read-only dashboard — the configurator's `Save` action needs the
+`config-write-api` sidecar, which normally only runs inside the Docker image. To run both locally
+without building the image:
+
+```bash
+npm run dev
+```
+
+This starts the Angular dev server (`:4200`) and the sidecar (`:3000`) together; `proxy.conf.json`
+forwards `/api/*` requests from the dev server to the sidecar, and Ctrl+C stops both. It writes to
+`public/config/dashboard.yaml` — the same file the dev server already reads — using the default
+token `dev-token` (enter that in the configurator's save prompt). Override `CONFIG_WRITE_TOKEN`,
+`CONFIG_PATH`, or `SERVER_PORT` as environment variables to change any of that.
+
 ### Building for Production
 
 ```bash
@@ -567,6 +604,7 @@ Build artifacts are created in the `dist/` directory.
 - ✅ Gzip compression
 - ✅ Long-term caching for static assets
 - ✅ Mountable config volume
+- ✅ Optional write API for saving the configurator draft directly to the mounted `dashboard.yaml`
 - ✅ Health checks
 
 ---
@@ -644,6 +682,19 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/rackandhost/getmando/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/rackandhost/getmando/discussions)
+
+---
+
+## ⭐ Star History
+
+<a href="https://www.star-history.com/?type=date&legend=top-left&repos=rackandhost%2Fgetmando">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&theme=dark&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=rackandhost/getmando&type=date&legend=top-left&sealed_token=XuQntX5nbzSy--PFt4qUdr0-yhsVXpUhpudaCYzQ0SLlgAWHw2bGfDXc5xHkUs4Z_X_YMontQnBHia5tLKWTkJYo3OUhei4h71DDWHv5smlYewoqKJNYAgjyNxdRJji0VwBgZiH6Cg77_aVappaBnJXNe04xtEOwz6ArhpEgax6vM50ud_sACceuTMkd" />
+ </picture>
+</a>
+---
 
 <div align="center">
   Built with ❤️ for the homelab community

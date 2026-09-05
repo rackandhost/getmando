@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+### ⚠️ Breaking Changes
+
+- **Config Volume Now Recommended `:rw`**: The `dashboard.yaml` volume mount documented in the README and `docker-compose` examples changed from `:ro` to `:rw` so the new configurator "Save" action can write to it. Existing deployments are unaffected on upgrade: without setting `CONFIG_WRITE_TOKEN`, or if the volume stays `:ro`, the dashboard continues to serve exactly as before — only the new save action fails, with copy/download remaining available.
+
 ### New Features
 
-- **Browser-Based YAML Configurator**: Added a lazy `/configure` route with typed reactive forms for building and editing dashboard configuration (metadata, settings, categories, applications, bookmarks) without hand-authoring YAML. Users can start from an empty draft, load the currently mounted `dashboard.yaml`, or import a local YAML file, then copy or download a validated, canonically-serialized result. Export happens entirely in the browser and never writes to the mounted configuration or a server.
+- **Config Write API**: Added an optional sidecar process (bundled into the existing Docker image, started alongside nginx) exposing `POST /api/config`. It validates a submitted configuration against the same schema the browser already enforces, then atomically overwrites the mounted `dashboard.yaml` (temp file + rename), rotating the previous contents into `dashboard.yaml.bak` first. Requires a shared-secret `CONFIG_WRITE_TOKEN` environment variable; without it, the endpoint rejects every request and the rest of the app is unaffected.
+- **Save to Server**: The `/configure` editor now offers a "Save" action alongside copy/download that writes to the mounted `dashboard.yaml` over the server. The first use prompts for the write token (the same value as `CONFIG_WRITE_TOKEN`), stored in this browser only; a rejected token clears the stored value and re-prompts on the next attempt.
+- **Browser-Based YAML Configurator**: Added a lazy `/configure` route with typed reactive forms for building and editing dashboard configuration (metadata, settings, categories, applications, bookmarks) without hand-authoring YAML. Users can start from an empty draft, load the currently mounted `dashboard.yaml`, or import a local YAML file, then copy, download, or save a validated, canonically-serialized result.
 - **Header Navigation to Configurator**: Added a link next to the theme toggle so users can jump into the configurator (gear icon) and back to the dashboard (arrow icon) without editing the URL by hand. The header tracks the active route to decide which icon, label, and target to show.
 
 ### Changed
@@ -23,8 +29,22 @@
 
 ### Changed Files
 
+- `.dockerignore`
+- `.gitignore`
+- `Dockerfile`
 - `README.md`
 - `config/dashboard.example.yaml`
+- `entrypoint.sh`
+- `nginx.conf`
+- `openspec/changes/yaml-configurator/proposal.md`
+- `server/package.json`
+- `server/src/app.spec.ts`
+- `server/src/app.ts`
+- `server/src/index.ts`
+- `server/src/write-config.spec.ts`
+- `server/src/write-config.ts`
+- `server/tsconfig.json`
+- `server/vitest.config.ts`
 - `src/app/app.html`
 - `src/app/app.routes.spec.ts`
 - `src/app/app.routes.ts`
@@ -34,6 +54,8 @@
 - `src/app/core/models/dashboard.models.ts`
 - `src/app/core/services/config-export.service.spec.ts`
 - `src/app/core/services/config-export.service.ts`
+- `src/app/core/services/config-write.service.spec.ts`
+- `src/app/core/services/config-write.service.ts`
 - `src/app/core/services/yaml-codec.service.spec.ts`
 - `src/app/core/services/yaml-codec.service.ts`
 - `src/app/core/services/yaml-loader.service.spec.ts`
@@ -59,7 +81,7 @@
 
 ### Summary
 
-Adds a browser-based visual configurator for building and editing `dashboard.yaml` through accessible forms, plus header navigation between the dashboard and the new `/configure` route with theme-aware header icons. Deployments remain read-only: exports are validated and canonically serialized entirely in the browser. There are no intentional breaking changes.
+Adds a browser-based visual configurator for building and editing `dashboard.yaml` through accessible forms, plus header navigation between the dashboard and the new `/configure` route with theme-aware header icons, and an optional server-side write API so the configurator can save directly to the mounted file instead of only copy/download. **Breaking change**: the documented volume mount moves from `:ro` to `:rw`; deployments that don't update their mount or set `CONFIG_WRITE_TOKEN` keep working exactly as before, read-only.
 
 ## v1.1.0
 

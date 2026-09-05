@@ -55,6 +55,30 @@ function cloneConfig(config: ConfiguratorDraft): ConfiguratorDraft {
   };
 }
 
+/**
+ * A loaded config whose background image exactly matches DashboardSettingsSchema's default was
+ * never actually overridden — it just came back defaulted because the source YAML omitted the
+ * key (see DashboardSettingsSchema). Blanking it here keeps the field's meaning in the editor
+ * consistent with createEmptyDraft() below: blank means "no override, use the built-in default".
+ */
+function blankDefaultBackgroundImages(config: DashboardConfig): DashboardConfig {
+  const defaults = DEFAULT_DASHBOARD_CONFIG.settings;
+  return {
+    ...config,
+    settings: {
+      ...config.settings,
+      lightBackgroundImage:
+        config.settings.lightBackgroundImage === defaults.lightBackgroundImage
+          ? ''
+          : config.settings.lightBackgroundImage,
+      darkBackgroundImage:
+        config.settings.darkBackgroundImage === defaults.darkBackgroundImage
+          ? ''
+          : config.settings.darkBackgroundImage,
+    },
+  };
+}
+
 function createEmptyDraft(): ConfiguratorDraft {
   const draft = cloneConfig(DEFAULT_DASHBOARD_CONFIG);
   return {
@@ -103,7 +127,7 @@ export class ConfiguratorStore {
     const mountedConfig = this.yamlLoader.mountedConfigResult();
     if (mountedConfig?.status !== 'valid') return;
 
-    this.draftState.set(cloneConfig(mountedConfig.config));
+    this.draftState.set(cloneConfig(blankDefaultBackgroundImages(mountedConfig.config)));
     this.validationErrorState.set([]);
     this.dirtyState.set(false);
     this.notifications.success('Loaded the mounted dashboard YAML.');
@@ -117,7 +141,7 @@ export class ConfiguratorStore {
       return;
     }
 
-    this.draftState.set(cloneConfig(result.config));
+    this.draftState.set(cloneConfig(blankDefaultBackgroundImages(result.config)));
     this.validationErrorState.set([]);
     this.dirtyState.set(true);
     this.notifications.success('Imported the local YAML file into the draft.');
@@ -223,6 +247,16 @@ export class ConfiguratorStore {
 
   validate(): boolean {
     return this.toDashboardConfig() !== undefined;
+  }
+
+  /** Marks the current draft as persisted (e.g. after a successful "Save to server"). */
+  markSaved(): void {
+    this.dirtyState.set(false);
+  }
+
+  /** Surfaces a server-side validation rejection through the same error summary as a local one. */
+  reportServerValidationErrors(errors: readonly ParseError[]): void {
+    this.validationErrorState.set(errors);
   }
 
   private updateDraft(update: (draft: ConfiguratorDraft) => ConfiguratorDraft): void {

@@ -1,0 +1,13 @@
+node_modules
+server/node_modules
+server/dist
+dist
+.angular
+coverage
+.git
+.github
+openspec
+screenshots
+documentation
+*.md
+!README.md

@@ -17,7 +17,10 @@ Deployments remain read-only; users export YAML for placement.
 - Documentation and example alignment with authoritative schema constraints.
 
 ### Out of Scope
-- Server-side writes or automatic deployment of generated YAML.
+- ~~Server-side writes or automatic deployment of generated YAML.~~ **Superseded by
+  `config-write-api`** (2026-09-04): that change adds a "Save to server" action alongside the
+  copy/download flow this proposal delivers. Copy/download remain unchanged and keep working
+  without a server write.
 - Preservation of YAML comments or original formatting.
 - Draft autosave, local storage, and generic form generation.
 
