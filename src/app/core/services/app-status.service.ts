@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { effect, inject, Injectable, signal, Signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 
 import { DashboardConfig } from '../models/dashboard.models';
 
@@ -43,6 +44,7 @@ export class AppStatusService {
   private retries = 0;
   private active = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private pollSubscription: Subscription | null = null;
 
   readonly statuses: Signal<Record<string, AppStatus>> = this.statusesSignal.asReadonly();
 
@@ -73,18 +75,21 @@ export class AppStatusService {
       clearTimeout(this.timer);
       this.timer = null;
     }
+    // Cancels a poll that's still in flight — without this, a stale response arriving after a
+    // stop()-then-start() cycle would be mistaken for current and schedule a second, orphaned
+    // polling loop alongside the new one.
+    this.pollSubscription?.unsubscribe();
+    this.pollSubscription = null;
   }
 
   private poll(): void {
-    this.http.get<StatusResponse>(STATUS_URL).subscribe({
+    this.pollSubscription = this.http.get<StatusResponse>(STATUS_URL).subscribe({
       next: (response) => {
-        if (!this.active) return;
         this.statusesSignal.set(response.apps);
         this.retries = 0;
         this.scheduleNext(Math.max(response.intervalMs, MIN_POLL_MS));
       },
       error: () => {
-        if (!this.active) return;
         this.retries += 1;
         if (this.retries <= MAX_RETRIES) {
           this.scheduleNext(RETRY_INTERVAL_MS);

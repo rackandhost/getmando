@@ -117,6 +117,29 @@ describe('AppStatusService', () => {
     expect(statuses()).toEqual(upResponse.apps);
   });
 
+  it('cancels an in-flight poll on stop, so a stale response cannot start a second polling loop', async () => {
+    createService();
+    const staleRequest = httpMock.expectOne(STATUS_URL);
+
+    // Stop while staleRequest is still in flight: it must be cancelled, not just ignored.
+    configState.set(configWith(false));
+    TestBed.flushEffects();
+    expect(staleRequest.cancelled).toBe(true);
+
+    // Start again before the stale request would have resolved.
+    configState.set(configWith(true));
+    TestBed.flushEffects();
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    // If the stale response's handler had still run (the bug), it would have scheduled its own
+    // extra timer alongside this one, and advancing time would surface two requests instead of one.
+    await vi.advanceTimersByTimeAsync(29_999);
+    httpMock.verify();
+    await vi.advanceTimersByTimeAsync(1);
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+    httpMock.verify();
+  });
+
   it('stores the response apps in the signal and reschedules at the reported intervalMs', async () => {
     createService();
 
