@@ -261,4 +261,32 @@ describe('YamlLoaderService mounted configuration outcome', () => {
       message: 'The mounted configuration is unavailable.',
     });
   });
+
+  it('re-fetches instead of replaying the cached mounted config on refresh', async () => {
+    httpClient.get.mockReturnValueOnce(of('yaml-content-v1'));
+    yamlParser.parseYamlOrThrow.mockReturnValueOnce({
+      ...DEFAULT_DASHBOARD_CONFIG,
+      metadata: { ...DEFAULT_DASHBOARD_CONFIG.metadata, title: 'v1' },
+    });
+    await expect(firstValueFrom(service.loadMountedConfig())).resolves.toMatchObject({
+      config: { metadata: { title: 'v1' } },
+    });
+
+    httpClient.get.mockReturnValueOnce(of('yaml-content-v2'));
+    yamlParser.parseYamlOrThrow.mockReturnValueOnce({
+      ...DEFAULT_DASHBOARD_CONFIG,
+      metadata: { ...DEFAULT_DASHBOARD_CONFIG.metadata, title: 'v2' },
+    });
+
+    await expect(firstValueFrom(service.refreshMountedConfig())).resolves.toMatchObject({
+      config: { metadata: { title: 'v2' } },
+    });
+    expect(httpClient.get).toHaveBeenCalledTimes(2);
+    expect(service.mountedConfigResult()).toMatchObject({ config: { metadata: { title: 'v2' } } });
+
+    await expect(firstValueFrom(service.loadMountedConfig())).resolves.toMatchObject({
+      config: { metadata: { title: 'v2' } },
+    });
+    expect(httpClient.get).toHaveBeenCalledTimes(2);
+  });
 });

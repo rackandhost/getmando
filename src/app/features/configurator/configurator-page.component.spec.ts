@@ -1,14 +1,16 @@
 import { signal } from '@angular/core';
 import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 
 import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../../core/models/dashboard.models';
+import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
+import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
 
 import { ConfiguratorPageComponent } from './configurator-page.component';
@@ -46,6 +48,10 @@ describe('ConfiguratorPageComponent', () => {
     hasToken: vi.fn(() => false),
     setToken: vi.fn(),
     save: vi.fn(),
+  };
+  const appService = { initializeConfig: vi.fn() };
+  const yamlLoader = {
+    refreshMountedConfig: vi.fn<() => Observable<MountedConfigResult>>(),
   };
 
   const store = {
@@ -101,7 +107,16 @@ describe('ConfiguratorPageComponent', () => {
     store.toDashboardConfig.mockReturnValue(undefined);
     store.canLoadMountedConfig.mockReturnValue(false);
     configWrite.hasToken.mockReturnValue(false);
+    yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'unavailable', message: 'n/a' }));
   });
+
+  function defaultProviders() {
+    return [
+      { provide: ConfiguratorStore, useValue: store },
+      { provide: AppService, useValue: appService },
+      { provide: YamlLoaderService, useValue: yamlLoader },
+    ];
+  }
 
   function exportProviders() {
     return [
@@ -115,7 +130,7 @@ describe('ConfiguratorPageComponent', () => {
 
   it('does not offer load mounted YAML when mounted configuration is unavailable', async () => {
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     expect(screen.queryByRole('button', { name: 'Load mounted YAML' })).not.toBeInTheDocument();
@@ -127,7 +142,7 @@ describe('ConfiguratorPageComponent', () => {
     const user = userEvent.setup();
     store.canLoadMountedConfig.mockReturnValue(true);
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     await user.click(screen.getByRole('button', { name: 'Start empty' }));
@@ -147,7 +162,7 @@ describe('ConfiguratorPageComponent', () => {
   it('edits schema-backed metadata and settings fields from accessible controls', async () => {
     const user = userEvent.setup();
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     await user.clear(screen.getByLabelText('Dashboard description'));
@@ -171,7 +186,7 @@ describe('ConfiguratorPageComponent', () => {
       value: { writeText },
     });
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
@@ -194,7 +209,7 @@ describe('ConfiguratorPageComponent', () => {
     });
     Object.defineProperty(globalThis, 'fetch', { configurable: true, value: fetch });
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
@@ -220,7 +235,7 @@ describe('ConfiguratorPageComponent', () => {
     });
     Object.defineProperty(globalThis, 'fetch', { configurable: true, value: fetch });
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Download YAML' }));
@@ -234,7 +249,7 @@ describe('ConfiguratorPageComponent', () => {
   it('does not attempt a server save or prompt for a token when the draft is invalid', async () => {
     const user = userEvent.setup();
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -248,7 +263,7 @@ describe('ConfiguratorPageComponent', () => {
     store.validate.mockReturnValue(true);
     store.toDashboardConfig.mockReturnValue(draft());
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -262,7 +277,7 @@ describe('ConfiguratorPageComponent', () => {
     store.validate.mockReturnValue(true);
     store.toDashboardConfig.mockReturnValue(draft());
     const view = await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -277,7 +292,7 @@ describe('ConfiguratorPageComponent', () => {
     store.toDashboardConfig.mockReturnValue(draft());
     configWrite.save.mockReturnValue(of({ status: 'saved' }));
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -298,7 +313,7 @@ describe('ConfiguratorPageComponent', () => {
     configWrite.hasToken.mockReturnValue(true);
     configWrite.save.mockReturnValue(of({ status: 'saved' }));
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -306,6 +321,24 @@ describe('ConfiguratorPageComponent', () => {
     expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
     await waitFor(() => expect(configWrite.save).toHaveBeenCalledWith(draft()));
     await waitFor(() => expect(store.markSaved).toHaveBeenCalledOnce());
+    expect(appService.initializeConfig).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the live dashboard config after a successful save', async () => {
+    const user = userEvent.setup();
+    const freshConfig = { ...draft(), metadata: { ...draft().metadata, title: 'Refreshed' } };
+    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
+    configWrite.hasToken.mockReturnValue(true);
+    configWrite.save.mockReturnValue(of({ status: 'saved' }));
+    yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'valid', config: freshConfig }));
+    await render(ConfiguratorPageComponent, {
+      providers: [...defaultProviders(), ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(appService.initializeConfig).toHaveBeenCalledWith(freshConfig));
   });
 
   it('reopens the token prompt and surfaces the rejection when the server refuses the token', async () => {
@@ -317,7 +350,7 @@ describe('ConfiguratorPageComponent', () => {
       of({ status: 'unauthorized', message: 'The write token was rejected.' }),
     );
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -336,7 +369,7 @@ describe('ConfiguratorPageComponent', () => {
     configWrite.hasToken.mockReturnValue(true);
     configWrite.save.mockReturnValue(of({ status: 'error', message: 'Disk full.' }));
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -354,7 +387,7 @@ describe('ConfiguratorPageComponent', () => {
     configWrite.hasToken.mockReturnValue(true);
     configWrite.save.mockReturnValue(of({ status: 'invalid', errors }));
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }, ...exportProviders()],
+      providers: [...defaultProviders(), ...exportProviders()],
     });
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -368,7 +401,7 @@ describe('ConfiguratorPageComponent', () => {
       { path: ['applications', '0', 'icon', 'value'], message: 'Icon value cannot be empty.' },
     ]);
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     expect(screen.getByLabelText('Icon name for Plex')).toHaveAttribute(
@@ -387,7 +420,7 @@ describe('ConfiguratorPageComponent', () => {
 
   it('renders labeled settings fields and associates an actionable error summary with invalid fields', async () => {
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     expect(screen.getByRole('heading', { name: 'Configuration editor' })).toBeInTheDocument();
@@ -406,7 +439,7 @@ describe('ConfiguratorPageComponent', () => {
   it('keeps the editor keyboard-accessible and free of detectable AXE violations', async () => {
     const user = userEvent.setup();
     const view = await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     await user.tab();
@@ -434,7 +467,7 @@ describe('ConfiguratorPageComponent', () => {
       ],
     });
     await render(ConfiguratorPageComponent, {
-      providers: [{ provide: ConfiguratorStore, useValue: store }],
+      providers: defaultProviders(),
     });
 
     const url = screen.getByLabelText('Bookmark URL for Docs');

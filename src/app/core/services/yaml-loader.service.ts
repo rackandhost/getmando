@@ -30,35 +30,45 @@ export class YamlLoaderService {
   /** Returns and caches the result of the single mounted-config startup request. */
   loadMountedConfig(): Observable<MountedConfigResult> {
     if (!this.mountedRequest) {
-      this.mountedRequest = this.http.get(this.configPath, { responseType: 'text' }).pipe(
-        retry({
-          count: 3,
-          delay: (error: unknown, retryCount) =>
-            this.isTransientHttpError(error)
-              ? timer(250 * 2 ** (retryCount - 1))
-              : throwError(() => error),
-        }),
-        tap(() => this.logger.debug('[YamlLoader] YAML content loaded successfully')),
-        map((content) => ({
-          status: 'valid' as const,
-          config: this.yamlParser.parseYamlOrThrow(content),
-        })),
-        tap(({ config }) =>
-          this.logger.info('[YamlLoader] Dashboard config loaded:', {
-            title: config.metadata.title,
-            apps: config.applications.length,
-            categories: config.categories.length,
-          }),
-        ),
-        catchError((error: unknown) => {
-          this.logger.error('[YamlLoader] Failed to load dashboard config:', error);
-          return of(this.toMountedResult(error));
-        }),
-        tap((result) => this.mountedResultState.set(result)),
-        shareReplay({ bufferSize: 1, refCount: false }),
-      );
+      this.mountedRequest = this.fetchMountedConfig();
     }
     return this.mountedRequest;
+  }
+
+  /** Re-fetches the mounted YAML, replacing the cached result — e.g. after a server-side save. */
+  refreshMountedConfig(): Observable<MountedConfigResult> {
+    this.mountedRequest = this.fetchMountedConfig();
+    return this.mountedRequest;
+  }
+
+  private fetchMountedConfig(): Observable<MountedConfigResult> {
+    return this.http.get(this.configPath, { responseType: 'text' }).pipe(
+      retry({
+        count: 3,
+        delay: (error: unknown, retryCount) =>
+          this.isTransientHttpError(error)
+            ? timer(250 * 2 ** (retryCount - 1))
+            : throwError(() => error),
+      }),
+      tap(() => this.logger.debug('[YamlLoader] YAML content loaded successfully')),
+      map((content) => ({
+        status: 'valid' as const,
+        config: this.yamlParser.parseYamlOrThrow(content),
+      })),
+      tap(({ config }) =>
+        this.logger.info('[YamlLoader] Dashboard config loaded:', {
+          title: config.metadata.title,
+          apps: config.applications.length,
+          categories: config.categories.length,
+        }),
+      ),
+      catchError((error: unknown) => {
+        this.logger.error('[YamlLoader] Failed to load dashboard config:', error);
+        return of(this.toMountedResult(error));
+      }),
+      tap((result) => this.mountedResultState.set(result)),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
   }
 
   /** Loads the dashboard configuration, retaining legacy fallback and notification behavior. */
