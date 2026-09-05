@@ -6,6 +6,10 @@
 
 - **Config Volume Now Recommended `:rw`**: The `dashboard.yaml` volume mount documented in the README and `docker-compose` examples changed from `:ro` to `:rw` so the new configurator "Save" action can write to it. Existing deployments are unaffected on upgrade: without setting `CONFIG_WRITE_TOKEN`, or if the volume stays `:ro`, the dashboard continues to serve exactly as before — only the new save action fails, with copy/download remaining available.
 
+### Bug Fixes
+
+- **First Run Without YAML**: Starting without a mounted `dashboard.yaml` now uses the default dashboard silently, shows a single Apps category, and leaves the visual configurator ready to start with an empty draft. Invalid or unavailable existing YAML continues to show a configuration warning.
+
 ### New Features
 
 - **Config Write API**: Added an optional sidecar process (bundled into the existing Docker image, started alongside nginx) exposing `POST /api/config`. It validates a submitted configuration against the same schema the browser already enforces, then atomically overwrites the mounted `dashboard.yaml` (temp file + rename), rotating the previous contents into `dashboard.yaml.bak` first. Requires a shared-secret `CONFIG_WRITE_TOKEN` environment variable; without it, the endpoint rejects every request and the rest of the app is unaffected.
