@@ -80,9 +80,25 @@ describe('ConfiguratorStore', () => {
 
     store.loadMountedConfig();
 
-    expect(store.draft()).toEqual(validConfig);
+    expect(store.draft()).toEqual({
+      ...validConfig,
+      settings: { ...validConfig.settings, lightBackgroundImage: '', darkBackgroundImage: '' },
+    });
     expect(store.isDirty()).toBe(false);
     expect(notifications.success).toHaveBeenCalledWith('Loaded the mounted dashboard YAML.');
+  });
+
+  it('keeps a background image that differs from the built-in default when loading', () => {
+    const configWithCustomBackground: DashboardConfig = {
+      ...validConfig,
+      settings: { ...validConfig.settings, lightBackgroundImage: 'custom-light.jpg' },
+    };
+    mountedConfigResult.set({ status: 'valid', config: configWithCustomBackground });
+
+    store.loadMountedConfig();
+
+    expect(store.draft().settings.lightBackgroundImage).toBe('custom-light.jpg');
+    expect(store.draft().settings.darkBackgroundImage).toBe('');
   });
 
   it('does not notify when loading the mounted config is unavailable', () => {
@@ -101,7 +117,10 @@ describe('ConfiguratorStore', () => {
     store.importLocalYaml('metadata: {}');
 
     expect(codec.parse).toHaveBeenCalledWith('metadata: {}');
-    expect(store.draft()).toEqual(validConfig);
+    expect(store.draft()).toEqual({
+      ...validConfig,
+      settings: { ...validConfig.settings, lightBackgroundImage: '', darkBackgroundImage: '' },
+    });
     expect(store.isDirty()).toBe(true);
     expect(getItem).not.toHaveBeenCalled();
     expect(setItem).not.toHaveBeenCalled();

@@ -1,7 +1,10 @@
 import Fastify, { FastifyError, FastifyInstance } from 'fastify';
 import { dump } from 'js-yaml';
 
-import { DashboardConfigSchema } from '../../src/app/core/models/dashboard.models';
+import {
+  DashboardConfigSchema,
+  omitBlankBackgroundImages,
+} from '../../src/app/core/models/dashboard.models';
 
 import { writeConfigAtomically } from './write-config';
 
@@ -51,9 +54,7 @@ export function buildApp({
         .code(400)
         .send({ status: 'invalid', errors: [{ path: [], message: error.message }] });
     }
-    return reply
-      .code(error.statusCode ?? 500)
-      .send({ status: 'error', message: error.message });
+    return reply.code(error.statusCode ?? 500).send({ status: 'error', message: error.message });
   });
 
   app.post('/api/config', async (request, reply) => {
@@ -67,7 +68,11 @@ export function buildApp({
       return reply.code(400).send({ status: 'invalid', errors });
     }
 
-    const yamlContent = dump(result.data, { lineWidth: -1, noRefs: true, sortKeys: false });
+    const canonicalConfig = {
+      ...result.data,
+      settings: omitBlankBackgroundImages(result.data.settings),
+    };
+    const yamlContent = dump(canonicalConfig, { lineWidth: -1, noRefs: true, sortKeys: false });
 
     try {
       await writeConfigAtomically(targetPath, yamlContent);

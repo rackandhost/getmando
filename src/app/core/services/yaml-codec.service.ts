@@ -1,7 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import * as yaml from 'js-yaml';
 
-import { DashboardConfig, DashboardConfigSchema } from '../models/dashboard.models';
+import {
+  CanonicalDashboardSettings,
+  DashboardConfig,
+  DashboardConfigSchema,
+  omitBlankBackgroundImages,
+} from '../models/dashboard.models';
 
 import { ParseError, YamlParserService } from './yaml-parser.service';
 
@@ -9,15 +14,9 @@ export type ConfigValidationResult =
   | { readonly success: true; readonly config: DashboardConfig }
   | { readonly success: false; readonly errors: readonly ParseError[] };
 
-/** Omits blank background image overrides so a loaded YAML falls back to the built-in default. */
-type CanonicalSettings = Omit<
-  DashboardConfig['settings'],
-  'lightBackgroundImage' | 'darkBackgroundImage'
-> & {
-  lightBackgroundImage?: string;
-  darkBackgroundImage?: string;
+type CanonicalDashboardConfig = Omit<DashboardConfig, 'settings'> & {
+  settings: CanonicalDashboardSettings;
 };
-type CanonicalDashboardConfig = Omit<DashboardConfig, 'settings'> & { settings: CanonicalSettings };
 
 /** Parses dashboard YAML and emits normalized dashboard YAML for browser-only export. */
 @Injectable({ providedIn: 'root' })
@@ -41,9 +40,6 @@ export class YamlCodecService {
   }
 
   private toCanonicalObject(config: DashboardConfig): CanonicalDashboardConfig {
-    const { lightBackgroundImage, darkBackgroundImage, searchEngines, ...restSettings } =
-      config.settings;
-
     return {
       metadata: { title: config.metadata.title, description: config.metadata.description },
       categories: config.categories.map(({ id, name }) => ({ id, name })),
@@ -67,12 +63,10 @@ export class YamlCodecService {
         openNewTab: bookmark.openNewTab,
         tags: [...bookmark.tags],
       })),
-      settings: {
-        ...restSettings,
-        searchEngines: [...searchEngines],
-        ...(lightBackgroundImage.trim() ? { lightBackgroundImage } : {}),
-        ...(darkBackgroundImage.trim() ? { darkBackgroundImage } : {}),
-      },
+      settings: omitBlankBackgroundImages({
+        ...config.settings,
+        searchEngines: [...config.settings.searchEngines],
+      }),
     };
   }
 }

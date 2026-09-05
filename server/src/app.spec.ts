@@ -95,6 +95,46 @@ describe('POST /api/config — schema validation and write', () => {
     });
   });
 
+  it('omits a blank background image override instead of writing it verbatim', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+    const configWithBlankBackground = {
+      ...validConfig,
+      settings: { lightBackgroundImage: '', darkBackgroundImage: '   ' },
+    };
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: configWithBlankBackground,
+    });
+
+    expect(response.statusCode).toBe(200);
+    const written = load(await readFile(targetPath, 'utf8')) as { settings: object };
+    expect(written.settings).not.toHaveProperty('lightBackgroundImage');
+    expect(written.settings).not.toHaveProperty('darkBackgroundImage');
+  });
+
+  it('keeps a non-blank background image override', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+    const configWithCustomBackground = {
+      ...validConfig,
+      settings: { lightBackgroundImage: 'custom-light.jpg' },
+    };
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: configWithCustomBackground,
+    });
+
+    const written = load(await readFile(targetPath, 'utf8')) as {
+      settings: { lightBackgroundImage: string };
+    };
+    expect(written.settings.lightBackgroundImage).toBe('custom-light.jpg');
+  });
+
   it('rejects a semantically invalid config (dangling category reference) and writes nothing', async () => {
     const app = buildApp({ configWriteToken: token, targetPath });
     const invalidConfig = {

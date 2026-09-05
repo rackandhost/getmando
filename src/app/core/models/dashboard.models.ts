@@ -166,6 +166,31 @@ export const DashboardConfigSchema = z
     });
   });
 
+/** Canonical settings shape where a blank background image override is omitted, not empty. */
+export type CanonicalDashboardSettings = Omit<
+  DashboardSettings,
+  'lightBackgroundImage' | 'darkBackgroundImage'
+> & {
+  lightBackgroundImage?: string;
+  darkBackgroundImage?: string;
+};
+
+/**
+ * Omits blank background image overrides (from a cleared configurator field) so the persisted
+ * YAML falls back to DashboardSettingsSchema's built-in default on the next load, instead of
+ * writing `lightBackgroundImage: ''`/`darkBackgroundImage: ''` verbatim. Used by both the
+ * client-side export (YamlCodecService) and the config-write-api sidecar so Save and
+ * Copy/Download YAML never disagree on this.
+ */
+export function omitBlankBackgroundImages(settings: DashboardSettings): CanonicalDashboardSettings {
+  const { lightBackgroundImage, darkBackgroundImage, ...rest } = settings;
+  return {
+    ...rest,
+    ...(lightBackgroundImage.trim() ? { lightBackgroundImage } : {}),
+    ...(darkBackgroundImage.trim() ? { darkBackgroundImage } : {}),
+  };
+}
+
 /**
  * Type inference from schemas
  */
