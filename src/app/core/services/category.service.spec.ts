@@ -40,6 +40,10 @@ describe('CategoryService', () => {
   });
 
   describe('categories$', () => {
+    it('shows exactly one Apps category with the startup defaults', () => {
+      expect(service.categories()).toEqual([APP_CATEGORY]);
+    });
+
     it('publishes no categories before config is available', () => {
       configSubject.set(undefined);
 
