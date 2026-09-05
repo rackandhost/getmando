@@ -28,6 +28,7 @@
 
 - **Configurator Export Guidance**: Documented the `/configure` export flow, browser-only validation, and normalization behavior in the README, along with the ID-uniqueness and category-reference constraints for categories, applications, and bookmarks.
 - **Refreshed README Screenshots**: Regenerated the light and dark dashboard screenshots in the README from the v2.0.0 UI (themed header icons and the configurator link).
+- **UI-First Quick Start**: Rewrote the README "Quick Start (Docker)" around the visual editor: bring up the container with a writable config **directory** mount (`./config:/app/config:rw`, or a named volume) and `CONFIG_WRITE_TOKEN`, then build and save the dashboard from `/configure` with no hand-authored YAML. The full inline `dashboard.yaml` example moved to a new "File-based configuration (advanced)" subsection that points to `config/dashboard.example.yaml`.
 
 ### Changed Files
 
