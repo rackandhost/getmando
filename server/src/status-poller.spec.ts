@@ -152,6 +152,34 @@ describe('createStatusPoller', () => {
     poller.stop();
   });
 
+  it('keeps checking other apps and never crashes the cycle when one check rejects', async () => {
+    await writeConfig(
+      configWith([
+        { id: 'broken', healthCheck: true },
+        { id: 'fine', healthCheck: true },
+      ]),
+    );
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const flaky: StatusCheck = vi.fn(async (url: string) => {
+      if (url.includes('broken')) throw new Error('simulated check failure');
+      return { status: 'up' as const };
+    });
+    const poller = createStatusPoller({ configPath, check: flaky });
+    const unhandled = vi.fn();
+    process.on('unhandledRejection', unhandled);
+
+    poller.start(2_000);
+    await vi.waitFor(() => expect(Object.keys(poller.getStatuses())).toEqual(['fine']));
+
+    poller.stop();
+    process.off('unhandledRejection', unhandled);
+    expect(unhandled).not.toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining('status check threw unexpectedly'),
+      expect.any(Error),
+    );
+  });
+
   it('reports the configured interval, defaulting to 60s before start', () => {
     const poller = createStatusPoller({ configPath, check });
 

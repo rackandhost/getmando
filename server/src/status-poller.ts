@@ -58,7 +58,9 @@ export function createStatusPoller({
       return;
     }
 
-    await Promise.all(
+    // allSettled, not all: one app's check misbehaving must never stop the others from updating,
+    // and must never make this cycle (or the poller) reject.
+    const results = await Promise.allSettled(
       applications
         .filter((application) => application.healthCheck)
         .map(async (application) => {
@@ -66,13 +68,26 @@ export function createStatusPoller({
           cache.set(application.id, { status, checkedAt: new Date().toISOString() });
         }),
     );
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error('[status-poller] a status check threw unexpectedly', result.reason);
+      }
+    }
+  }
+
+  /** runCycle() is never awaited by its callers — this guarantees it can never crash the process
+   * via an unhandled rejection, even if something above this function's own safeguards fails. */
+  function runCycleSafely(): void {
+    runCycle().catch((error: unknown) => {
+      console.error('[status-poller] a poll cycle failed unexpectedly', error);
+    });
   }
 
   return {
     start(startedIntervalMs: number): void {
       intervalMs = startedIntervalMs;
-      void runCycle();
-      timer = setInterval(() => void runCycle(), intervalMs);
+      runCycleSafely();
+      timer = setInterval(runCycleSafely, intervalMs);
     },
 
     stop(): void {

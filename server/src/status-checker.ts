@@ -12,30 +12,38 @@ export interface StatusCheckResult {
  *
  * TLS verification is disabled for this one request only: a status dot answers "is something
  * listening", not "does this app have a browser-trusted certificate".
+ *
+ * This promise never rejects — a background poller must never crash on one bad app — so any
+ * synchronous failure (e.g. constructing the request from a malformed URL) resolves 'down' too,
+ * the same as a network-level failure.
  */
 export function checkAppStatus(url: string, timeoutMs: number): Promise<StatusCheckResult> {
   return new Promise((resolve) => {
-    const transport = new URL(url).protocol === 'https:' ? httpsRequest : httpRequest;
+    try {
+      const transport = new URL(url).protocol === 'https:' ? httpsRequest : httpRequest;
 
-    const request = transport(
-      url,
-      { timeout: timeoutMs, rejectUnauthorized: false },
-      (response) => {
-        // Headers arrived — the app is up. The body is never read; destroy the socket at once.
-        response.destroy();
-        resolve({ status: 'up' });
-      },
-    );
+      const request = transport(
+        url,
+        { timeout: timeoutMs, rejectUnauthorized: false },
+        (response) => {
+          // Headers arrived — the app is up. The body is never read; destroy the socket at once.
+          response.destroy();
+          resolve({ status: 'up' });
+        },
+      );
 
-    request.on('timeout', () => {
-      request.destroy();
+      request.on('timeout', () => {
+        request.destroy();
+        resolve({ status: 'down' });
+      });
+
+      request.on('error', () => {
+        resolve({ status: 'down' });
+      });
+
+      request.end();
+    } catch {
       resolve({ status: 'down' });
-    });
-
-    request.on('error', () => {
-      resolve({ status: 'down' });
-    });
-
-    request.end();
+    }
   });
 }

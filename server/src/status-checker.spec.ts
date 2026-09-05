@@ -107,6 +107,10 @@ describe('checkAppStatus', () => {
     ).resolves.toEqual({ status: 'down' });
   });
 
+  it('resolves down instead of rejecting for a malformed URL', async () => {
+    await expect(checkAppStatus('not-a-url', 2_000)).resolves.toEqual({ status: 'down' });
+  });
+
   it('resolves down after the timeout when the server never responds', async () => {
     const server = http.createServer(() => {
       // Accept the connection but never respond.
