@@ -623,7 +623,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Release (v1.1.0)
+### Current Release (v2.0.0)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering
