@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 
 import { SelfhostedApp } from '../../../core/models/dashboard.models';
 
+import { AppStatusService } from '../../../core/services/app-status.service';
 import { IconService } from '../../../core/services/icon.service';
 import { SettingsService } from '../../../core/services/settings.service';
 
@@ -19,6 +20,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 export class AppCardComponent {
   private readonly settingsService = inject(SettingsService);
   private readonly settings = this.settingsService.settings;
+  private readonly appStatusService = inject(AppStatusService);
 
   // Inputs
   readonly app = input.required<SelfhostedApp>();
@@ -35,6 +37,13 @@ export class AppCardComponent {
 
   readonly showDescriptions = computed(() => this.settings().showDescriptions);
   readonly showLabels = computed(() => this.settings().showLabels);
+
+  /**
+   * Status badge for monitored apps — undefined while healthCheck is off or no check has run yet.
+   */
+  readonly status = computed(() =>
+    this.app().healthCheck ? this.appStatusService.statuses()[this.app().id] : undefined,
+  );
 
   /**
    * Open application

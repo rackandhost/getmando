@@ -7,11 +7,14 @@ import { AppCardComponent } from './app-card.component';
 import { IconService } from '../../../core/services/icon.service';
 import { SettingsService } from '../../../core/services/settings.service';
 
+import { AppStatusService, AppStatus } from '../../../core/services/app-status.service';
+
 import { DEFAULT_DASHBOARD_CONFIG, SelfhostedApp } from '../../../core/models/dashboard.models';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppCardComponent', () => {
   const settingsState = signal(DEFAULT_DASHBOARD_CONFIG.settings);
+  const statusesState = signal<Record<string, AppStatus>>({});
   const iconServiceMock = {
     getIconUrl: vi.fn((app: SelfhostedApp) => `https://example.com/icons/${app.id}.png`),
   };
@@ -29,13 +32,16 @@ describe('AppCardComponent', () => {
     openNewTab: true,
     tags: ['video', 'streaming'],
     favorite: false,
+    healthCheck: false,
   };
 
   const setup = async (
     app: SelfhostedApp = appFixture,
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
+    statuses: Record<string, AppStatus> = {},
   ) => {
     settingsState.set(settings);
+    statusesState.set(statuses);
     iconServiceMock.getIconUrl.mockClear();
 
     const view = await render(AppCardComponent, {
@@ -51,6 +57,12 @@ describe('AppCardComponent', () => {
           provide: SettingsService,
           useValue: {
             settings: settingsState,
+          },
+        },
+        {
+          provide: AppStatusService,
+          useValue: {
+            statuses: statusesState,
           },
         },
       ],
@@ -82,6 +94,55 @@ describe('AppCardComponent', () => {
     const view = await setup();
 
     await expectNoAxeViolations(view.container);
+  });
+
+  it('should render a green badge for a monitored app that is up', async () => {
+    const view = await setup(
+      { ...appFixture, healthCheck: true },
+      DEFAULT_DASHBOARD_CONFIG.settings,
+      { plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' } },
+    );
+
+    const badge = screen.getByRole('img', { name: 'Plex is up' });
+    expect(badge.className).toContain('bg-emerald-500');
+    await expectNoAxeViolations(view.container);
+  });
+
+  it('should render a red badge for a monitored app that is down', async () => {
+    await setup({ ...appFixture, healthCheck: true }, DEFAULT_DASHBOARD_CONFIG.settings, {
+      plex: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' },
+    });
+
+    const badge = screen.getByRole('img', { name: 'Plex is down' });
+    expect(badge.className).toContain('bg-red-500');
+  });
+
+  it('should render no badge when healthCheck is disabled', async () => {
+    await setup(appFixture, DEFAULT_DASHBOARD_CONFIG.settings, {
+      plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' },
+    });
+
+    expect(screen.queryByRole('img', { name: /Plex is (up|down)/ })).not.toBeInTheDocument();
+  });
+
+  it('should render no badge while the app has not been checked yet', async () => {
+    await setup({ ...appFixture, healthCheck: true }, DEFAULT_DASHBOARD_CONFIG.settings, {
+      other: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' },
+    });
+
+    expect(screen.queryByRole('img', { name: /Plex is (up|down)/ })).not.toBeInTheDocument();
+  });
+
+  it('should render the badge once a status arrives after render', async () => {
+    await setup({ ...appFixture, healthCheck: true });
+
+    expect(screen.queryByRole('img', { name: /Plex is (up|down)/ })).not.toBeInTheDocument();
+
+    statusesState.set({ plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' } });
+
+    await waitFor(() => {
+      expect(screen.getByRole('img', { name: 'Plex is up' })).toBeInTheDocument();
+    });
   });
 
   it('should not render the description when showDescriptions is disabled', async () => {

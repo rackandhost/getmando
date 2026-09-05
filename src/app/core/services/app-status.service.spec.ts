@@ -1,0 +1,210 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
+
+import { ConfigService } from './config.service';
+import { AppStatus, AppStatusService } from './app-status.service';
+
+const STATUS_URL = '/api/status';
+
+const upResponse = {
+  intervalMs: 30_000,
+  apps: { plex: { status: 'up' as const, checkedAt: '2026-01-01T00:00:00.000Z' } },
+};
+
+const configWith = (healthCheck: boolean): DashboardConfig => ({
+  ...DEFAULT_DASHBOARD_CONFIG,
+  applications: [
+    {
+      id: 'plex',
+      name: 'Plex',
+      description: '',
+      url: 'https://plex.example.test',
+      icon: { type: 'name', value: 'plex' },
+      category: 'apps',
+      openNewTab: true,
+      tags: [],
+      favorite: false,
+      healthCheck,
+    },
+  ],
+});
+
+describe('AppStatusService', () => {
+  let httpMock: HttpTestingController;
+  let statuses: () => Record<string, AppStatus>;
+  const configState = signal<DashboardConfig | undefined>(configWith(true));
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    configState.set(configWith(true));
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ConfigService, useValue: { config: configState } },
+      ],
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+
+  function createService(): void {
+    const service = TestBed.inject(AppStatusService);
+    TestBed.flushEffects();
+    statuses = service.statuses;
+  }
+
+  function expectStatusRequest(): void {
+    httpMock.expectOne(STATUS_URL);
+  }
+
+  it('makes one bootstrap request immediately on construction', () => {
+    createService();
+
+    expectStatusRequest();
+    httpMock.verify();
+  });
+
+  it('makes no request at all while no application has healthCheck enabled', async () => {
+    configState.set(configWith(false));
+
+    createService();
+
+    httpMock.verify();
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    httpMock.verify();
+    expect(statuses()).toEqual({});
+  });
+
+  it('makes no request while the configuration has not loaded yet', () => {
+    configState.set(undefined);
+
+    createService();
+
+    httpMock.verify();
+  });
+
+  it('starts polling once the configuration gains a monitored application', async () => {
+    configState.set(configWith(false));
+    createService();
+
+    configState.set(configWith(true));
+    TestBed.flushEffects();
+
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+    expect(statuses()).toEqual(upResponse.apps);
+  });
+
+  it('stops polling once no application is monitored anymore, freezing last known statuses', async () => {
+    createService();
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    configState.set(configWith(false));
+    TestBed.flushEffects();
+
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    httpMock.verify();
+    expect(statuses()).toEqual(upResponse.apps);
+  });
+
+  it('stores the response apps in the signal and reschedules at the reported intervalMs', async () => {
+    createService();
+
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    expect(statuses()).toEqual(upResponse.apps);
+
+    await vi.advanceTimersByTimeAsync(29_999);
+    httpMock.verify();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expectStatusRequest();
+  });
+
+  it('floors a too-small reported interval at MIN_POLL_MS (5s)', async () => {
+    createService();
+
+    httpMock.expectOne(STATUS_URL).flush({ intervalMs: 1_000, apps: {} });
+
+    await vi.advanceTimersByTimeAsync(4_999);
+    httpMock.verify();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expectStatusRequest();
+  });
+
+  it('retries a failed poll after RETRY_INTERVAL_MS (15s), keeping the last known statuses', async () => {
+    createService();
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    httpMock.expectOne(STATUS_URL).flush({}, { status: 503, statusText: 'Service Unavailable' });
+
+    expect(statuses()).toEqual(upResponse.apps);
+
+    await vi.advanceTimersByTimeAsync(14_999);
+    httpMock.verify();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expectStatusRequest();
+  });
+
+  it('resumes interval-driven polling after a retry succeeds', async () => {
+    createService();
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    httpMock.expectOne(STATUS_URL).flush({}, { status: 503, statusText: 'Service Unavailable' });
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    httpMock.expectOne(STATUS_URL).flush({ ...upResponse, intervalMs: 60_000 });
+
+    await vi.advanceTimersByTimeAsync(59_999);
+    httpMock.verify();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expectStatusRequest();
+  });
+
+  it('stops polling for the rest of the page load after MAX_RETRIES consecutive failures', async () => {
+    createService();
+
+    // The bootstrap request plus MAX_RETRIES (4) retries all fail.
+    httpMock.expectOne(STATUS_URL).error(new ProgressEvent('network error'));
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await vi.advanceTimersByTimeAsync(15_000);
+      httpMock.expectOne(STATUS_URL).error(new ProgressEvent('network error'));
+    }
+
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    httpMock.verify();
+    expect(statuses()).toEqual({});
+  });
+
+  it('can still retry after an earlier recovered failure (retry count resets on success)', async () => {
+    createService();
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    httpMock.expectOne(STATUS_URL).error(new ProgressEvent('network error'));
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    httpMock.expectOne(STATUS_URL).flush(upResponse);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    httpMock.expectOne(STATUS_URL).error(new ProgressEvent('network error'));
+
+    await vi.advanceTimersByTimeAsync(15_000);
+    expectStatusRequest();
+  });
+});

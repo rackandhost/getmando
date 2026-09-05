@@ -12,6 +12,15 @@
       [alt]="app().name + ' icon'"
       [src]="iconUrl()"
     />
+    @if (status(); as status) {
+      <span
+        role="img"
+        [attr.aria-label]="app().name + ' is ' + status.status"
+        class="absolute -top-2 -right-6 size-3.5 rounded-full bg-emerald-500 ring-2 ring-white/70 transition-all duration-300"
+        [class.bg-emerald-500]="status.status === 'up'"
+        [class.bg-red-500]="status.status === 'down'"
+      ></span>
+    }
   </div>
 
   <!-- App info -->
