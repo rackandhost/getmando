@@ -18,6 +18,7 @@
 - **Themed Header Icons**: Replaced the header emoji controls with Heroicons outline so the configurator gear, back arrow, and theme sun/moon inherit light and dark text color instead of staying platform-colored.
 - **Shared Configuration Validation**: Extended the dashboard schema with cross-collection validation shared by the loader and configurator: unique IDs across categories, applications, and bookmarks, application `category` values that must match a declared category ID, and category IDs reserved for virtual categories (`apps`, `bookmarks`, `favorites`).
 - **YAML Loader Outcomes**: Reworked `YamlLoaderService` to preserve distinguishable outcomes (mounted config, runtime fallback, parse/validation errors) so the configurator can accurately offer a "load mounted YAML" entry point.
+- **Footer Landing Page Link**: The "Powered by Mando" footer credit now links to the product landing page (`https://getmando.rackandhost.com`), opening in a new tab.
 
 ### Testing & Quality
 
@@ -69,6 +70,8 @@
 - `src/app/features/configurator/configurator.routes.ts`
 - `src/app/features/configurator/configurator.store.spec.ts`
 - `src/app/features/configurator/configurator.store.ts`
+- `src/app/shared/components/app-footer/app-footer.component.html`
+- `src/app/shared/components/app-footer/app-footer.component.spec.ts`
 - `src/app/shared/components/app-header/app-header.component.html`
 - `src/app/shared/components/app-header/app-header.component.spec.ts`
 - `src/app/shared/components/app-header/app-header.component.ts`
