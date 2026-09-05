@@ -12,11 +12,6 @@ CONFIG_WRITE_TOKEN="${CONFIG_WRITE_TOKEN:-dev-token}"
 CONFIG_PATH="${CONFIG_PATH:-$(pwd)/public/config/dashboard.yaml}"
 PORT="${SERVER_PORT:-3000}"
 
-if [ ! -f "$CONFIG_PATH" ]; then
-  echo "error: $CONFIG_PATH does not exist. Copy public/config/dashboard.example.yaml there first." >&2
-  exit 1
-fi
-
 if [ ! -d server/node_modules ]; then
   echo "Installing server dependencies..."
   npm --prefix server install

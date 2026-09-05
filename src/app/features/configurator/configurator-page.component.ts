@@ -9,10 +9,12 @@ import {
   DashboardSettings,
   SelfhostedApp,
 } from '../../core/models/dashboard.models';
+import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
+import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
 
 import {
@@ -40,10 +42,12 @@ type BooleanSetting = Extract<
 })
 export class ConfiguratorPageComponent {
   protected readonly store = inject(ConfiguratorStore);
+  private readonly appService = inject(AppService);
   private readonly configExport = inject(ConfigExportService);
   private readonly configWrite = inject(ConfigWriteService);
   private readonly notifications = inject(NotificationService);
   private readonly yamlCodec = inject(YamlCodecService);
+  private readonly yamlLoader = inject(YamlLoaderService);
 
   protected readonly draft = this.store.draft;
   protected readonly validationErrors = this.store.validationErrors;
@@ -281,6 +285,7 @@ export class ConfiguratorPageComponent {
     if (result.status === 'saved') {
       this.store.markSaved();
       this.notifications.success('Configuration saved to the server.');
+      await this.refreshLiveConfig();
       return;
     }
 
@@ -295,6 +300,17 @@ export class ConfiguratorPageComponent {
     }
 
     this.notifications.error(result.message);
+  }
+
+  /**
+   * Re-fetches the just-saved YAML and pushes it into the live dashboard state, so the running
+   * app reflects the save immediately instead of only after a manual reload (F5).
+   */
+  private async refreshLiveConfig(): Promise<void> {
+    const result = await firstValueFrom(this.yamlLoader.refreshMountedConfig());
+    if (result.status === 'valid') {
+      this.appService.initializeConfig(result.config);
+    }
   }
 
   private serializeExportableDraft(): string | undefined {
