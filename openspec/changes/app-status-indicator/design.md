@@ -57,6 +57,7 @@ corner badge — green for `up`, red for `down`, no badge while the id is absent
 | Frontend poll cadence | (a) A separate, hardcoded frontend interval (e.g. 15-30s) vs (b) the frontend polls at whatever cadence the sidecar reports it actually checks at | (b). With the sidecar's default at 60s, a front-end-only 15-30s interval would spend most of its requests re-fetching an unchanged cache for no benefit — polling can never observe fresher data than the sidecar produces. `GET /api/status` reports its own `intervalMs`; the frontend reschedules its next poll using that value, so there is exactly one place (`STATUS_CHECK_INTERVAL_MS`) that defines the cadence instead of two numbers that must be kept in sync by hand. |
 | Frontend's very first poll, before any `intervalMs` is known | (a) Assume a hardcoded default (e.g. `MIN_POLL_MS`) until the first response arrives vs (b) make one immediate request specifically to learn `intervalMs`, then schedule the recurring timer from its response | (b). Scheduling a real timer against a guessed default just to replace it moments later is unnecessary — the service always has a live response to key off of once bootstrapped, so there's no "assumed" interval anywhere in the steady state, only a one-time bootstrap fetch. |
 | Frontend behavior when a poll request fails | (a) Keep retrying at `MIN_POLL_MS`/`intervalMs` forever vs (b) a bounded flat retry window, then give up for the page's lifetime | (b). A flat `RETRY_INTERVAL_MS` (15s) for `MAX_RETRIES` (4, ~1 minute total) is simpler than exponential backoff and answers the same concern — don't hammer a dead endpoint. Once the window is exhausted, the service stops entirely rather than retrying forever at any cadence: a status dashboard that's been failing for a full minute is treated as "not coming back this session", and badges freeze at their last known value until the page is reloaded. Any successful retry within the window cancels the give-up and resumes normal `intervalMs`-driven polling. |
+| Whether the frontend polls at all when nothing is monitored | (a) Always poll `GET /api/status` once the app boots, regardless of config vs (b) poll only while the loaded configuration has ≥1 application with `healthCheck: true`, reactively | (b) (found during implementation, not the original design pass). There's nothing to fetch when no app opts in, so polling unconditionally would just be periodic no-op traffic for the common case of a dashboard that doesn't use this feature. `AppStatusService` watches `ConfigService.config()` via an `effect()` and starts/stops polling as that set changes — including immediately after a configurator save that adds or removes the last monitored app. |
 
 ## Data Flow
 
@@ -157,14 +158,15 @@ export class AppStatusService {
 
 | Layer | What to test | Approach |
 |---|---|---|
-| Unit (sidecar) | `checkAppStatus`: 200/404/500 all resolve `up`; connection refused, DNS failure, and timeout resolve `down`; a self-signed HTTPS cert still resolves `up` | Spin up local `http.createServer`/`https.createServer` instances (with a generated self-signed cert) on ephemeral ports in the test, point checks at them; use a short timeout to test the timeout path against a server that never responds |
-| Unit (sidecar) | Poller: only `healthCheck: true` apps are checked; a missing or invalid `CONFIG_PATH` leaves the previous cache untouched instead of throwing | Fake timers + a temp-file `CONFIG_PATH`, mock `checkAppStatus` |
+| Unit (sidecar) | `checkAppStatus`: 200/404/500 all resolve `up`; connection refused, DNS failure, and timeout resolve `down`; a self-signed HTTPS cert still resolves `up`; a malformed URL resolves `down` instead of rejecting | Spin up local `http.createServer`/`https.createServer` instances (with a generated self-signed cert) on ephemeral ports in the test, point checks at them; use a short timeout to test the timeout path against a server that never responds |
+| Unit (sidecar) | Poller: only `healthCheck: true` apps are checked; a missing or invalid `CONFIG_PATH` leaves the previous cache untouched instead of throwing; one app's check throwing/rejecting doesn't stop other apps from being checked or updated that cycle, and never becomes an unhandled rejection | Fake timers + a temp-file `CONFIG_PATH`, mock `checkAppStatus`; for the last case, register a `process.on('unhandledRejection', ...)` spy for the duration of the test and assert it's never called |
 | Unit (sidecar) | `GET /api/status` returns the current cache verbatim, with no auth required | `app.inject()` against `buildApp`, as the existing `app.spec.ts` tests already do for `/api/config` |
 | Unit (sidecar) | Sidecar starts and serves requests with `CONFIG_WRITE_TOKEN` unset; `/api/config` still 401s every request in that case | Extends the existing token-auth test group |
 | Unit (Angular) | `AppStatusService` makes one bootstrap request before scheduling any timer; maps `response.apps` into the signal; reschedules at `response.intervalMs` (floored at `MIN_POLL_MS`) after success | Vitest with `HttpTestingController`, fake timers |
 | Unit (Angular) | On a failed poll, `AppStatusService` retries every `RETRY_INTERVAL_MS` (not the last known `intervalMs`), leaves `statuses` unchanged, and resumes normal cadence if a retry within `MAX_RETRIES` succeeds | Vitest with `HttpTestingController` returning one or more errors then a success, fake timers |
 | Unit (Angular) | After `MAX_RETRIES` consecutive failures, `AppStatusService` stops scheduling any further request for the rest of the test/page lifetime | Vitest with `HttpTestingController` always erroring; assert no request is made after the last retry's delay elapses |
-| Unit (Angular) | `AppCardComponent` renders no badge when `healthCheck` is false or the app id is absent from the status map; green/red badge otherwise | Component test with a mocked `AppStatusService` |
+| Unit (Angular) | Stopping polling (config loses its last monitored app) cancels an in-flight poll rather than letting its response schedule a second, orphaned polling loop once polling restarts | `HttpTestingController`'s `TestRequest.cancelled` flag, asserted after a stop-then-start sequence with a request still pending |
+| Unit (Angular) | `AppCardComponent` renders no badge when `healthCheck` is false or the app id is absent from the status map; green/red badge otherwise, and never both classes at once | Component test with a mocked `AppStatusService`; assert the absence of the *other* status's class, not just the presence of the expected one |
 | Integration (Angular) | Configurator's `healthCheck` toggle updates the draft and round-trips through save | Extends the existing configurator page/store test suites |
 
 ## Threat Matrix
@@ -217,3 +219,23 @@ pulled forward.
   exponential backoff, and chosen over "keep retrying forever at some cadence" so a status dashboard
   that's been down for a full minute doesn't poll a dead endpoint indefinitely; recovery after that
   point requires a page reload.
+- **Poll-only-when-monitored** (found during implementation, not the original design pass):
+  `AppStatusService` only polls while the loaded config has ≥1 `healthCheck: true` application,
+  starting/stopping reactively via an `effect()` on `ConfigService.config()`. See Architecture
+  Decisions.
+- **Sidecar resilience hardening** (found during code review, fixed before merge): `checkAppStatus`
+  is wrapped in a try/catch so it can never reject (a malformed URL or any other synchronous failure
+  in constructing the request now resolves `down`, matching its own documented contract instead of
+  crashing the process via an unhandled rejection); `runCycle`'s `Promise.all` was replaced with
+  `Promise.allSettled` plus per-result error logging, so one app's check misbehaving can never stop
+  siblings from updating or escape as an unhandled rejection; and `start()`/`setInterval` now route
+  through a `runCycleSafely()` wrapper that catches and logs instead of leaving `runCycle()`'s
+  returned promise unhandled. Verified by reproducing the crash against the pre-fix code (`node
+  --unhandled-rejections=throw` — Node's default since v15 — terminates the process on an unhandled
+  rejection) and confirming it no longer occurs after the fix.
+- **Frontend stale-poll cancellation** (found during code review, fixed before merge):
+  `AppStatusService.stop()` now unsubscribes the in-flight poll's `Subscription` in addition to
+  clearing the scheduled timer. Previously, a stop-then-start cycle while a request was in flight
+  could let that stale response's handler run after polling resumed, scheduling a second, orphaned
+  polling loop alongside the new one. Angular's `HttpClient` cancels the underlying request on
+  unsubscribe, so the stale response's `next`/`error` handlers now never run at all.

@@ -64,6 +64,18 @@ token to serve status results.
 - THEN opted-in apps are still checked
 - AND `GET /api/status` still returns their results
 
+### Requirement: One app's check failure never affects another app or the sidecar itself
+
+A failure while checking one application — including an unexpected exception, not just a network
+error already covered by "Reachability check semantics" — MUST NOT prevent other applications from
+being checked in the same cycle, and MUST NOT crash or otherwise interrupt the sidecar process.
+
+#### Scenario: One app's check throws unexpectedly
+- GIVEN two `healthCheck: true` apps, where checking one raises an unexpected exception
+- WHEN a poll cycle runs
+- THEN the other app is still checked and its result is cached
+- AND the sidecar process keeps running and continues serving `POST /api/config` and `GET /api/status`
+
 ### Requirement: Status endpoint
 
 The system MUST expose `GET /api/status`, unauthenticated, returning the current cached results and
@@ -108,3 +120,25 @@ retries are exhausted, rather than retrying indefinitely.
 - WHEN the last retry's delay elapses
 - THEN no further request is scheduled
 - AND previously known statuses remain displayed unchanged
+
+### Requirement: Frontend polls only while an application is monitored
+
+The frontend MUST NOT poll `GET /api/status` while no application in the loaded configuration has
+`healthCheck: true`, and MUST start or stop polling reactively as that set changes, without
+requiring a page reload.
+
+#### Scenario: No monitored applications
+- GIVEN the loaded configuration has no application with `healthCheck: true`
+- WHEN the dashboard is open
+- THEN no request to `GET /api/status` is ever made
+
+#### Scenario: Configuration gains a monitored application
+- GIVEN no application was monitored and no polling was happening
+- WHEN the loaded configuration changes to include one `healthCheck: true` application
+- THEN polling starts immediately, without a page reload
+
+#### Scenario: An in-flight poll is cancelled when monitoring stops
+- GIVEN a poll request is in flight
+- WHEN the configuration changes to have no monitored applications before that request resolves
+- THEN the request is cancelled
+- AND its response, if any, MUST NOT be used to schedule a further poll

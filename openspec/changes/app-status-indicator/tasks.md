@@ -171,3 +171,52 @@ Decision needed before apply: No — resolved during design review, see `design.
       - Files: N/A (verification only).
 
 **Phase 3 exit check**: full regression suite green across both `ng test` and `server/`'s Vitest.
+
+## Phase 4: Code Review Fixes
+
+Findings from a `code-review-and-quality` pass over the full feature branch. See `design.md`'s
+"Decisions (resolved)" for the details recorded there.
+
+- [x] 4.1 (Critical) `checkAppStatus` could reject instead of resolving `down` if constructing the
+      request threw synchronously (e.g. a malformed URL), and `runCycle`'s `Promise.all` plus the
+      un-caught `void runCycle()` call sites meant that rejection became an unhandled promise
+      rejection — which crashes the sidecar process by default on Node 15+ (verified empirically:
+      reproduced the crash against the pre-fix code, confirmed it's gone after the fix).
+      - Acceptance: `checkAppStatus` never rejects; one app's check failing doesn't stop others from
+        updating that cycle or escape as an unhandled rejection anywhere in the call chain.
+      - Verify: `npm test` in `server/` — new tests in `status-checker.spec.ts` (malformed URL) and
+        `status-poller.spec.ts` (a rejecting `check` mock, asserted via a `process.on
+        ('unhandledRejection', ...)` spy).
+      - Files: `server/src/status-checker.ts`, `server/src/status-checker.spec.ts`,
+        `server/src/status-poller.ts`, `server/src/status-poller.spec.ts`.
+
+- [x] 4.2 (Required) `AppStatusService.stop()` didn't cancel an in-flight poll, so a stop-then-start
+      sequence while a request was pending could let its stale response schedule a second, orphaned
+      polling loop alongside the new one.
+      - Acceptance: stopping cancels the in-flight request; its response (if it could still arrive)
+        never schedules a further poll.
+      - Verify: `ng test` — new test in `app-status.service.spec.ts` asserting
+        `TestRequest.cancelled` and that only one polling loop survives a stop/start-while-in-flight
+        sequence.
+      - Files: `src/app/core/services/app-status.service.ts`,
+        `src/app/core/services/app-status.service.spec.ts`.
+
+- [x] 4.3 (Required) `design.md`/`specs/app-status-check/spec.md` didn't document that the frontend
+      only polls while ≥1 application is monitored (an enhancement added during implementation,
+      correctly documented in README but not in the spec docs).
+      - Acceptance: design/spec docs describe the poll-only-when-monitored behavior.
+      - Verify: manual read-through.
+      - Files: `design.md`, `specs/app-status-check/spec.md`.
+
+- [x] 4.4 (Nit) Redundant static `bg-emerald-500` class on the status badge, alongside the
+      `[class.bg-emerald-500]` binding that already fully governs it — confirmed harmless at runtime
+      (Angular's class binding wins), but misleading to read. Removed. Strengthened the up/down
+      badge tests to assert the *absence* of the other status's class, not just the presence of the
+      expected one.
+      - Acceptance: template has no redundant static class; tests would catch a regression either way.
+      - Verify: `ng test`.
+      - Files: `src/app/shared/components/app-card/app-card.component.html`,
+        `src/app/shared/components/app-card/app-card.component.spec.ts`.
+
+**Phase 4 exit check**: `ng test` and `server/`'s `npm test` both green; `npx tsc -p
+server/tsconfig.json` clean.
