@@ -74,6 +74,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: true,
+              healthCheck: false,
             },
           ],
           settings: {
@@ -104,6 +105,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: false,
+              healthCheck: false,
             },
           ],
           settings: {
@@ -134,6 +136,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: true,
+              healthCheck: false,
             },
           ],
           settings: {
@@ -177,6 +180,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: true,
+              healthCheck: false,
             },
           ],
           settings: {
@@ -207,6 +211,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: false,
+              healthCheck: false,
             },
           ],
           settings: {
@@ -238,6 +243,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: true,
+              healthCheck: false,
             },
           ],
           settings: {
@@ -269,6 +275,7 @@ describe('CategoryService', () => {
               openNewTab: true,
               tags: [],
               favorite: false,
+              healthCheck: false,
             },
           ],
           settings: {
