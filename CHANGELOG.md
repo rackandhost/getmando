@@ -27,6 +27,7 @@
 ### Documentation
 
 - **Configurator Export Guidance**: Documented the `/configure` export flow, browser-only validation, and normalization behavior in the README, along with the ID-uniqueness and category-reference constraints for categories, applications, and bookmarks.
+- **Refreshed README Screenshots**: Regenerated the light and dark dashboard screenshots in the README from the v2.0.0 UI (themed header icons and the configurator link).
 
 ### Changed Files
 
@@ -38,6 +39,8 @@
 - `entrypoint.sh`
 - `nginx.conf`
 - `openspec/changes/yaml-configurator/proposal.md`
+- `screenshots/dashboard.png`
+- `screenshots/dashboard_light.png`
 - `server/package.json`
 - `server/src/app.spec.ts`
 - `server/src/app.ts`
