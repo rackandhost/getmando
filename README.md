@@ -569,6 +569,22 @@ npm test
 
 The dev server runs on `http://localhost:4200` with hot-reload enabled.
 
+### Local Development with the Write API
+
+`npm start` alone serves a read-only dashboard — the configurator's `Save` action needs the
+`config-write-api` sidecar, which normally only runs inside the Docker image. To run both locally
+without building the image:
+
+```bash
+npm run dev
+```
+
+This starts the Angular dev server (`:4200`) and the sidecar (`:3000`) together; `proxy.conf.json`
+forwards `/api/*` requests from the dev server to the sidecar, and Ctrl+C stops both. It writes to
+`public/config/dashboard.yaml` — the same file the dev server already reads — using the default
+token `dev-token` (enter that in the configurator's save prompt). Override `CONFIG_WRITE_TOKEN`,
+`CONFIG_PATH`, or `SERVER_PORT` as environment variables to change any of that.
+
 ### Building for Production
 
 ```bash
