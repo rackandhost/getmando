@@ -186,11 +186,10 @@ existing `dashboard.yaml` files parse unchanged and no app gets checked until ex
 The only behavior change to something that already exists is removing the sidecar's
 `process.exit(1)` when `CONFIG_WRITE_TOKEN` is unset — today that means the sidecar (and therefore
 this new feature) doesn't run at all in a read-only deployment; after this change it runs, `/api/config`
-keeps 401-ing every write, and `/api/status` starts working. Per the proposal, this feature doesn't
-ship in the next release regardless — it's tracked on `feature/app-status-indicator` until explicitly
-pulled forward.
+keeps 401-ing every write, and `/api/status` starts working. This feature was built in parallel with
+v2.0.0 on `feature/app-status-indicator` and is targeted for the first release after v2.0.0.
 
-## Decisions (resolved — see Open Questions in proposal.md)
+## Decisions (resolved — see Resolved Questions in proposal.md)
 
 - **Self-signed / invalid TLS certificates**: accepted for status checks specifically
   (`rejectUnauthorized: false` on that one request), never process-wide. See Architecture Decisions.

@@ -158,9 +158,9 @@ Decision needed before apply: No — resolved during design review, see `design.
         shape assertions need updating.
 
 - [x] 3.3 Update `README.md`: document the `healthCheck` field, `STATUS_CHECK_INTERVAL_MS` env var,
-      the "any HTTP response counts as up" behavior, and the self-signed-cert acceptance. Defer the
-      `CHANGELOG.md` entry to whenever this feature is actually pulled into a release (per
-      `proposal.md`'s Success Criteria — it does not ship in the next version).
+      the "any HTTP response counts as up" behavior, and the self-signed-cert acceptance. The
+      `CHANGELOG.md` entry is still pending — add it when this feature is cut into its release (the
+      first after v2.0.0), together with promoting the spec and archiving this change.
       - Acceptance: README accurately describes the new field/env var and its behavior.
       - Verify: manual read-through against `design.md`.
       - Files: `README.md`.

@@ -26,7 +26,8 @@ the dashboard host's.
 - A single global check interval via an environment variable (e.g. `STATUS_CHECK_INTERVAL_MS`),
   applied to every monitored app — no per-app interval in v1.
 - Frontend: `AppCardComponent` renders a small corner badge (green/red) for apps with `healthCheck`
-  enabled, driven by a new service that polls `GET /api/status` on its own interval.
+  enabled, driven by a new service that polls `GET /api/status` (at the cadence the endpoint
+  reports — see `design.md`).
 - The configurator exposes the `healthCheck` toggle when editing an app.
 
 ### Out of Scope
@@ -35,8 +36,9 @@ the dashboard host's.
 - Uptime history, response-time graphs, or alerting/notifications. The cache is in-memory only and
   resets on sidecar restart; no database is introduced.
 - Status for bookmarks — bookmarks are arbitrary external links and are never monitored.
-- An explicit toggle for self-signed/invalid TLS certificates — flagged as an open design question
-  (see `design.md`), since many homelab apps serve HTTPS with self-signed certs.
+- An explicit toggle for self-signed/invalid TLS certificates — resolved in `design.md`: the
+  status-check request always skips verification (`rejectUnauthorized: false`), with no per-app
+  toggle, since many homelab apps serve HTTPS with self-signed certs.
 - Any change to `POST /api/config`'s existing behavior.
 
 ## Capabilities
@@ -57,10 +59,10 @@ Extend the existing sidecar process (no new container — consistent with the si
 established in `config-write-api`) with an in-memory poller: on startup, and every
 `STATUS_CHECK_INTERVAL_MS`, issue a short-timeout HTTP request to the `url` of every application
 flagged `healthCheck: true` in the currently loaded config, and store `{ status, checkedAt }` per
-app id in memory. `GET /api/status` returns this cache as JSON, unauthenticated. The frontend polls
-this endpoint on its own interval (decoupled from the server's check cadence) and renders a small
-badge on `AppCardComponent` — green for up, red for down, no badge before the first check completes
-or when `healthCheck` isn't set.
+app id in memory. `GET /api/status` returns this cache as JSON, unauthenticated, along with the
+sidecar's own `intervalMs`. The frontend polls this endpoint at that reported cadence and renders a
+small badge on `AppCardComponent` — green for up, red for down, no badge before the first check
+completes or when `healthCheck` isn't set.
 
 ## Affected Areas
 
@@ -79,7 +81,7 @@ or when `healthCheck` isn't set.
 | Risk | Likelihood | Mitigation |
 |------|------------|------------|
 | Polling floods a fragile/embedded device (router, IoT sensor) | Medium | Opt-in per app, default off; short per-request timeout; single low-frequency global interval for v1 |
-| Self-signed certs on HTTPS apps make every check fail | High | Open design question: likely need to disable TLS verification specifically for status checks (documented trade-off), not for any other request |
+| Self-signed certs on HTTPS apps make every check fail | High | Resolved (`design.md`): TLS verification is disabled for the status-check request specifically (`rejectUnauthorized: false`), never for any other request |
 | Sidecar's network reach differs from the viewer's browser (container can reach an app the viewer can't, or vice versa) | Medium | Document as a known limitation: status reflects reachability from the dashboard host's network, not the viewer's |
 | In-memory-only cache means a sidecar restart briefly shows every monitored app as unknown | Low | Accepted per Out of Scope — no persistence in v1 |
 | Decoupling from `CONFIG_WRITE_TOKEN` changes existing sidecar startup behavior | Low | Purely additive — read-only deployments gain a capability; nothing currently working stops working |
@@ -107,13 +109,17 @@ new scheduling dependency either.
 - [ ] A down app (connection refused/timeout/DNS failure) shows red; an app returning any HTTP
       response (even 401/500) shows green.
 - [ ] Existing `POST /api/config` behavior is unaffected.
-- [ ] This feature does not ship in the next release (per current scoping) — tracked on its own
-      branch until explicitly pulled into a release.
+- [ ] Ships in the first release after v2.0.0: on that release,
+      `specs/app-status-check/spec.md` is promoted into `openspec/specs/`, the `config-write-api`
+      spec is updated for the new route and the decoupled startup, and this change is archived.
 
-## Open Questions
+## Resolved Questions
 
-- Self-signed/invalid TLS certificates: disable verification for status checks specifically, or
-  require valid certs (making HTTPS self-signed apps always show red)? See `design.md`.
-- HEAD vs GET for the check request — HEAD is cheaper but some apps don't implement it correctly
-  (405 or hang). Needs a decision in `design.md`.
-- Default values for `STATUS_CHECK_INTERVAL_MS` and per-request timeout.
+Developed in parallel with v2.0.0; all three were settled in design review and are recorded in full
+in `design.md` (§ Architecture Decisions, § Decisions).
+
+- Self-signed/invalid TLS certificates: verification is disabled for the status-check request only
+  (`rejectUnauthorized: false` on that request, never process-wide).
+- HEAD vs GET: GET — HEAD is unreliably implemented across self-hosted apps, and the body is never
+  read either way.
+- Default `STATUS_CHECK_INTERVAL_MS` is `60000` ms; default per-check timeout is `5000` ms.
