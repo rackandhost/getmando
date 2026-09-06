@@ -50,7 +50,7 @@
 - `config/dashboard.example.yaml`
 - `entrypoint.sh`
 - `nginx.conf`
-- `openspec/changes/yaml-configurator/proposal.md`
+- `openspec/changes/archive/2026-09-05-yaml-configurator/proposal.md` (archived after v2.0.0)
 - `package-lock.json`
 - `package.json`
 - `screenshots/dashboard.png`
