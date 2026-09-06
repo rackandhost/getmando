@@ -34,6 +34,26 @@ describe('CollectionEditorComponent', () => {
     expect(screen.getByRole('button', { name: 'Remove Tools' })).toHaveFocus();
   });
 
+  it('focuses the new item name field after Add', async () => {
+    const user = userEvent.setup();
+    const added = vi.fn(() => {
+      view.fixture.componentRef.setInput('items', [
+        ...categories,
+        { id: 'category-3', name: 'New category' },
+      ]);
+      view.fixture.detectChanges();
+    });
+    const view = await render(CollectionEditorComponent, {
+      inputs: { collection: 'categories', items: categories },
+      on: { addItem: added },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Add category' }));
+
+    expect(added).toHaveBeenCalled();
+    expect(screen.getByLabelText('Category name for New category')).toHaveFocus();
+  });
+
   it('edits an application IconConfig with labeled type and value controls', async () => {
     const user = userEvent.setup();
     const edited = vi.fn();

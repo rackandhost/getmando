@@ -9,6 +9,8 @@
 ### Bug Fixes
 
 - **First Run Without YAML**: Starting without a mounted `dashboard.yaml` now uses the default dashboard silently, shows a single Apps category, and leaves the visual configurator ready to start with an empty draft. Invalid or unavailable existing YAML continues to show a configuration warning.
+- **Settings Field Error Association**: The configurator's "Items per row" setting now surfaces its validation error inline with `aria-invalid`/`aria-describedby`, matching the pattern already used by metadata and collection fields, instead of only appearing in the top validation summary.
+- **Focus After Adding a Collection Item**: Adding a category, application, or bookmark in the configurator now moves keyboard focus to the new item's Name field, matching the existing focus-management behavior after Remove.
 
 ### New Features
 
@@ -23,6 +25,7 @@
 - **Shared Configuration Validation**: Extended the dashboard schema with cross-collection validation shared by the loader and configurator: unique IDs across categories, applications, and bookmarks, application `category` values that must match a declared category ID, and category IDs reserved for virtual categories (`apps`, `bookmarks`, `favorites`).
 - **YAML Loader Outcomes**: Reworked `YamlLoaderService` to preserve distinguishable outcomes (mounted config, runtime fallback, parse/validation errors) so the configurator can accurately offer a "load mounted YAML" entry point.
 - **Footer Landing Page Link**: The "Powered by Mando" footer credit now links to the product landing page (`https://getmando.rackandhost.com`), opening in a new tab.
+- **Export Serialization Safety**: Removed an unreachable fallback path in the configurator's copy/download export flow that bypassed schema validation via an unsafe type cast; canonical YAML is now only ever produced from a fully validated `DashboardConfig`.
 
 ### Testing & Quality
 
