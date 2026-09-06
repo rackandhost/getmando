@@ -315,10 +315,7 @@ export class ConfiguratorPageComponent {
 
   private serializeExportableDraft(): string | undefined {
     const config = this.store.toDashboardConfig();
-    if (config) return this.yamlCodec.serialize(config);
-    if (!this.store.validate()) return undefined;
-
-    return this.yamlCodec.serialize(this.draft() as DashboardConfig);
+    return config ? this.yamlCodec.serialize(config) : undefined;
   }
 
   private readFileText(file: File): Promise<string> {

@@ -63,21 +63,28 @@ export class YamlLoaderService {
         }),
       ),
       catchError((error: unknown) => {
-        this.logger.error('[YamlLoader] Failed to load dashboard config:', error);
-        return of(this.toMountedResult(error));
+        const result = this.toMountedResult(error);
+        if (result.status !== 'missing') {
+          this.logger.error('[YamlLoader] Failed to load dashboard config:', error);
+        }
+        return of(result);
       }),
       tap((result) => this.mountedResultState.set(result)),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
   }
 
-  /** Loads the dashboard configuration, retaining legacy fallback and notification behavior. */
+  /** Uses defaults when YAML is missing and warns only when configuration cannot be used. */
   loadDashboardConfig(): Observable<DashboardConfig> {
     return this.loadMountedConfig().pipe(
       map((result) => {
         if (result.status === 'valid') return result.config;
-        this.logger.warn('[YamlLoader] Falling back to default configuration');
-        this.notifications.warning('Dashboard configuration could not be loaded. Using defaults.');
+        if (result.status !== 'missing') {
+          this.logger.warn('[YamlLoader] Falling back to default configuration');
+          this.notifications.warning(
+            'Dashboard configuration could not be loaded. Using defaults.',
+          );
+        }
         return this.yamlParser.getDefaultConfig();
       }),
     );

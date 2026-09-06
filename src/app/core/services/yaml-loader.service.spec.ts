@@ -91,9 +91,24 @@ describe('YamlLoaderService', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 
+  it('starts with defaults without warnings or retries when the YAML is missing', async () => {
+    vi.useFakeTimers();
+    httpClient.get.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+
+    await expect(firstValueFrom(service.loadDashboardConfig())).resolves.toEqual(
+      DEFAULT_DASHBOARD_CONFIG,
+    );
+
+    expect(service.mountedConfigResult()).toEqual({ status: 'missing' });
+    expect(notifications.warning).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('falls back immediately for a non-retryable HTTP error', async () => {
     vi.useFakeTimers();
-    const loadError = new HttpErrorResponse({ status: 404 });
+    const loadError = new HttpErrorResponse({ status: 403 });
 
     httpClient.get.mockReturnValue(throwError(() => loadError));
 

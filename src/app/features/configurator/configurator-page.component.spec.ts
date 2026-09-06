@@ -193,7 +193,7 @@ describe('ConfiguratorPageComponent', () => {
     await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
     await user.click(screen.getByRole('button', { name: 'Download YAML' }));
 
-    expect(store.validate).toHaveBeenCalledTimes(2);
+    expect(store.toDashboardConfig).toHaveBeenCalledTimes(2);
     expect(yamlCodec.serialize).not.toHaveBeenCalled();
     expect(writeText).not.toHaveBeenCalled();
     expect(notifications.success).not.toHaveBeenCalled();
@@ -203,7 +203,7 @@ describe('ConfiguratorPageComponent', () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
     const fetch = vi.fn();
-    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },
@@ -229,7 +229,7 @@ describe('ConfiguratorPageComponent', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
     const fetch = vi.fn();
-    store.validate.mockReturnValue(true);
+    store.toDashboardConfig.mockReturnValue(draft());
     Object.defineProperty(globalThis, 'URL', {
       configurable: true,
       value: { createObjectURL, revokeObjectURL },
@@ -417,6 +417,25 @@ describe('ConfiguratorPageComponent', () => {
       'href',
       '#field-applications-0-icon-value',
     );
+  });
+
+  it('associates a settings validation error with its field', async () => {
+    validationErrors.set([
+      { path: ['settings', 'itemsPerRow'], message: 'Items per row must be between 1 and 10.' },
+    ]);
+    await render(ConfiguratorPageComponent, {
+      providers: defaultProviders(),
+    });
+
+    const field = screen.getByLabelText(/Items per row/);
+    expect(field).toHaveAttribute('aria-describedby', 'error-settings-itemsPerRow');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(
+      screen.getByText('Items per row must be between 1 and 10.', { selector: 'p' }),
+    ).toHaveAttribute('id', 'error-settings-itemsPerRow');
+    expect(
+      screen.getByRole('link', { name: 'Items per row must be between 1 and 10.' }),
+    ).toHaveAttribute('href', '#field-settings-itemsPerRow');
   });
 
   it('renders labeled settings fields and associates an actionable error summary with invalid fields', async () => {

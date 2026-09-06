@@ -227,7 +227,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
     title: 'Mando',
     description: 'My Selfhosted Applications',
   },
-  categories: [APP_CATEGORY],
+  categories: [],
   applications: [],
   bookmarks: [],
   settings: {

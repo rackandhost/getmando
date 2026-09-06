@@ -65,6 +65,7 @@ export class CollectionEditorComponent {
   readonly editItem = output<CollectionEditEvent>();
 
   private readonly removeButtons = viewChildren<ElementRef<HTMLButtonElement>>('removeButton');
+  private readonly nameInputs = viewChildren<ElementRef<HTMLInputElement>>('nameInput');
 
   protected addLabel(): string {
     return `Add ${this.collectionLabel()}`;
@@ -186,6 +187,14 @@ export class CollectionEditorComponent {
         ...this.itemIcon(this.items()[index]),
         value: (event.target as HTMLInputElement).value,
       },
+    });
+  }
+
+  protected add(): void {
+    this.addItem.emit();
+    queueMicrotask(() => {
+      const nameInputs = this.nameInputs();
+      nameInputs[nameInputs.length - 1]?.nativeElement.focus();
     });
   }
 

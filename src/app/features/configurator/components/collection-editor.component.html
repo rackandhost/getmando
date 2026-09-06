@@ -19,7 +19,7 @@
     <button
       class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
       type="button"
-      (click)="addItem.emit()"
+      (click)="add()"
     >
       <ng-icon aria-hidden="true" name="heroPlus" />
       {{ addLabel() }}
@@ -66,6 +66,7 @@
             <label class="block text-sm font-medium text-neutral-900 dark:text-white">
               Name
               <input
+                #nameInput
                 class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
                 [id]="fieldId(index, 'name')"
                 [attr.aria-label]="fieldLabel(item, 'name')"

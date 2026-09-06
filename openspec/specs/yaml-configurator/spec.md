@@ -38,6 +38,30 @@ the mounted configuration or start empty. A runtime fallback MUST NOT be present
 - THEN the user starts with an empty draft
 - AND no misleading mounted-load option is offered
 
+### Requirement: Start normally without mounted YAML
+
+A missing mounted YAML file (HTTP 404) MUST be treated as a normal initial state. The dashboard
+MUST use its default configuration without a configuration warning toast or warning/error
+diagnostic. The default configuration MUST contain no user categories; the category service
+MUST provide the single virtual Apps category. The mounted outcome MUST remain missing so the
+configurator starts empty.
+
+#### Scenario: First startup without YAML
+
+- GIVEN no dashboard YAML file exists
+- WHEN the application starts
+- THEN the category selector shows exactly one Apps button
+- AND no configuration warning toast appears
+- AND the missing request is not retried
+- AND the configurator starts with an empty draft
+
+#### Scenario: Existing YAML cannot be used
+
+- GIVEN the mounted YAML is invalid or its request fails with a status other than 404
+- WHEN the application falls back to defaults after any transient retries
+- THEN one configuration warning toast appears
+- AND diagnostics describe the failure
+
 ### Requirement: Import and edit a draft
 
 The configurator MUST allow local YAML import and editing of settings, categories, applications, and
