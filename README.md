@@ -19,6 +19,8 @@
 
 <img alt="Dashboard Light" width="1024" src="screenshots/dashboard_light.png" />
 
+<img alt="Visual Configurator" width="1024" src="screenshots/configurator.png" />
+
 ## 📖 Overview
 
 **Mando** is a beautiful and simply dashboard (not pretend to add too many features such a widgets, weather, etc...) for your self-hosted applications. Built with modern web technologies, it provides an elegant glassmorphism UI to organize and access all your homelab services from a single place. 
