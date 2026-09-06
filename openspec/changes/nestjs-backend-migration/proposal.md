@@ -151,7 +151,7 @@ deployment change. No data migration is involved (there is no data store).
 - [ ] `CONFIG_WRITE_TOKEN` unset → process exits non-zero; `CONFIG_PATH` / `PORT` / `HOST` defaults
       unchanged.
 - [ ] `server/` Vitest suite covers the same cases as today and passes in CI; `npm --prefix server
-    run typecheck` is clean.
+  run typecheck` is clean.
 - [ ] The Angular frontend and its test suite are unmodified and pass unchanged.
 - [ ] `docker build` succeeds; a manual `curl` smoke test against the running image shows parity;
       the compressed image is no more than 25 MB larger than the previous release.
