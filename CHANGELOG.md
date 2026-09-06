@@ -1,10 +1,16 @@
 # Changelog
 
-## Unreleased
+## v2.0.0
 
 ### ⚠️ Breaking Changes
 
 - **Config Volume Now Recommended `:rw`**: The `dashboard.yaml` volume mount documented in the README and `docker-compose` examples changed from `:ro` to `:rw` so the new configurator "Save" action can write to it. Existing deployments are unaffected on upgrade: without setting `CONFIG_WRITE_TOKEN`, or if the volume stays `:ro`, the dashboard continues to serve exactly as before — only the new save action fails, with copy/download remaining available.
+
+### Bug Fixes
+
+- **First Run Without YAML**: Starting without a mounted `dashboard.yaml` now uses the default dashboard silently, shows a single Apps category, and leaves the visual configurator ready to start with an empty draft. Invalid or unavailable existing YAML continues to show a configuration warning.
+- **Settings Field Error Association**: The configurator's "Items per row" setting now surfaces its validation error inline with `aria-invalid`/`aria-describedby`, matching the pattern already used by metadata and collection fields, instead of only appearing in the top validation summary.
+- **Focus After Adding a Collection Item**: Adding a category, application, or bookmark in the configurator now moves keyboard focus to the new item's Name field, matching the existing focus-management behavior after Remove.
 
 ### New Features
 
@@ -18,6 +24,12 @@
 - **Themed Header Icons**: Replaced the header emoji controls with Heroicons outline so the configurator gear, back arrow, and theme sun/moon inherit light and dark text color instead of staying platform-colored.
 - **Shared Configuration Validation**: Extended the dashboard schema with cross-collection validation shared by the loader and configurator: unique IDs across categories, applications, and bookmarks, application `category` values that must match a declared category ID, and category IDs reserved for virtual categories (`apps`, `bookmarks`, `favorites`).
 - **YAML Loader Outcomes**: Reworked `YamlLoaderService` to preserve distinguishable outcomes (mounted config, runtime fallback, parse/validation errors) so the configurator can accurately offer a "load mounted YAML" entry point.
+- **Footer Landing Page Link**: The "Powered by Mando" footer credit now links to the product landing page (`https://getmando.rackandhost.com`), opening in a new tab.
+- **Export Serialization Safety**: Removed an unreachable fallback path in the configurator's copy/download export flow that bypassed schema validation via an unsafe type cast; canonical YAML is now only ever produced from a fully validated `DashboardConfig`.
+
+### Security
+
+- **Dependency Vulnerability Cleanup**: Updated `@angular/core`/`common`/`compiler`/`forms`/`platform-browser`/`router` to 21.2.22 and `js-yaml` to 4.3.2, resolving 13 GitHub-flagged advisories reachable from production dependencies (Angular XSS/sanitization-bypass/denial-of-service issues and a `js-yaml` quadratic-CPU parsing issue). A follow-up `npm audit fix` also cleared the remaining build-tooling-only transitive advisories (bundled in `@angular/cli`'s dependency tree, never shipped to the browser or the server). `npm audit` now reports zero vulnerabilities; no application behavior changed.
 
 ### Testing & Quality
 
@@ -26,6 +38,8 @@
 ### Documentation
 
 - **Configurator Export Guidance**: Documented the `/configure` export flow, browser-only validation, and normalization behavior in the README, along with the ID-uniqueness and category-reference constraints for categories, applications, and bookmarks.
+- **Refreshed README Screenshots**: Regenerated the light and dark dashboard screenshots in the README from the v2.0.0 UI (themed header icons and the configurator link).
+- **UI-First Quick Start**: Rewrote the README "Quick Start (Docker)" around the visual editor: bring up the container with a writable config **directory** mount (`./config:/app/config:rw`, or a named volume) and `CONFIG_WRITE_TOKEN`, then build and save the dashboard from `/configure` with no hand-authored YAML. The full inline `dashboard.yaml` example moved to a new "File-based configuration (advanced)" subsection that points to `config/dashboard.example.yaml`.
 
 ### Changed Files
 
@@ -37,6 +51,10 @@
 - `entrypoint.sh`
 - `nginx.conf`
 - `openspec/changes/yaml-configurator/proposal.md`
+- `package-lock.json`
+- `package.json`
+- `screenshots/dashboard.png`
+- `screenshots/dashboard_light.png`
 - `server/package.json`
 - `server/src/app.spec.ts`
 - `server/src/app.ts`
@@ -69,6 +87,8 @@
 - `src/app/features/configurator/configurator.routes.ts`
 - `src/app/features/configurator/configurator.store.spec.ts`
 - `src/app/features/configurator/configurator.store.ts`
+- `src/app/shared/components/app-footer/app-footer.component.html`
+- `src/app/shared/components/app-footer/app-footer.component.spec.ts`
 - `src/app/shared/components/app-header/app-header.component.html`
 - `src/app/shared/components/app-header/app-header.component.spec.ts`
 - `src/app/shared/components/app-header/app-header.component.ts`

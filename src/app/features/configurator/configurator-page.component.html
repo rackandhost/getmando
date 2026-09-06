@@ -194,9 +194,19 @@
             type="number"
             min="1"
             max="10"
+            [attr.aria-describedby]="describedBy(['settings', 'itemsPerRow'])"
+            [attr.aria-invalid]="errorFor(['settings', 'itemsPerRow']) ? 'true' : null"
             [value]="draft().settings.itemsPerRow"
             (input)="updateSettingNumber('itemsPerRow', $event)"
           />
+          @if (errorFor(['settings', 'itemsPerRow']); as error) {
+            <p
+              id="error-settings-itemsPerRow"
+              class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+            >
+              {{ error }}
+            </p>
+          }
         </label>
         <label class="block text-sm font-medium text-neutral-900 dark:text-white">
           Light background image
