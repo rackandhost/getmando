@@ -43,22 +43,14 @@ Archiving is done per change **when it ships**, dated by the day the work comple
 change's delta spec into `specs/` is what turns "done" into "current truth"; the archived change
 keeps its own copy as a point-in-time record.
 
-## Current state
+## Built capabilities
 
-**Built (`specs/`)**
+The folders are the index — `ls specs/` for what's built, `ls changes/` for what's proposed or in
+progress, `ls changes/archive/` for history. This table only adds the release each capability
+shipped in, which the folders don't record; add a row when a spec is promoted into `specs/`.
 
 | Capability          | Shipped in | Notes                                                         |
 | ------------------- | ---------- | ------------------------------------------------------------- |
 | `app-favorites`     | v1.0.0     | `favorite` flag + virtual Favorites category                  |
 | `yaml-configurator` | v2.0.0     | `/configure` browser editor; first-run-without-YAML behaviour |
 | `config-write-api`  | v2.0.0     | `POST /api/config` write sidecar; `:ro` → `:rw` volume change |
-
-**Active (`changes/`)**
-
-| Change                     | State    | Notes                                                                                                                |
-| -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
-| `nestjs-backend-migration` | proposed | Re-platform `server/` Fastify → NestJS at parity; gated on the multi-user / DB roadmap. Folder lands via its own PR. |
-
-**Archived (`changes/archive/`)**
-
-`2026-04-25-favorites-feature`, `2026-09-04-config-write-api`, `2026-09-05-yaml-configurator`.
