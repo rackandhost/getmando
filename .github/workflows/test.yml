@@ -46,29 +46,17 @@ jobs:
       - name: Build production application
         run: npm run build -- --configuration production
 
-  server-test:
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
+      # The config-write-api sidecar under server/ has its own package, but its
+      # typecheck compiles the shared src/app/core/models/dashboard.models.ts and
+      # so needs the root dependencies (zod) installed above.
+      - name: Install server dependencies
+        run: npm ci
         working-directory: server
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
-          cache-dependency-path: server/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Typecheck
+      - name: Typecheck server
         run: npm run typecheck
+        working-directory: server
 
-      - name: Run tests
+      - name: Run server tests
         run: npm test
+        working-directory: server
