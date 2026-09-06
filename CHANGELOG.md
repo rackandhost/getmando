@@ -27,6 +27,10 @@
 - **Footer Landing Page Link**: The "Powered by Mando" footer credit now links to the product landing page (`https://getmando.rackandhost.com`), opening in a new tab.
 - **Export Serialization Safety**: Removed an unreachable fallback path in the configurator's copy/download export flow that bypassed schema validation via an unsafe type cast; canonical YAML is now only ever produced from a fully validated `DashboardConfig`.
 
+### Security
+
+- **Dependency Vulnerability Cleanup**: Updated `@angular/core`/`common`/`compiler`/`forms`/`platform-browser`/`router` to 21.2.22 and `js-yaml` to 4.3.2, resolving 13 GitHub-flagged advisories reachable from production dependencies (Angular XSS/sanitization-bypass/denial-of-service issues and a `js-yaml` quadratic-CPU parsing issue). A follow-up `npm audit fix` also cleared the remaining build-tooling-only transitive advisories (bundled in `@angular/cli`'s dependency tree, never shipped to the browser or the server). `npm audit` now reports zero vulnerabilities; no application behavior changed.
+
 ### Testing & Quality
 
 - **Configurator Test Coverage**: Added unit and component tests for the configurator routes, store, collection editor, and page component, plus expanded coverage for dashboard model validation, the YAML codec, and the export service.
@@ -47,6 +51,8 @@
 - `entrypoint.sh`
 - `nginx.conf`
 - `openspec/changes/yaml-configurator/proposal.md`
+- `package-lock.json`
+- `package.json`
 - `screenshots/dashboard.png`
 - `screenshots/dashboard_light.png`
 - `server/package.json`
