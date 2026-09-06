@@ -1,0 +1,27 @@
+{
+  "name": "config-write-api",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sidecar service exposing POST /api/config to validate and atomically persist dashboard.yaml.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist/index.mjs",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "js-yaml": "^4.1.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.7",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.2",
+    "vitest": "4.1.5"
+  }
+}

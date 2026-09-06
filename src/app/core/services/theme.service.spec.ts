@@ -66,6 +66,7 @@ describe('ThemeService', () => {
 
   it('falls back to configured settings when localStorage cannot be read', () => {
     settings.set({ ...DEFAULT_DASHBOARD_CONFIG.settings, theme: 'dark' });
+    // jsdom's localStorage instance silently ignores direct property spies; spy on the prototype instead.
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('Access denied', 'SecurityError');
     });

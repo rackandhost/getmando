@@ -1,12 +1,35 @@
 import { z } from 'zod';
 
 /**
+ * Rejects dangerous URL schemes (`javascript:`, `data:`, `vbscript:`, ...) that `z.string().url()`
+ * alone accepts. `window.open()` and other imperative navigation calls bypass Angular's template
+ * URL sanitizer, so this must be enforced at the schema boundary instead.
+ */
+const HTTP_URL_MESSAGE = 'URL must use http or https.';
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const HttpUrlSchema = z.string().url().refine(isHttpUrl, HTTP_URL_MESSAGE);
+
+/**
  * Icon configuration schema
  */
-export const IconConfigSchema = z.object({
-  type: z.enum(['url', 'name', 'initials']),
-  value: z.string(),
-});
+export const IconConfigSchema = z
+  .object({
+    type: z.enum(['url', 'name', 'initials']),
+    value: z.string(),
+  })
+  .refine((icon) => icon.type !== 'url' || isHttpUrl(icon.value), {
+    message: HTTP_URL_MESSAGE,
+    path: ['value'],
+  });
 
 /**
  * Application schema
@@ -15,7 +38,7 @@ export const SelfhostedAppSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string().max(255),
-  url: z.string().url(),
+  url: HttpUrlSchema,
   icon: IconConfigSchema,
   category: z.string(),
   openNewTab: z.boolean().default(true),
@@ -38,7 +61,7 @@ export const BookmarkSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string().max(255),
-  url: z.string().url(),
+  url: HttpUrlSchema,
   icon: IconConfigSchema,
   openNewTab: z.boolean().default(true),
   tags: z.array(z.string()).default([]),
@@ -50,7 +73,7 @@ export const BookmarkSchema = z.object({
 export const SearchEngineSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(50),
-  searchUrl: z.string().url(),
+  searchUrl: HttpUrlSchema,
   icon: z.string().optional(),
 });
 
@@ -86,13 +109,87 @@ export const DashboardSettingsSchema = z.object({
 /**
  * Complete Dashboard configuration schema
  */
-export const DashboardConfigSchema = z.object({
-  metadata: DashboardMetadataSchema,
-  categories: z.array(CategorySchema).min(1),
-  applications: z.array(SelfhostedAppSchema).min(1),
-  bookmarks: z.array(BookmarkSchema),
-  settings: DashboardSettingsSchema,
-});
+export const RESERVED_VIRTUAL_CATEGORY_IDS = ['apps', 'bookmarks', 'favorites'] as const;
+
+const RESERVED_VIRTUAL_CATEGORY_ID_SET = new Set<string>(RESERVED_VIRTUAL_CATEGORY_IDS);
+
+type ConfigItemPath = ['categories' | 'applications' | 'bookmarks', number, 'id' | 'category'];
+
+function addSemanticIssue(context: z.RefinementCtx, path: ConfigItemPath, message: string): void {
+  context.addIssue({ code: 'custom', path, message });
+}
+
+/**
+ * Complete Dashboard configuration schema, including cross-collection dashboard semantics.
+ */
+export const DashboardConfigSchema = z
+  .object({
+    metadata: DashboardMetadataSchema,
+    categories: z.array(CategorySchema).min(1),
+    applications: z.array(SelfhostedAppSchema).min(1),
+    bookmarks: z.array(BookmarkSchema),
+    settings: DashboardSettingsSchema,
+  })
+  .superRefine((config, context) => {
+    const identifiers = new Set<string>();
+    const categoryIds = new Set(config.categories.map(({ id }) => id));
+
+    const validateIdentifier = (
+      id: string,
+      path: ['categories' | 'applications' | 'bookmarks', number, 'id'],
+    ): void => {
+      if (identifiers.has(id)) {
+        addSemanticIssue(context, path, `ID '${id}' must be unique across the dashboard.`);
+        return;
+      }
+      identifiers.add(id);
+    };
+
+    config.categories.forEach(({ id }, index) => {
+      validateIdentifier(id, ['categories', index, 'id']);
+      if (RESERVED_VIRTUAL_CATEGORY_ID_SET.has(id)) {
+        addSemanticIssue(context, ['categories', index, 'id'], `Category ID '${id}' is reserved.`);
+      }
+    });
+    config.applications.forEach(({ id, category }, index) => {
+      validateIdentifier(id, ['applications', index, 'id']);
+      if (!categoryIds.has(category)) {
+        addSemanticIssue(
+          context,
+          ['applications', index, 'category'],
+          `Category '${category}' does not exist.`,
+        );
+      }
+    });
+    config.bookmarks.forEach(({ id }, index) => {
+      validateIdentifier(id, ['bookmarks', index, 'id']);
+    });
+  });
+
+/** Canonical settings shape where a blank background image override is omitted, not empty. */
+export type CanonicalDashboardSettings = Omit<
+  DashboardSettings,
+  'lightBackgroundImage' | 'darkBackgroundImage'
+> & {
+  lightBackgroundImage?: string;
+  darkBackgroundImage?: string;
+};
+
+/**
+ * Omits blank background image overrides (from a cleared configurator field) so the persisted
+ * YAML falls back to DashboardSettingsSchema's built-in default on the next load, instead of
+ * writing `lightBackgroundImage: ''`/`darkBackgroundImage: ''` verbatim. Used by both the
+ * client-side export (YamlCodecService) and the config-write-api sidecar so Save and
+ * Copy/Download YAML never disagree on this.
+ */
+export function omitBlankBackgroundImages(settings: DashboardSettings): CanonicalDashboardSettings {
+  const { lightBackgroundImage, darkBackgroundImage, ...rest } = settings;
+  return {
+    ...rest,
+    ...(lightBackgroundImage.trim() ? { lightBackgroundImage } : {}),
+    ...(darkBackgroundImage.trim() ? { darkBackgroundImage } : {}),
+  };
+}
 
 /**
  * Type inference from schemas
@@ -129,7 +226,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
     title: 'Mando',
     description: 'My Selfhosted Applications',
   },
-  categories: [APP_CATEGORY],
+  categories: [],
   applications: [],
   bookmarks: [],
   settings: {

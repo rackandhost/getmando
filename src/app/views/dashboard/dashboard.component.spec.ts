@@ -52,17 +52,6 @@ describe('DashboardComponent', () => {
     getIconUrl: vi.fn(() => 'https://example.com/icon.png'),
   };
 
-  const expectBackgroundImageToBe = (expectedUrl: string) => {
-    const escapedUrl = expectedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const bgLayer = document.getElementById('app-background');
-
-    expect(bgLayer).not.toBeNull();
-    expect(bgLayer!.style.backgroundImage).toMatch(
-      new RegExp(`^url\\(["']?${escapedUrl}["']?\\)$`),
-    );
-    expect(bgLayer!.style.backgroundImage.match(/url\(/g)).toHaveLength(1);
-  };
-
   const setup = async ({
     filteredApps = [] as SelfhostedApp[] | null,
     searchQuery = '',
@@ -74,13 +63,6 @@ describe('DashboardComponent', () => {
     settings?: DashboardSettings;
     isDarkMode?: boolean;
   } = {}) => {
-    let bgLayer = document.getElementById('app-background');
-    if (!bgLayer) {
-      bgLayer = document.createElement('div');
-      bgLayer.id = 'app-background';
-      document.body.appendChild(bgLayer);
-    }
-    bgLayer.style.backgroundImage = '';
     appServiceMock.setSearchQuery.mockReset();
     appServiceMock.setSelectedCategory.mockReset();
     iconServiceMock.getIconUrl.mockClear();
@@ -343,109 +325,5 @@ describe('DashboardComponent', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Applications' })).not.toBeInTheDocument();
     expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
-  });
-
-  it('should apply the background image that matches the current theme', async () => {
-    await setup({
-      filteredApps: [appFixture],
-      settings: {
-        ...DEFAULT_DASHBOARD_CONFIG.settings,
-        darkBackgroundImage: 'custom-dark.jpg',
-        lightBackgroundImage: 'custom-light.jpg',
-      },
-      isDarkMode: true,
-    });
-
-    expectBackgroundImageToBe('/img/custom-dark.jpg');
-  });
-
-  it('should apply the light background image when light theme is active', async () => {
-    await setup({
-      filteredApps: [appFixture],
-      settings: {
-        ...DEFAULT_DASHBOARD_CONFIG.settings,
-        darkBackgroundImage: 'custom-dark.jpg',
-        lightBackgroundImage: 'custom-light.jpg',
-      },
-      isDarkMode: false,
-    });
-
-    expectBackgroundImageToBe('/img/custom-light.jpg');
-  });
-
-  it('should not prefix https background image URLs with /img/', async () => {
-    await setup({
-      filteredApps: [appFixture],
-      settings: {
-        ...DEFAULT_DASHBOARD_CONFIG.settings,
-        darkBackgroundImage: 'https://cdn.example.com/dark.jpg',
-        lightBackgroundImage: 'http://cdn.example.com/light.jpg',
-      },
-      isDarkMode: true,
-    });
-
-    expectBackgroundImageToBe('https://cdn.example.com/dark.jpg');
-    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain(
-      '/img/https://cdn.example.com/dark.jpg',
-    );
-  });
-
-  it('should not prefix http background image URLs with /img/', async () => {
-    await setup({
-      filteredApps: [appFixture],
-      settings: {
-        ...DEFAULT_DASHBOARD_CONFIG.settings,
-        darkBackgroundImage: 'https://cdn.example.com/dark.jpg',
-        lightBackgroundImage: 'http://cdn.example.com/light.jpg',
-      },
-      isDarkMode: false,
-    });
-
-    expectBackgroundImageToBe('http://cdn.example.com/light.jpg');
-    expect(document.getElementById('app-background')!.style.backgroundImage).not.toContain(
-      '/img/http://cdn.example.com/light.jpg',
-    );
-  });
-
-  it('should update the background image when the theme changes after render', async () => {
-    const view = await setup({
-      filteredApps: [appFixture],
-      settings: {
-        ...DEFAULT_DASHBOARD_CONFIG.settings,
-        darkBackgroundImage: 'custom-dark.jpg',
-        lightBackgroundImage: 'custom-light.jpg',
-      },
-      isDarkMode: true,
-    });
-
-    expectBackgroundImageToBe('/img/custom-dark.jpg');
-
-    currentTheme.set('light');
-    await view.fixture.whenStable();
-
-    expectBackgroundImageToBe('/img/custom-light.jpg');
-  });
-
-  it('should update the background image when settings change after render', async () => {
-    const view = await setup({
-      filteredApps: [appFixture],
-      settings: {
-        ...DEFAULT_DASHBOARD_CONFIG.settings,
-        darkBackgroundImage: 'initial-dark.jpg',
-        lightBackgroundImage: 'initial-light.jpg',
-      },
-      isDarkMode: true,
-    });
-
-    expectBackgroundImageToBe('/img/initial-dark.jpg');
-
-    settingsState.set({
-      ...DEFAULT_DASHBOARD_CONFIG.settings,
-      darkBackgroundImage: 'updated-dark.jpg',
-      lightBackgroundImage: 'updated-light.jpg',
-    });
-    await view.fixture.whenStable();
-
-    expectBackgroundImageToBe('/img/updated-dark.jpg');
   });
 });

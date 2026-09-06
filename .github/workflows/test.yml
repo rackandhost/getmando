@@ -45,3 +45,18 @@ jobs:
 
       - name: Build production application
         run: npm run build -- --configuration production
+
+      # The config-write-api sidecar under server/ has its own package, but its
+      # typecheck compiles the shared src/app/core/models/dashboard.models.ts and
+      # so needs the root dependencies (zod) installed above.
+      - name: Install server dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Typecheck server
+        run: npm run typecheck
+        working-directory: server
+
+      - name: Run server tests
+        run: npm test
+        working-directory: server

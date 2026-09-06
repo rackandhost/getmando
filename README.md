@@ -19,6 +19,8 @@
 
 <img alt="Dashboard Light" width="1024" src="screenshots/dashboard_light.png" />
 
+<img alt="Visual Configurator" width="1024" src="screenshots/configurator.png" />
+
 ## 📖 Overview
 
 **Mando** is a beautiful and simply dashboard (not pretend to add too many features such a widgets, weather, etc...) for your self-hosted applications. Built with modern web technologies, it provides an elegant glassmorphism UI to organize and access all your homelab services from a single place. 
@@ -33,198 +35,21 @@
 - **📱 Fully Responsive** - Optimized for mobile, tablet, and desktop
 - **♿ Accessible** - WCAG AA compliant with keyboard navigation
 - **🐳 Docker Ready** - Easy deployment with pre-built containers
-- **⚙️ YAML Configuration** - Simple, declarative configuration file
+- **🛠️ Visual Configurator** - Build and edit your entire dashboard through accessible forms at `/configure` and save it straight to the server — no YAML required
+- **⚙️ Optional YAML** - Manage the same configuration as a declarative `dashboard.yaml` file whenever you prefer
 
 ---
 
 ## 🚀 Quick Start (Docker)
 
+Mando starts with sensible defaults and a built-in visual editor. You bring up the
+container, open `/configure`, build your dashboard through forms, and click **Save** —
+there is no configuration file to write by hand.
+
 ### Using Docker Compose (Recommended)
 
-1. **Create and customize the `dashboard.yaml`** file with all your data and settings.
+1. **Create a `docker-compose.yaml` file:**
 ```yaml
-metadata:
-  title: 'My dashboard'
-  description: 'Simply and lovelly'
-
-categories:
-  - id: 'media'
-    name: 'Media'
-
-  - id: 'productivity'
-    name: 'Productivity'
-
-  - id: 'home-automation'
-    name: 'Home Automation'
-
-  - id: 'networking'
-    name: 'Networking'
-
-applications:
-  - id: 'plex'
-    name: 'Plex'
-    description: 'Media server for movies, TV shows, and music'
-    url: 'https://plex.example.com'
-    icon:
-      type: 'name'
-      value: 'plex'
-    category: 'media'
-    openNewTab: true
-    favorite: true
-    tags:
-      - media
-      - streaming
-
-  - id: 'jellyfin'
-    name: 'Jellyfin'
-    description: 'Free software media system'
-    url: 'https://jellyfin.example.com'
-    icon:
-      type: 'name'
-      value: 'jellyfin'
-    category: 'media'
-    openNewTab: true
-    tags:
-      - media
-      - open-source
-
-  - id: 'ombi'
-    name: 'Ombi'
-    description: 'Request media for your Plex/Jellyfin server'
-    url: 'https://ombi.example.com'
-    icon:
-      type: 'name'
-      value: 'ombi'
-    category: 'media'
-    openNewTab: true
-    tags:
-      - requests
-      - media
-
-  - id: 'nextcloud'
-    name: 'Nextcloud'
-    description: 'Productivity platform for file storage and collaboration'
-    url: 'https://nextcloud.example.com'
-    icon:
-      type: 'name'
-      value: 'nextcloud'
-    category: 'productivity'
-    openNewTab: true
-    tags:
-      - cloud
-      - files
-
-  - id: 'paperless-ngx'
-    name: 'Paperless-ngx'
-    description: 'Document management system'
-    url: 'https://paperless.example.com'
-    icon:
-      type: 'name'
-      value: 'paperless-ngx'
-    category: 'productivity'
-    openNewTab: true
-    tags:
-      - documents
-      - scanning
-
-  - id: 'home-assistant'
-    name: 'Home Assistant'
-    description: 'Open source home automation platform'
-    url: 'https://homeassistant.example.com'
-    icon:
-      type: 'name'
-      value: 'home-assistant'
-    category: 'home-automation'
-    openNewTab: true
-    tags:
-      - smart-home
-      - automation
-
-  - id: 'mosquitto'
-    name: 'Mosquitto'
-    description: 'MQTT message broker'
-    url: 'https://mosquitto.example.com'
-    icon:
-      type: 'name'
-      value: 'mosquitto'
-    category: 'home-automation'
-    openNewTab: true
-    tags:
-      - iot
-      - mqtt
-
-  - id: 'portainer'
-    name: 'Portainer'
-    description: 'Docker management UI'
-    url: 'https://portainer.example.com'
-    icon:
-      type: 'name'
-      value: 'portainer'
-    category: 'networking'
-    openNewTab: true
-    tags:
-      - docker
-      - containers
-
-  - id: 'pihole'
-    name: 'Pi-hole'
-    description: 'Network-wide ad blocking'
-    url: 'https://pihole.example.com'
-    icon:
-      type: 'name'
-      value: 'pi-hole'
-    category: 'networking'
-    openNewTab: true
-    tags:
-      - dns
-      - adblock
-
-  - id: 'uptime-kuma'
-    name: 'Uptime Kuma'
-    description: 'Self-hosted monitoring tool'
-    url: 'https://uptime.example.com'
-    icon:
-      type: 'name'
-      value: 'uptime-kuma'
-    category: 'networking'
-    openNewTab: true
-    tags:
-      - monitoring
-      - uptime
-
-bookmarks:
-  - id: 'google'
-    name: 'Google'
-    description: 'The google web'
-    url: 'https://google.com'
-    openNewTab: true
-    icon:
-      type: 'name'
-      value: 'google'
-    tags:
-      - web
-
-settings:
-  theme: 'auto'
-  dateFormat: 'd MMMM yyyy'
-  datePosition: 'bottom'
-  showSeconds: false
-  showDate: true
-  itemsPerRow: 5
-  allowBookmarks: true
-  showAllCategory: true
-  showDescriptions: true
-  showLabels: true
-  searchEngines:
-    - 'google'
-    - 'duckduckgo'
-    - 'startpage'
-    - 'youtube'
-
-```
-
-2. **Create the `docker-compose.yaml` file:**
- ```yaml
 services:
   dashboard:
     image: ghcr.io/rackandhost/getmando:latest
@@ -232,12 +57,16 @@ services:
     ports:
       - '8080:80'
     volumes:
-      # Mount your local dashboard.yaml config
-      - ./config/dashboard.yaml:/app/config/dashboard.yaml:ro
-      - ./my-custom-image.jpg:/app/img/my-custom-image.jpg:ro # Use this if you want to set a custom background
+      # Persists whatever the visual editor saves. A host directory keeps
+      # dashboard.yaml visible and version-controllable; it's created on first run
+      # if it doesn't exist. Prefer a Docker-managed named volume? See below.
+      - ./config:/app/config:rw
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      # Lets the visual editor's "Save" write to the mounted config — pick your own secret.
+      # Leave it unset to run fully read-only (copy/download from the editor still work).
+      - CONFIG_WRITE_TOKEN=change-me
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost/health']
       interval: 30s
@@ -250,12 +79,37 @@ services:
 networks:
   dashboard-network:
     driver: bridge
+```
 
- ```
-3. **Run `docker compose up -d`**
+<details>
+<summary>Prefer a Docker-managed named volume instead of a host directory?</summary>
 
-4. **Access your dashboard:**
-   Open your browser and navigate to `http://localhost:8080`
+```yaml
+services:
+  dashboard:
+    # ...same as above, but swap the config volume for:
+    volumes:
+      - getmando-config:/app/config
+
+volumes:
+  getmando-config:
+```
+
+</details>
+
+2. **Start it:** `docker compose up -d`
+
+3. **Open** `http://localhost:8080` — the dashboard loads with default settings.
+
+4. **Build your dashboard.** Go to `http://localhost:8080/configure`, add your
+   categories, applications, and bookmarks through the forms, then click **Save**.
+   The first save asks once for the `CONFIG_WRITE_TOKEN` value (kept in your browser
+   afterwards). The dashboard updates immediately and the config is written to the
+   mounted volume as `dashboard.yaml`.
+
+That's the whole setup — no file authored by hand. If you'd rather manage the
+configuration as a file (GitOps, bulk edits, migrating an existing dashboard), see the
+**Configuration** section below.
 
 ### Using Docker CLI
 
@@ -263,18 +117,61 @@ networks:
 docker run -d \
   --name getmando-dashboard \
   -p 8080:80 \
-  -v $(pwd)/config/dashboard.yaml:/app/config/dashboard.yaml:ro \
+  -v $(pwd)/config:/app/config:rw \
+  -e CONFIG_WRITE_TOKEN=change-me \
   --restart unless-stopped \
   ghcr.io/rackandhost/getmando:latest
 ```
+
+Then open `http://localhost:8080/configure` and Save.
+
+> **⚠️ Upgrading from an earlier version?** Earlier setups mounted a read-only
+> `dashboard.yaml` and had no `CONFIG_WRITE_TOKEN`. That still works unchanged — the
+> dashboard serves your existing file read-only and the editor's "Save" is simply
+> disabled (copy and download still work). To edit from the browser, mount the config
+> **directory** `:rw` (`./config:/app/config:rw`, keeping your existing
+> `./config/dashboard.yaml` in place) and set `CONFIG_WRITE_TOKEN`.
 
 ---
 
 ## ⚙️ Configuration
 
-The dashboard is configured via a single `dashboard.yaml` file. This file is automatically loaded when the application starts.
+Mando's configuration is a single `dashboard.yaml` in the mounted config directory,
+written for you by the visual editor at `/configure` — **you normally never touch it**.
+Until you save from the editor there's no file at all and the dashboard runs on built-in
+defaults. Manage the file directly only if you prefer a file-based workflow.
 
-### YAML Structure Overview
+### Visual editor (recommended)
+
+Open `/configure` (there's a gear icon in the header too). Build metadata, categories,
+applications, and bookmarks through typed forms starting from an empty draft, the currently
+mounted config, or a local YAML file you import. The editor validates the draft, then lets
+you **copy** it to the clipboard, **download** it as `dashboard.yaml`, or **save** it to the
+server. Copy and download happen entirely in the browser and never touch the mounted file.
+
+**Save** writes the validated draft to the mounted `dashboard.yaml` over
+`POST /api/config`, so the running dashboard reflects it immediately without a manual copy. It
+requires the volume to be mounted `:rw` and `CONFIG_WRITE_TOKEN` to be set on the container (see
+"Quick Start (Docker)" above); the first save prompts for that same token value, which is
+then kept in this browser's `localStorage` for subsequent saves. This is a single shared secret, not
+a user account — anyone who knows it (or who already has write access to your deployment) can save
+changes, and it's not a substitute for keeping the dashboard off the public internet or behind your
+own access control.
+
+Valid configurations must use IDs that are unique across categories, applications, and bookmarks.
+Application `category` values must refer to an existing category ID, and category IDs must not be
+`apps`, `bookmarks`, or `favorites` because those are reserved virtual categories. Exported YAML is
+normalized to the supported schema and field order. Comments, original formatting, and unknown keys
+are not preserved, and schema defaults can be written explicitly in the output.
+
+### File-based configuration (advanced)
+
+If you'd rather manage the configuration as a file — GitOps, bulk edits, or migrating an
+existing dashboard — author `dashboard.yaml` yourself and mount it into the config
+directory. The `/configure` editor's copy and download actions produce a file in exactly
+this format, so you can start visually and take over the file later.
+
+**Top-level structure:**
 
 ```yaml
 metadata:           # Dashboard metadata
@@ -283,6 +180,33 @@ applications:       # Your self-hosted applications
 bookmarks:          # Quick-access bookmarks
 settings:           # Dashboard settings
 ```
+
+A complete, annotated example ships in the repository at
+[`config/dashboard.example.yaml`](config/dashboard.example.yaml). Minimal starting point:
+
+```yaml
+metadata:
+  title: 'My Homelab'
+  description: 'All my self-hosted services'
+
+categories:
+  - id: 'media'
+    name: 'Media'
+
+applications:
+  - id: 'jellyfin'
+    name: 'Jellyfin'
+    description: 'Free software media system'
+    url: 'https://jellyfin.example.com'
+    icon:
+      type: 'name'
+      value: 'jellyfin'
+    category: 'media'
+```
+
+Mount it the same way as the config directory shown in Quick Start above; the running
+dashboard picks it up on load. If the file is missing or invalid, Mando falls back to
+built-in defaults and shows a notification.
 
 ---
 
@@ -311,6 +235,9 @@ Each category needs:
 |-------|------|----------|---------|-------------|
 | `id` | `string` | ✅ Yes | - | Unique identifier (used by apps) |
 | `name` | `string` | ✅ Yes | - | Display name |
+
+Category IDs must be unique across the whole configuration. Do not use `apps`, `bookmarks`, or
+`favorites`; the dashboard reserves those IDs for virtual categories.
 
 **Example:**
 ```yaml
@@ -342,6 +269,9 @@ Each application supports:
 | `openNewTab` | `boolean` | No | `true` | Open in new tab or same window |
 | `tags` | `array[string]` | No | `[]` | Searchable tags |
 | `favorite` | `boolean` | No | `false` | Mark as favorite and show in Favorites category |
+
+Application IDs must be unique across the whole configuration, and every `category` value must
+match a declared category ID.
 
 **Icon Configuration:**
 
@@ -412,6 +342,8 @@ Bookmarks work exactly like applications but don't require a category.
 | `openNewTab` | `boolean` | No | `true` | Open in new tab |
 | `tags` | `array[string]` | No | `[]` | Searchable tags |
 
+Bookmark IDs must also be unique across categories, applications, and bookmarks.
+
 **Example:**
 ```yaml
 bookmarks:
@@ -481,6 +413,7 @@ settings:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NODE_ENV` | `production` | Environment mode |
+| `CONFIG_WRITE_TOKEN` | *(unset)* | Shared secret required by the configurator's "Save" action. Unset means the dashboard runs read-only; the write endpoint returns 401 for every request. |
 
 ---
 
@@ -527,6 +460,22 @@ npm test
 
 The dev server runs on `http://localhost:4200` with hot-reload enabled.
 
+### Local Development with the Write API
+
+`npm start` alone serves a read-only dashboard — the configurator's `Save` action needs the
+`config-write-api` sidecar, which normally only runs inside the Docker image. To run both locally
+without building the image:
+
+```bash
+npm run dev
+```
+
+This starts the Angular dev server (`:4200`) and the sidecar (`:3000`) together; `proxy.conf.json`
+forwards `/api/*` requests from the dev server to the sidecar, and Ctrl+C stops both. It writes to
+`public/config/dashboard.yaml` — the same file the dev server already reads — using the default
+token `dev-token` (enter that in the configurator's save prompt). Override `CONFIG_WRITE_TOKEN`,
+`CONFIG_PATH`, or `SERVER_PORT` as environment variables to change any of that.
+
 ### Building for Production
 
 ```bash
@@ -546,6 +495,7 @@ Build artifacts are created in the `dist/` directory.
 - ✅ Gzip compression
 - ✅ Long-term caching for static assets
 - ✅ Mountable config volume
+- ✅ Optional write API for saving the configurator draft directly to the mounted `dashboard.yaml`
 - ✅ Health checks
 
 ---
@@ -564,7 +514,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Release (v1.1.0)
+### Current Release (v2.0.0)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering

@@ -1,0 +1,321 @@
+<section
+  class="scroll-mt-6 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:scroll-mt-8 sm:p-8"
+  [attr.aria-labelledby]="collection() + '-heading'"
+>
+  <div
+    class="flex flex-col gap-4 border-b border-white/15 pb-5 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <div>
+      <h2
+        [id]="collection() + '-heading'"
+        class="text-2xl font-semibold text-neutral-900 dark:text-white"
+      >
+        {{ collection()[0].toUpperCase() + collection().slice(1) }}
+      </h2>
+      <p class="mt-2 text-sm leading-6 text-neutral-700 dark:text-white/70">
+        Add, reorder, and update {{ collection() }} without leaving the editor.
+      </p>
+    </div>
+    <button
+      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
+      type="button"
+      (click)="add()"
+    >
+      <ng-icon aria-hidden="true" name="heroPlus" />
+      {{ addLabel() }}
+    </button>
+  </div>
+
+  @if (items().length === 0) {
+    <p
+      class="mt-6 rounded-2xl border border-dashed border-white/30 bg-white/5 px-5 py-6 text-sm leading-6 text-neutral-700 dark:text-white/70"
+      role="status"
+    >
+      No {{ collection() }} yet. Add a {{ collectionLabel() }} to begin editing this collection.
+    </p>
+  }
+
+  <ol class="mt-6 space-y-5">
+    @for (item of items(); track $index; let index = $index) {
+      <li class="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg shadow-black/5">
+        <fieldset class="min-w-0">
+          <legend class="px-1 text-base font-semibold text-neutral-900 dark:text-white">
+            {{ itemLabel(item) }}
+          </legend>
+          <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+              ID
+              <input
+                class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                [id]="fieldId(index, 'id')"
+                [attr.aria-label]="fieldLabel(item, 'id')"
+                [attr.aria-describedby]="describedBy(index, 'id')"
+                [attr.aria-invalid]="errorId(index, 'id') ? 'true' : null"
+                [value]="item.id"
+                (input)="editText(index, 'id', $event)"
+              />
+              @if (errorMessage(index, 'id'); as error) {
+                <p
+                  [id]="errorId(index, 'id')"
+                  class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                >
+                  {{ error }}
+                </p>
+              }
+            </label>
+            <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+              Name
+              <input
+                #nameInput
+                class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                [id]="fieldId(index, 'name')"
+                [attr.aria-label]="fieldLabel(item, 'name')"
+                [attr.aria-describedby]="describedBy(index, 'name')"
+                [attr.aria-invalid]="errorId(index, 'name') ? 'true' : null"
+                [value]="item.name"
+                (input)="editText(index, 'name', $event)"
+              />
+              @if (errorMessage(index, 'name'); as error) {
+                <p
+                  [id]="errorId(index, 'name')"
+                  class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                >
+                  {{ error }}
+                </p>
+              }
+            </label>
+
+            @if (collection() !== 'categories') {
+              <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+                URL
+                <input
+                  class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                  [id]="fieldId(index, 'url')"
+                  [attr.aria-label]="fieldLabel(item, 'url')"
+                  [attr.aria-describedby]="describedBy(index, 'url')"
+                  [attr.aria-invalid]="errorId(index, 'url') ? 'true' : null"
+                  [value]="item.url ?? ''"
+                  type="url"
+                  (input)="editText(index, 'url', $event)"
+                />
+                @if (errorMessage(index, 'url'); as error) {
+                  <p
+                    [id]="errorId(index, 'url')"
+                    class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                  >
+                    {{ error }}
+                  </p>
+                }
+              </label>
+              <label
+                class="block text-sm font-medium text-neutral-900 dark:text-white md:col-span-2 xl:col-span-3"
+              >
+                Description
+                <textarea
+                  class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                  rows="2"
+                  [id]="fieldId(index, 'description')"
+                  [attr.aria-label]="fieldLabel(item, 'description')"
+                  [attr.aria-describedby]="describedBy(index, 'description')"
+                  [attr.aria-invalid]="errorId(index, 'description') ? 'true' : null"
+                  [value]="item.description ?? ''"
+                  (input)="editText(index, 'description', $event)"
+                ></textarea>
+                @if (errorMessage(index, 'description'); as error) {
+                  <p
+                    [id]="errorId(index, 'description')"
+                    class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                  >
+                    {{ error }}
+                  </p>
+                }
+              </label>
+              <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+                Tags
+                <input
+                  class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                  [id]="fieldId(index, 'tags')"
+                  [attr.aria-label]="fieldLabel(item, 'tags')"
+                  [attr.aria-describedby]="describedBy(index, 'tags')"
+                  [attr.aria-invalid]="errorId(index, 'tags') ? 'true' : null"
+                  [value]="(item.tags ?? []).join(', ')"
+                  (input)="editTags(index, $event)"
+                />
+                @if (errorMessage(index, 'tags'); as error) {
+                  <p
+                    [id]="errorId(index, 'tags')"
+                    class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                  >
+                    {{ error }}
+                  </p>
+                }
+              </label>
+              <div class="flex flex-col justify-end gap-3">
+                <label
+                  class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
+                >
+                  <input
+                    class="peer sr-only"
+                    type="checkbox"
+                    [id]="fieldId(index, 'openNewTab')"
+                    [attr.aria-label]="fieldLabel(item, 'openNewTab')"
+                    [checked]="item.openNewTab ?? true"
+                    (change)="editBoolean(index, 'openNewTab', $event)"
+                  />
+                  <span
+                    aria-hidden="true"
+                    class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
+                  ></span>
+                  Open in new tab
+                </label>
+                @if (collection() === 'applications') {
+                  <label
+                    class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
+                  >
+                    <input
+                      class="peer sr-only"
+                      type="checkbox"
+                      [id]="fieldId(index, 'favorite')"
+                      [attr.aria-label]="fieldLabel(item, 'favorite')"
+                      [checked]="item.favorite ?? false"
+                      (change)="editBoolean(index, 'favorite', $event)"
+                    />
+                    <span
+                      aria-hidden="true"
+                      class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
+                    ></span>
+                    Favorite
+                  </label>
+                }
+              </div>
+            }
+
+            @if (collection() === 'applications') {
+              <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+                Category
+                <select
+                  class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                  [id]="fieldId(index, 'category')"
+                  [attr.aria-label]="fieldLabel(item, 'category')"
+                  [attr.aria-describedby]="describedBy(index, 'category')"
+                  [attr.aria-invalid]="errorId(index, 'category') ? 'true' : null"
+                  [value]="item.category ?? ''"
+                  [disabled]="categoryOptions().length === 0"
+                  (change)="editText(index, 'category', $event)"
+                >
+                  @if (categoryOptions().length === 0) {
+                    <option value="">No categories available</option>
+                  } @else {
+                    @for (category of categoryOptions(); track category.id) {
+                      <option [value]="category.id">{{ category.name }}</option>
+                    }
+                  }
+                </select>
+                @if (errorMessage(index, 'category'); as error) {
+                  <p
+                    [id]="errorId(index, 'category')"
+                    class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                  >
+                    {{ error }}
+                  </p>
+                }
+              </label>
+            }
+
+            @if (supportsIcon()) {
+              <fieldset
+                class="rounded-xl border border-white/20 bg-white/5 p-4 md:col-span-2 xl:col-span-3"
+              >
+                <legend class="px-1 text-sm font-semibold text-neutral-900 dark:text-white">
+                  Icon for {{ itemLabel(item) }}
+                </legend>
+                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                  <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+                    Icon type
+                    <select
+                      class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                      [id]="fieldId(index, 'iconType')"
+                      [attr.aria-label]="'Icon type for ' + itemLabel(item)"
+                      [attr.aria-describedby]="describedBy(index, 'iconType')"
+                      [attr.aria-invalid]="errorId(index, 'iconType') ? 'true' : null"
+                      [value]="iconType(index)"
+                      (change)="updateIconType(index, $event)"
+                    >
+                      <option value="url">URL</option>
+                      <option value="name">Name</option>
+                      <option value="initials">Initials</option>
+                    </select>
+                    @if (errorMessage(index, 'iconType'); as error) {
+                      <p
+                        [id]="errorId(index, 'iconType')"
+                        class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                      >
+                        {{ error }}
+                      </p>
+                    }
+                  </label>
+                  <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+                    {{ iconValueLabel(index) }}
+                    <input
+                      class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+                      [id]="fieldId(index, 'iconValue')"
+                      [attr.aria-label]="iconValueLabel(index)"
+                      [attr.aria-describedby]="describedBy(index, 'iconValue')"
+                      [attr.aria-invalid]="errorId(index, 'iconValue') ? 'true' : null"
+                      [type]="iconType(index) === 'url' ? 'url' : 'text'"
+                      [value]="iconValue(index)"
+                      (input)="updateIconValue(index, $event)"
+                    />
+                    <span
+                      [id]="collectionLabel() + '-icon-' + iconType(index) + '-help-' + index"
+                      class="mt-2 block text-xs font-normal leading-5 text-neutral-700 dark:text-white/70"
+                      >{{ iconHelp(index) }}</span
+                    >
+                    @if (errorMessage(index, 'iconValue'); as error) {
+                      <p
+                        [id]="errorId(index, 'iconValue')"
+                        class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+                      >
+                        {{ error }}
+                      </p>
+                    }
+                  </label>
+                </div>
+              </fieldset>
+            }
+          </div>
+        </fieldset>
+        <div class="mt-5 flex flex-wrap gap-3 border-t border-white/15 pt-5">
+          <button
+            aria-label="Move {{ itemLabel(item) }} up"
+            class="inline-flex size-10 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-neutral-900 transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white"
+            type="button"
+            [disabled]="index === 0"
+            [title]="'Move ' + itemLabel(item) + ' up'"
+            (click)="move(index, index - 1)"
+          >
+            <ng-icon aria-hidden="true" name="heroArrowUp" />
+          </button>
+          <button
+            aria-label="Move {{ itemLabel(item) }} down"
+            class="inline-flex size-10 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-neutral-900 transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white"
+            type="button"
+            [disabled]="index === items().length - 1"
+            [title]="'Move ' + itemLabel(item) + ' down'"
+            (click)="move(index, index + 1)"
+          >
+            <ng-icon aria-hidden="true" name="heroArrowDown" />
+          </button>
+          <button
+            #removeButton
+            class="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-500/50 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-500/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-100"
+            type="button"
+            (click)="remove(index)"
+          >
+            Remove {{ itemLabel(item) }}
+          </button>
+        </div>
+      </li>
+    }
+  </ol>
+</section>
