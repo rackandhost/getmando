@@ -80,8 +80,9 @@ server/                   config-write-api sidecar (own package.json and tests)
 ```
 
 Root build and delivery files are [angular.json](angular.json), [proxy.conf.json](proxy.conf.json),
-[Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). CI workflows
-live in [.github/workflows](.github/workflows).
+[Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). Kubernetes
+deployment manifests (the Kustomize base) live in [deploy/kubernetes](deploy/kubernetes). CI
+workflows live in [.github/workflows](.github/workflows).
 
 ### Dependency Rules
 

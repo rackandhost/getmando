@@ -15,7 +15,8 @@
     "test": "ng test",
     "test:coverage": "ng test --coverage --watch=false",
     "check:focused-tests": "node scripts/check-focused-tests.mjs",
-    "test:focused-tests": "vitest run scripts/check-focused-tests.test.mjs"
+    "test:focused-tests": "vitest run scripts/check-focused-tests.test.mjs",
+    "verify:k8s": "node scripts/verify-k8s.mjs"
   },
   "prettier": {
     "printWidth": 100,

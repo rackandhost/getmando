@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: getmando
+  labels:
+    app.kubernetes.io/name: getmando
+    app.kubernetes.io/part-of: getmando

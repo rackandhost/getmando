@@ -46,6 +46,16 @@ jobs:
       - name: Build production application
         run: npm run build -- --configuration production
 
+      # deploy/kubernetes is declarative and has no unit tests, so this is its gate: build the
+      # kustomization and validate every resource against the upstream Kubernetes OpenAPI schemas.
+      # kubectl ships on the ubuntu-latest runner; kubeconform is pinned to v0.8.0. Nothing is
+      # skipped (-strict, no -ignore-missing-schemas): the base contains no custom resources.
+      - name: Validate Kubernetes manifests
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz \
+            | tar xz -C /tmp
+          kubectl kustomize deploy/kubernetes | /tmp/kubeconform -strict -
+
       # The config-write-api sidecar under server/ has its own package, but its
       # typecheck compiles the shared src/app/core/models/dashboard.models.ts and
       # so needs the root dependencies (zod) installed above.

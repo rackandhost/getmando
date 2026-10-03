@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: getmando
+  labels:
+    app.kubernetes.io/name: getmando
+    app.kubernetes.io/part-of: getmando
+    app.kubernetes.io/component: dashboard
+spec:
+  # Single replica by design: the config volume is ReadWriteOnce and would otherwise be shared
+  # (and fought over) by multiple pods.
+  replicas: 1
+  # Recreate, not RollingUpdate: the replacement pod cannot attach the ReadWriteOnce volume while
+  # the old pod holds it, so a rolling update would deadlock on scheduling.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: getmando
+      app.kubernetes.io/component: dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: getmando
+        app.kubernetes.io/part-of: getmando
+        app.kubernetes.io/component: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          # Readable fallback tag; the kustomization pins the image by digest (see kustomization.yaml).
+          image: ghcr.io/rackandhost/getmando:v2.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: NODE_ENV
+              value: production
+            # Optional: absent Secret means the sidecar runs read-only (Save disabled,
+            # POST /api/config returns 401), mirroring the Docker `:ro` setup.
+            - name: CONFIG_WRITE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: getmando-config-write
+                  key: CONFIG_WRITE_TOKEN
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: getmando-config

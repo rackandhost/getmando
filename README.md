@@ -35,6 +35,7 @@
 - **📱 Fully Responsive** - Optimized for mobile, tablet, and desktop
 - **♿ Accessible** - WCAG AA compliant with keyboard navigation
 - **🐳 Docker Ready** - Easy deployment with pre-built containers
+- **☸️ Kubernetes Ready** - One `kubectl apply -k` on any stock Kubernetes distribution (k8s, k3s, Talos)
 - **🛠️ Visual Configurator** - Build and edit your entire dashboard through accessible forms at `/configure` and save it straight to the server — no YAML required
 - **⚙️ Optional YAML** - Manage the same configuration as a declarative `dashboard.yaml` file whenever you prefer
 
@@ -131,6 +132,131 @@ Then open `http://localhost:8080/configure` and Save.
 > disabled (copy and download still work). To edit from the browser, mount the config
 > **directory** `:rw` (`./config:/app/config:rw`, keeping your existing
 > `./config/dashboard.yaml` in place) and set `CONFIG_WRITE_TOKEN`.
+
+---
+
+## ☸️ Deploying on Kubernetes
+
+Mando ships a Kustomize base in the repository (`deploy/kubernetes/`) — the same published image,
+the same config persistence, the same `/health` endpoint the Docker image already exposes. Any
+stock Kubernetes distribution runs it with one command: k8s, k3s, and Talos are all supported,
+because the manifests are plain Kubernetes.
+
+### One-command install
+
+```bash
+git clone https://github.com/rackandhost/getmando.git
+kubectl apply -k getmando/deploy/kubernetes
+```
+
+GitOps users: point Flux or Argo CD at that same directory — both consume Kustomize natively.
+
+What gets created in the `getmando` namespace:
+
+| Resource | Purpose |
+| -------- | ------- |
+| `Deployment/getmando` | Single replica, by design — the config volume is `ReadWriteOnce` and `strategy: Recreate` avoids the rolling-update deadlock that follows |
+| `PersistentVolumeClaim/getmando-config` | 64Mi volume holding `dashboard.yaml` — what the visual editor's Save writes to |
+| `Service/getmando` | ClusterIP on port 80 |
+| `Ingress/getmando` | Placeholder host and class — see "Publishing the dashboard" below |
+| `Secret/getmando-config-write` | **Not created by the base** — see the write token below |
+
+The deployment runs **read-only** until you create the write-token Secret. To reach it without an
+ingress: `kubectl port-forward -n getmando svc/getmando 8080:80`, then open
+`http://localhost:8080/configure`.
+
+### The write token (visual editor's Save)
+
+Save needs a `CONFIG_WRITE_TOKEN` — the same shared secret as the Docker setup, sourced from a
+Secret the base deliberately does not create:
+
+```bash
+kubectl create secret generic getmando-config-write \
+  --from-literal=CONFIG_WRITE_TOKEN='<your-token>' \
+  -n getmando
+
+kubectl rollout restart deployment/getmando -n getmando
+```
+
+`deploy/kubernetes/secret.example.yaml` is a copy-me template; it is **not** part of the Kustomize
+base, so no placeholder token can ever be applied from the repository.
+
+Without the Secret the dashboard still serves — the editor's Save is simply rejected
+(`POST /api/config` → 401), mirroring the Docker `:ro` setup.
+
+### Publishing the dashboard (Ingress)
+
+The base ships an Ingress with two placeholders you set in your own overlay — never by forking
+the manifests:
+
+- `ingressClassName: nginx` — set your controller's class (`traefik` on k3s, `nginx` for
+  ingress-nginx, ...)
+- host `getmando.example.com` — your hostname
+
+Example overlay patch for a k3s/traefik cluster:
+
+```yaml
+# In your overlay's kustomization.yaml, alongside the resources referencing the base:
+patches:
+  - target:
+      kind: Ingress
+      name: getmando
+    patch: |-
+      - op: replace
+        path: /spec/ingressClassName
+        value: traefik
+      - op: replace
+        path: /spec/rules/0/host
+        value: mando.homelab.internal
+```
+
+ingress-nginx users only need to change the host. TLS is your edge concern (cert-manager or your
+controller's own defaults) — the shipped Ingress is HTTP-only.
+
+### Image pinning
+
+The base pins the image **by digest**, so an applied manifest runs exactly what was reviewed — a
+tag can be repushed upstream, a digest cannot. The release tag (`v2.0.0` at the time of writing)
+is recorded as a comment next to the digest, and each release bumps it.
+
+To track a different version, override it in your overlay with the standard Kustomize idiom:
+
+```yaml
+images:
+  - name: ghcr.io/rackandhost/getmando
+    newTag: v2.1.0
+```
+
+### Clusters without a default StorageClass (vanilla Talos)
+
+The PVC does not set `storageClassName`, so it uses the cluster's default — what k3s (local-path),
+most k8s installs, and Talos clusters with a provisioner already have. Vanilla Talos ships **no**
+default StorageClass: the claim stays `Pending` until you name one. Patch it in your overlay:
+
+```yaml
+patches:
+  - target:
+      kind: PersistentVolumeClaim
+      name: getmando-config
+    patch: |-
+      - op: add
+        path: /spec/storageClassName
+        value: local-path
+```
+
+Any provisioner works (Longhorn, Rook, local-path) as long as it provides `ReadWriteOnce`.
+
+### Verifying the manifests
+
+`npm run verify:k8s` is the project's smoke test for this directory. Its prerequisites are
+checked per stage, so missing tooling makes a stage skip (exit 0) rather than fail:
+
+- **Structural stage** (needs only `kubectl`): builds the Kustomize base and fails on any broken
+  manifest.
+- **Runtime stage** (needs `kind` plus Docker or Podman): creates a throwaway kind cluster,
+  applies the base, and asserts the full contract — the bundle is served, `/health` answers,
+  the configuration is read from the PVC, a token-authenticated `POST /api/config` round-trips,
+  and the write survives pod rescheduling.
 
 ---
 
