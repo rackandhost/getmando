@@ -220,6 +220,16 @@ tag can be repushed upstream, a digest cannot. The release tag (`v2.0.0` at the 
 is recorded as a comment next to the digest; the publish workflow rewrites both automatically on
 every push to `main`.
 
+**Which reference wins?** Under `kubectl apply -k` (and under Flux/Argo CD, which consume the
+same base) the digest replaces the Deployment's `image:` tag outright — the cluster runs
+`ghcr.io/rackandhost/getmando@sha256:…`, never the tag. The `:v2.0.0` visible in
+`deployment.yaml` is a readable fallback for humans, kept in sync by the same release pipeline.
+
+> **Avoid `kubectl apply -f deploy/kubernetes/deployment.yaml`.** It bypasses the digest pin
+> (deploys the mutable version tag instead), applies only the Deployment — no namespace, PVC,
+> Service, or Ingress — and has no GitOps story: Flux and Argo CD read the Kustomize base, never
+> raw files. `kubectl apply -k` is the supported path.
+
 To track a different version, override it in your overlay with the standard Kustomize idiom:
 
 ```yaml
