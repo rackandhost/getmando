@@ -217,7 +217,8 @@ controller's own defaults) — the shipped Ingress is HTTP-only.
 
 The base pins the image **by digest**, so an applied manifest runs exactly what was reviewed — a
 tag can be repushed upstream, a digest cannot. The release tag (`v2.0.0` at the time of writing)
-is recorded as a comment next to the digest, and each release bumps it.
+is recorded as a comment next to the digest; the publish workflow rewrites both automatically on
+every push to `main`.
 
 To track a different version, override it in your overlay with the standard Kustomize idiom:
 

@@ -13,7 +13,7 @@ resources:
   # secret.example.yaml is intentionally omitted: applying the base must never create a Secret.
 
 # Pin the published image by digest, so an applied manifest runs exactly what was reviewed.
-# Release tag: v2.0.0 — bump the digest by hand on each release (the tag here is for humans only).
+# Release tag: v2.0.0 — docker-publish.yml rewrites the tag and digest on every push to main.
 images:
   - name: ghcr.io/rackandhost/getmando
     digest: sha256:5aa0c245b84d7768d5dea7d11bfc41a633177cbb832a50e9e57433d0b25a8bfc

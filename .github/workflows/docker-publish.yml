@@ -9,12 +9,19 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Serialize runs: each run commits the pinned digest back to main, and concurrent runs
+# would race on that push.
+concurrency:
+  group: docker-publish
+  cancel-in-progress: false
+
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      # write: the run commits the pinned digest back to main after publishing.
+      contents: write
       packages: write
 
     steps:
@@ -49,6 +56,7 @@ jobs:
             type=sha,format=long
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -58,3 +66,34 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Pin the freshly pushed digest in the Kustomize base, so `kubectl apply -k` (or Flux/
+      # Argo CD pointed at this repo) always runs exactly what this build produced. Pushing with
+      # the default GITHUB_TOKEN does not retrigger workflows, and [skip ci] guards against a
+      # future switch to a PAT.
+      - name: Pin image digest in Kubernetes manifests
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          sed -i "s|digest: sha256:[0-9a-f]*|digest: ${DIGEST}|" deploy/kubernetes/kustomization.yaml
+          sed -i "s|^# Release tag: v[0-9.]*|# Release tag: ${VERSION}|" deploy/kubernetes/kustomization.yaml
+          sed -i "s|${REGISTRY}/${IMAGE_NAME}:v[0-9.]*|${REGISTRY}/${IMAGE_NAME}:${VERSION}|" deploy/kubernetes/deployment.yaml
+
+          # Fail loudly if the manifests drift from these patterns instead of committing a no-op.
+          grep -q "digest: ${DIGEST}" deploy/kubernetes/kustomization.yaml
+          grep -q "# Release tag: ${VERSION}" deploy/kubernetes/kustomization.yaml
+          grep -q "${REGISTRY}/${IMAGE_NAME}:${VERSION}" deploy/kubernetes/deployment.yaml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add deploy/kubernetes
+          if git diff --cached --quiet; then
+            echo "Digest ${DIGEST} already pinned; nothing to commit."
+            exit 0
+          fi
+          git commit -m "chore(k8s): pin ${VERSION} image digest [skip ci]"
+          # Detached-HEAD checkout: rebase onto the latest main, then push the branch explicitly.
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
