@@ -123,6 +123,7 @@ function runStageA() {
 
 let clusterCreated = false;
 let portForward = null;
+let activeRuntimeEnv = {};
 
 function stopPortForward() {
   if (portForward && portForward.exitCode === null) {
@@ -155,6 +156,30 @@ function teardownCluster(runtimeEnv) {
     spawnOptions({ env: runtimeEnv, stdio: 'inherit' }),
   );
   clusterCreated = false;
+}
+
+// A signal lands here while a cluster this run created is still up (e.g. Ctrl-C during Stage B).
+// Without this, the process exits immediately, the `finally` in runStageB never runs, and the
+// cluster + port-forward leak — the next run then fails at `kind create cluster` ("already
+// exists") instead of the clean run the script promises.
+function handleTerminationSignal() {
+  teardownCluster(activeRuntimeEnv);
+  process.exit(1);
+}
+process.on('SIGINT', handleTerminationSignal);
+process.on('SIGTERM', handleTerminationSignal);
+
+// A prior run that was killed harder than a handled signal (SIGKILL, host crash) can leave a
+// same-named cluster behind even with the handler above. Delete it before creating a new one so a
+// stale leftover never blocks a fresh run.
+function deleteStaleClusterIfPresent(runtimeEnv) {
+  const existing = spawnSync(KIND, ['get', 'clusters'], spawnOptions({ env: runtimeEnv, stdio: 'pipe' }));
+  const names = (existing.stdout ?? '').split('\n').map((name) => name.trim());
+  if (!names.includes(CLUSTER_NAME)) {
+    return;
+  }
+  console.log(`  found a stale "${CLUSTER_NAME}" cluster from a prior interrupted run, deleting it first...`);
+  spawnSync(KIND, ['delete', 'cluster', '--name', CLUSTER_NAME], spawnOptions({ env: runtimeEnv, stdio: 'inherit' }));
 }
 
 function assert(condition, message) {
@@ -223,8 +248,11 @@ async function runStageB() {
   }
 
   const runtimeEnv = runtime.env;
+  activeRuntimeEnv = runtimeEnv;
 
   try {
+    deleteStaleClusterIfPresent(runtimeEnv);
+
     console.log(`  creating kind cluster "${CLUSTER_NAME}" (provider: ${runtime.label})...`);
     mustRun(KIND, ['create', 'cluster', '--name', CLUSTER_NAME, '--wait', CLUSTER_WAIT], {
       env: runtimeEnv,
