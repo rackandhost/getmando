@@ -48,12 +48,17 @@ jobs:
 
       # deploy/kubernetes is declarative and has no unit tests, so this is its gate: build the
       # kustomization and validate every resource against the upstream Kubernetes OpenAPI schemas.
-      # kubectl ships on the ubuntu-latest runner; kubeconform is pinned to v0.8.0. Nothing is
-      # skipped (-strict, no -ignore-missing-schemas): the base contains no custom resources.
+      # kubectl ships on the ubuntu-latest runner; kubeconform is pinned to v0.8.0 and its download
+      # is checked against the release's published SHA-256 before extraction, so a compromised or
+      # substituted binary fails the step instead of running inside the job. Nothing is skipped
+      # (-strict, no -ignore-missing-schemas): the base contains no custom resources.
       - name: Validate Kubernetes manifests
+        env:
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
         run: |
-          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz \
-            | tar xz -C /tmp
+          curl -sSL -o /tmp/kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          echo "${KUBECONFORM_SHA256}  /tmp/kubeconform.tar.gz" | sha256sum -c -
+          tar xz -C /tmp -f /tmp/kubeconform.tar.gz
           kubectl kustomize deploy/kubernetes | /tmp/kubeconform -strict -
 
       # The config-write-api sidecar under server/ has its own package, but its
