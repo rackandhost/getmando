@@ -206,7 +206,7 @@ CHANGELOG entry yet.
 
 ## Phase 5: Full Verification + Review
 
-- [ ] 5.1 Run the complete local gate: `npm test`, `npm --prefix server test`, `npm run lint`,
+- [x] 5.1 Run the complete local gate: `npm test`, `npm --prefix server test`, `npm run lint`,
       `npm run format:check`, `npm run build -- --configuration production`, and the structural
       manifest validation (`kubectl kustomize` + kubeconform) — confirming the change touched
       none of the existing surfaces.
@@ -214,26 +214,135 @@ CHANGELOG entry yet.
         `docker-compose*.yml`, `src/`, `server/` (proposal § Success Criteria).
       - Verify: the commands above plus `git status`/`git diff --stat` review.
       - Files: N/A (verification only).
+      - Result (2026-10-04): all six green (306/306 + 11/11 focused-guard tests, 49/49 server
+        tests, lint, format:check, production build, kubeconform `-strict`). Production bundle
+        exceeds its 500 kB budget by ~243 kB — pre-existing, zero diff on `src/`, out of scope for
+        this change. Zero diff confirmed on `Dockerfile`, `entrypoint.sh`, `nginx.conf`,
+        `docker-compose*.yml`, `src/`, `server/`.
 
-- [ ] 5.2 **[held: runtime]** Execute the deferred runtime verification on the pushed branch: on
-      a machine with `kind`, `kubectl`, and a container runtime, run `npm run verify:k8s` (full
-      run — structural and runtime stages, including the write round-trip and PVC persistence
-      assertions) and record the outcome, a summary of the command output, and the environment it
-      ran on in this change's `verify-report.md`. This single run completes every
-      **[held: runtime]** item above and the Phase 2 exit check.
+- [ ] 5.2 **[held: runtime]** — **blocked, not a manifest defect**: run on a machine with `kind`,
+      `kubectl`, and a container runtime; see `verify-report.md` for the attempted run.
+      `npm run verify:k8s` fails today at the `POST /api/config` (no token) assertion — it gets
+      502, not the expected 401 — because the only published image (`ghcr.io/rackandhost/getmando`
+      pinned by digest, built from the `v2.0.0` tag) still exits the sidecar process when
+      `CONFIG_WRITE_TOKEN` is unset. That exit(1) requirement was removed in `4fb3440`
+      (`feat(server): poll opted-in apps and expose GET /api/status`), which shipped as part of
+      `app-status-indicator` into `develop` — confirmed *not* an ancestor of `v2.0.0`
+      (`git merge-base --is-ancestor`) and *not* on `main` (`origin/main` is still exactly the
+      `v2.0.0` commit; no image has been published since). The docker-publish auto-pin step
+      (added in this same change) will self-correct the digest the next time `main` advances and
+      publishes a new image — expected to include this fix once that release happens. Re-run this
+      task once that image exists; do not change the manifests or the smoke test's assertions to
+      work around it.
       - Acceptance: `npm run verify:k8s` exits 0 end-to-end; `verify-report.md` records the pass
         and the verification environment.
       - Verify: the report entry plus the command's exit code.
       - Files: `openspec/changes/kubernetes-support/verify-report.md` (created here if not
         already).
 
-- [ ] 5.3 `code-review-and-quality` pass over the whole change (manifests, script, CI, docs),
+- [x] 5.3 `code-review-and-quality` pass over the whole change (manifests, script, CI, docs),
       comparing the implementation against every scenario in `specs/kubernetes-deployment/spec.md`.
-      Any findings become numbered fix tasks in a new phase here, mirroring the
-      `app-status-indicator` review phases.
+      Findings below in Phase 6, mirroring the `app-status-indicator` review phases.
       - Acceptance: review findings resolved or explicitly accepted with rationale.
       - Verify: review pass output recorded; this file updated.
       - Files: as findings dictate.
+      - Result (2026-10-04): reviewed all 18 changed files against the five axes
+        (correctness/readability/architecture/security/performance) and every scenario in
+        `specs/kubernetes-deployment/spec.md`; manually exercised the full runtime contract
+        (write round-trip, PVC persistence) against a local kind cluster. 5 findings recorded in
+        Phase 6. No Critical findings — the one blocker-grade issue (pinned image predates the
+        sidecar's optional-token fix) was already captured in task 5.2/`verify-report.md`.
 
 **Phase 5 exit check**: every spec scenario verified (runtime items via task 5.2); full local
 gate green; review pass complete.
+
+## Phase 6: Review Pass Findings
+
+Findings from the `code-review-and-quality` pass (task 5.3) over the full `develop..HEAD` diff.
+
+- [x] 6.1 (Required) `scripts/verify-k8s.mjs` has no `SIGINT`/`SIGTERM` handler, so interrupting a
+      Stage B run (e.g. Ctrl-C) skips the `finally` teardown and leaves the `getmando-smoke` kind
+      cluster (and any `kubectl port-forward` child) running. The next run then fails at
+      `kind create cluster` ("already exists") instead of the clean run the script promises. This
+      breaks the contract stated in `design.md`'s Interfaces/Contracts and task 1.1: "torn down on
+      exit even on failure."
+      - Acceptance: a Ctrl-C during Stage B tears down the cluster and port-forward before the
+        process exits; a stale cluster from a prior interrupted run doesn't block a fresh run.
+      - Verify: manually interrupt a run mid-Stage-B, confirm `kind get clusters` is empty
+        afterward; confirm a second `npm run verify:k8s` run succeeds immediately after.
+      - Files: `scripts/verify-k8s.mjs`.
+      - Result (2026-10-04): added `SIGINT`/`SIGTERM` handlers that call the existing
+        `teardownCluster`, plus a `deleteStaleClusterIfPresent` guard before `kind create cluster`
+        for the harder case (`SIGKILL`/host crash) a handler can't catch. Verified against the
+        real PID (not a job-control artifact): sent `SIGINT` mid-Stage-B — the cluster and
+        port-forward were torn down cleanly with no leak (`kind get clusters` empty afterward).
+        Caveat worth recording: the handler only runs once Node's event loop regains control, so
+        if the signal arrives while blocked inside a synchronous `kubectl`/`kind` `spawnSync` call,
+        teardown is deferred until that call returns — still strictly better than the prior
+        behavior (an unhandled signal killed the process immediately with zero cleanup, every
+        time). Separately confirmed: pre-seeding a stale `getmando-smoke` cluster before a run, the
+        script detects and deletes it before creating a new one, exactly as 6.1 requires.
+
+- [x] 6.2 (Nit) `deployment.yaml`'s `readinessProbe` has no `initialDelaySeconds` (defaults to
+      `0`), guaranteeing a "connection refused" probe-failure event while nginx is still starting
+      (observed in the smoke-test run). Cosmetic only — self-heals within one `periodSeconds` and
+      never affects rollout success — but noisy in `kubectl describe`/events.
+      - Acceptance: no spurious readiness-probe-failed event on a normal pod start.
+      - Verify: `kubectl describe pod` after a fresh rollout shows no `Unhealthy` readiness event.
+      - Files: `deploy/kubernetes/deployment.yaml`.
+      - Result (2026-10-04): added `initialDelaySeconds: 5`. Re-validated structurally
+        (`kubectl kustomize | kubeconform -strict -` → exit 0); the same value the liveness probe
+        already waited before its first check.
+
+- [x] 6.3 (Nit) `.github/workflows/test.yml`'s kubeconform download (`curl -sSL ... | tar xz`) has
+      no checksum or signature verification — a compromised or substituted release would execute
+      inside the CI job with the job's token and environment. Low likelihood (pinned version,
+      GitHub Releases) but cheap to close.
+      - Acceptance: the download is verified against a pinned SHA-256 before extraction.
+      - Verify: a deliberately corrupted download fails the step instead of silently extracting.
+      - Files: `.github/workflows/test.yml`.
+      - Result (2026-10-04): pinned the official release checksum
+        (`9bc2bffbf71f2...466ec287883`, confirmed against both the release's published `CHECKSUMS`
+        file and a fresh local download) and gated extraction on `sha256sum -c`. Verified both
+        directions locally: the real binary passes and still validates the manifests (exit 0); a
+        corrupted file fails `sha256sum -c` with exit 1 before `tar` ever runs.
+
+- [x] 6.4 (Optional) `.github/workflows/docker-publish.yml`'s auto-pin step pushes a commit
+      directly to `main` using the default `GITHUB_TOKEN` (`contents: write`), bypassing any PR
+      review for that commit. If `main`'s branch protection requires pull requests, this push will
+      fail silently-ish (the job errors, but nothing alerts that the digest never got pinned,
+      which compounds with finding 6.1's sibling concern about the image/Secret mismatch staying
+      unnoticed). Confirm branch protection explicitly permits this, or add a job-failure
+      notification.
+      - Acceptance: either branch protection is confirmed compatible, or the workflow alerts when
+        the push fails.
+      - Verify: manual confirmation against the repository's branch protection settings.
+      - Files: `.github/workflows/docker-publish.yml` (or repository settings; no code change may
+        be needed).
+      - Result (2026-10-04): confirmed via `gh api repos/rackandhost/getmando/rulesets/8629865`
+        that the "Dev" ruleset (covers `main` and `develop`) requires a PR with 1 approval + code
+        owner review, with zero bypass actors — the default `GITHUB_TOKEN` push would have failed
+        every time. Resolution: a dedicated collaborator bot account (`randhbot`, Write access,
+        not Admin) was added as a ruleset bypass actor (`actor_type: User`, `bypass_mode: always`)
+        scoped to that one identity — confirmed present via `.bypass_actors` after the repo owner
+        applied it (requires Admin, which the implementing account does not have). The workflow
+        now checks out with a classic PAT (`KUBE_DIGEST_BOT_TOKEN`, scope `repo`, fine-grained PATs
+        are unsupported for outside/repository collaborators per GitHub's own documented
+        limitation) instead of `GITHUB_TOKEN`, so the push authenticates as `randhbot`. The job's
+        `permissions.contents: write` was removed as now-unused (the push no longer uses
+        `GITHUB_TOKEN`). Loop safety re-verified for the new credential: GitHub's
+        GITHUB_TOKEN-authored-push loop suppression does not apply to a real user's PAT, but the
+        commit's existing `[skip ci]` marker (unchanged) independently prevents re-triggering this
+        workflow regardless of which credential pushed it.
+
+- [ ] 6.5 (FYI) `scripts/check-focused-tests.mjs`'s Windows-portability fix (`pathToFileURL` guard,
+      POSIX-normalized paths) is unrelated to Kubernetes support but bundled into this change at
+      the maintainer's explicit request — already disclosed with rationale in `tasks.md` §
+      Verification Environment. No action needed; recorded here only so the review record notes
+      the mixed-concern commit was deliberate, not accidental.
+      - Acceptance: n/a — informational.
+      - Verify: n/a.
+      - Files: `scripts/check-focused-tests.mjs`.
+
+**Phase 6 exit check**: 6.1 fixed and verified (it's the only Required/Critical-adjacent finding);
+6.2–6.4 fixed or explicitly deferred with rationale; 6.5 needs no action.
