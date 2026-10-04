@@ -55,6 +55,9 @@ spec:
             httpGet:
               path: /health
               port: http
+            # A small delay avoids a guaranteed "connection refused" probe-failure event while
+            # nginx is still starting (cosmetic only — the pod still reaches Ready on schedule).
+            initialDelaySeconds: 5
             periodSeconds: 10
           resources:
             requests:
