@@ -20,13 +20,18 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      # write: the run commits the pinned digest back to main after publishing.
-      contents: write
       packages: write
 
     steps:
+      # The default GITHUB_TOKEN cannot push the digest-pin commit below: main is covered by a
+      # ruleset requiring a pull request, and GITHUB_TOKEN has no bypass. Checking out with
+      # KUBE_DIGEST_BOT_TOKEN (a classic PAT for the randhbot collaborator account, which IS a
+      # ruleset bypass actor) persists that credential for every later git command in this job,
+      # including the push.
       - name: Checkout del código
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.KUBE_DIGEST_BOT_TOKEN }}
 
       - name: Get version from package.json
         id: pkg
@@ -68,9 +73,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Pin the freshly pushed digest in the Kustomize base, so `kubectl apply -k` (or Flux/
-      # Argo CD pointed at this repo) always runs exactly what this build produced. Pushing with
-      # the default GITHUB_TOKEN does not retrigger workflows, and [skip ci] guards against a
-      # future switch to a PAT.
+      # Argo CD pointed at this repo) always runs exactly what this build produced. This push is
+      # authenticated as randhbot (a real user, not GITHUB_TOKEN), so GitHub's loop prevention for
+      # GITHUB_TOKEN-authored pushes does not apply here — [skip ci] in the commit message below
+      # is the actual guard against re-triggering this workflow.
       - name: Pin image digest in Kubernetes manifests
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
@@ -85,8 +91,8 @@ jobs:
           grep -q "# Release tag: ${VERSION}" deploy/kubernetes/kustomization.yaml
           grep -q "${REGISTRY}/${IMAGE_NAME}:${VERSION}" deploy/kubernetes/deployment.yaml
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "randhbot"
+          git config user.email "337729080+randhbot@users.noreply.github.com"
           git add deploy/kubernetes
           if git diff --cached --quiet; then
             echo "Digest ${DIGEST} already pinned; nothing to commit."
