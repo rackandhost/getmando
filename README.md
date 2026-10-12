@@ -216,13 +216,13 @@ controller's own defaults) — the shipped Ingress is HTTP-only.
 ### Image pinning
 
 The base pins the image **by digest**, so an applied manifest runs exactly what was reviewed — a
-tag can be repushed upstream, a digest cannot. The release tag (`v2.1.0` at the time of writing)
+tag can be repushed upstream, a digest cannot. The release tag (`v2.1.1` at the time of writing)
 is recorded as a comment next to the digest; the publish workflow rewrites both automatically on
 every push to `main`.
 
 **Which reference wins?** Under `kubectl apply -k` (and under Flux/Argo CD, which consume the
 same base) the digest replaces the Deployment's `image:` tag outright — the cluster runs
-`ghcr.io/rackandhost/getmando@sha256:…`, never the tag. The `:v2.1.0` visible in
+`ghcr.io/rackandhost/getmando@sha256:…`, never the tag. The `:v2.1.1` visible in
 `deployment.yaml` is a readable fallback for humans, kept in sync by the same release pipeline.
 
 > **Avoid `kubectl apply -f deploy/kubernetes/deployment.yaml`.** It bypasses the digest pin
@@ -235,7 +235,7 @@ To track a different version, override it in your overlay with the standard Kust
 ```yaml
 images:
   - name: ghcr.io/rackandhost/getmando
-    newTag: v2.1.0
+    newTag: v2.1.1
 ```
 
 ### Clusters without a default StorageClass (vanilla Talos)
@@ -681,7 +681,7 @@ Build artifacts are created in the `dist/` directory.
 
 ## 🗺️ Roadmap
 
-### Current Release (v2.1.0)
+### Current Release (v2.1.1)
 - ✅ Core dashboard functionality
 - ✅ YAML configuration
 - ✅ Search and filtering

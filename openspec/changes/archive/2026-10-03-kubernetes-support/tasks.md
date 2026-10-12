@@ -204,7 +204,7 @@ at PR time once the branch is pushed.
         `specs/kubernetes-deployment/spec.md` promoted into `openspec/specs/`, the capability row
         added to `openspec/README.md`, and this change archived. The promotion and archive were done
         ahead of task 5.2's runtime run by the maintainer's decision: a spec fixed after the release
-        would need another release. Task 5.2 is **still open** and unverified; see below.
+        would need another release. Task 5.2 has since passed; see below.
 
 **Phase 4 exit check**: README and ARCHITECTURE accurate against the shipped manifests; CHANGELOG
 entry added with the v2.1.0 release prep.
@@ -225,28 +225,27 @@ entry added with the v2.1.0 release prep.
         this change. Zero diff confirmed on `Dockerfile`, `entrypoint.sh`, `nginx.conf`,
         `docker-compose*.yml`, `src/`, `server/`.
 
-- [ ] 5.2 **[held: runtime]** — **blocked, not a manifest defect**: run on a machine with `kind`,
-      `kubectl`, and a container runtime; see `verify-report.md` for the attempted run.
-      `npm run verify:k8s` fails today at the `POST /api/config` (no token) assertion — it gets
-      502, not the expected 401 — because the only published image (`ghcr.io/rackandhost/getmando`
-      pinned by digest, built from the `v2.0.0` tag) still exits the sidecar process when
-      `CONFIG_WRITE_TOKEN` is unset. That exit(1) requirement was removed in `4fb3440`
-      (`feat(server): poll opted-in apps and expose GET /api/status`), which shipped as part of
-      `app-status-indicator` into `develop` — confirmed *not* an ancestor of `v2.0.0`
-      (`git merge-base --is-ancestor`) and *not* on `main` (`origin/main` is still exactly the
-      `v2.0.0` commit; no image has been published since). The docker-publish auto-pin step
-      (added in this same change) will self-correct the digest the next time `main` advances and
-      publishes a new image — expected to include this fix once that release happens. Re-run this
-      task once that image exists; do not change the manifests or the smoke test's assertions to
-      work around it.
+- [x] 5.2 **[held: runtime]** — run on a machine with `kind`, `kubectl`, and a container runtime;
+      see `verify-report.md`. It was first blocked (not a manifest defect): `npm run verify:k8s`
+      failed at the `POST /api/config` (no token) assertion — it got 502, not the expected 401 —
+      because the only published image (`ghcr.io/rackandhost/getmando` pinned by digest, built from
+      the `v2.0.0` tag) still exited the sidecar process when `CONFIG_WRITE_TOKEN` was unset. That
+      exit(1) requirement was removed in `4fb3440` (`feat(server): poll opted-in apps and expose GET
+      /api/status`), which shipped as part of `app-status-indicator` into `develop` and was not in
+      `v2.0.0`. The docker-publish auto-pin step (added in this same change) re-pinned the digest
+      when v2.1.0 was published, and the task was re-run then. The manifests and the smoke test's
+      assertions were not changed to work around it.
       - Acceptance: `npm run verify:k8s` exits 0 end-to-end; `verify-report.md` records the pass
         and the verification environment.
       - Verify: the report entry plus the command's exit code.
       - Files: `openspec/changes/archive/2026-10-03-kubernetes-support/verify-report.md` (created
         here if not already).
-      - Status (2026-10-12): **open — not run.** Spec promoted and change archived before this run,
-        on the maintainer's expectation that it will pass against the v2.1.0 image. If the run fails,
-        the spec in `openspec/specs/kubernetes-deployment/` and this record must be corrected.
+      - Result (2026-10-12): **passed**, on a GitHub Actions runner against the published v2.1.0
+        image (digest `990ce6bf…db35`, `origin/main` at `c2d698a`); details in `verify-report.md`
+        (Attempt 2). The earlier 502 is gone: the v2.1.0 image starts without a token and
+        `POST /api/config` returns the expected 401. The run also exposed a race in the script's
+        port-forward restart, fixed in the same release (v2.1.1). It passed with that fix, not with
+        the script as shipped in v2.1.0.
 
 - [x] 5.3 `code-review-and-quality` pass over the whole change (manifests, script, CI, docs),
       comparing the implementation against every scenario in `specs/kubernetes-deployment/spec.md`.
