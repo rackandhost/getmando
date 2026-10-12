@@ -18,6 +18,10 @@
 
 - **Sidecar Starts Without `CONFIG_WRITE_TOKEN`**: The `config-write-api` sidecar no longer exits at startup when the token is unset. Read-only deployments now get status checks, while `POST /api/config` keeps rejecting every write with `401`. Deployments that set the token are unaffected.
 
+### Security
+
+- **Production Dependency Updates**: Updated the Angular runtime packages (`@angular/core`, `common`, `compiler`, `forms`, `platform-browser`, `router`, and the matching `compiler-cli`) to 21.2.25, and refreshed `fast-uri` and the sidecar's `fastify` (5.12.5), clearing the production-reachable advisories reported since v2.0.0: an Angular router denial-of-service advisory (it concerns server-side rendering, which Mando does not use), two `fast-uri` parsing advisories, and a `fastify` HTTP/2 trailer denial-of-service. `npm audit --omit=dev` now reports zero vulnerabilities in both the app and the sidecar. No application behavior changed. Advisories that remain are in build and test tooling only (`@angular/cli`, `vitest`, `brace-expansion`) and are never shipped to the browser or the sidecar.
+
 ### Accessibility
 
 - **Status Badge**: The badge is decorative (`aria-hidden`) and the state is part of the card's accessible name (for example, "Open Plex, currently up"). A check mark versus a cross keeps the state distinguishable without relying on color (WCAG 1.4.1).
@@ -44,9 +48,12 @@
 - `ARCHITECTURE.md`
 - `README.md`
 - `deploy/kubernetes/*`
+- `package-lock.json`
 - `package.json`
 - `scripts/check-focused-tests.mjs`
 - `scripts/verify-k8s.mjs`
+- `server/package-lock.json`
+- `server/package.json`
 - `server/src/app.ts`
 - `server/src/index.ts`
 - `server/src/status-checker.ts`
