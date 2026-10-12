@@ -2,6 +2,10 @@
 
 ## v2.1.0
 
+### Bug Fixes
+
+- **Configurator Category Select**: In the `/configure` application editor, the Category dropdown showed the first category for every application after loading a `dashboard.yaml`, instead of the application's own. Each application now shows its saved category.
+
 ### New Features
 
 - **App Status Indicator**: Applications can opt in to a live health badge with `healthCheck: true`. Dashboard cards show a green ✓ when the app answers and a red ✕ when it does not. Checks run server-side from the `config-write-api` sidecar, so they reflect reachability from the server rather than the viewer's browser and are not blocked by CORS or mixed content. Any HTTP response (2xx–5xx) counts as up; only a connection error or timeout counts as down. Self-signed TLS certificates are accepted for these checks only. Apps without `healthCheck: true` are never probed, so existing `dashboard.yaml` files behave exactly as before.
@@ -27,6 +31,7 @@
 ### Testing & Quality
 
 - **Status Check Coverage**: Added server tests for the status poller, checker, and `GET /api/status` route (real local HTTP, HTTPS, and TCP servers; fake timers), and frontend tests for `AppStatusService` and the card badge, including AXE checks.
+- **Category Select Regression Test**: Added a configurator test that renders applications with different categories, including a non-first one, so the dropdown can no longer silently fall back to the first option.
 
 ### Documentation
 
