@@ -198,6 +198,22 @@ describe('CollectionEditorComponent', () => {
     expect(edited).toHaveBeenLastCalledWith({ index: 0, field: 'category', value: 'tools' });
   });
 
+  it('shows the saved category of each application, not always the first option', async () => {
+    await render(CollectionEditorComponent, {
+      inputs: {
+        collection: 'applications',
+        items: [
+          { id: 'plex', name: 'Plex', category: 'media' },
+          { id: 'grafana', name: 'Grafana', category: 'tools' },
+        ],
+        categoryOptions: categories,
+      },
+    });
+
+    expect(screen.getByLabelText('Application category for Plex')).toHaveValue('media');
+    expect(screen.getByLabelText('Application category for Grafana')).toHaveValue('tools');
+  });
+
   it('edits schema-backed application fields through accessible controls', async () => {
     const user = userEvent.setup();
     const edited = vi.fn();
