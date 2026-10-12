@@ -191,7 +191,7 @@ at PR time once the branch is pushed.
       - Verify: manual read-through.
       - Files: `ARCHITECTURE.md`.
 
-- [ ] 4.3 Note the `CHANGELOG.md` entry as pending until this ships in its release — add it
+- [x] 4.3 Note the `CHANGELOG.md` entry as pending until this ships in its release — add it
       together with promoting `specs/kubernetes-deployment/spec.md` into `openspec/specs/`, the
       `openspec/README.md` capability-table row, and archiving this change (see proposal § Success
       Criteria). Every subsequent release must also bump the pinned digest in
@@ -200,9 +200,14 @@ at PR time once the branch is pushed.
       - Acceptance: this task tracks the ship-time obligations; no premature CHANGELOG entry.
       - Verify: at release time.
       - Files: `CHANGELOG.md` (at release), `openspec/README.md` (at release).
+      - Result (2026-10-12): done on the v2.1.0 release branch. `CHANGELOG.md` v2.1.0 entry added,
+        `specs/kubernetes-deployment/spec.md` promoted into `openspec/specs/`, the capability row
+        added to `openspec/README.md`, and this change archived. The promotion and archive were done
+        ahead of task 5.2's runtime run by the maintainer's decision: a spec fixed after the release
+        would need another release. Task 5.2 is **still open** and unverified; see below.
 
-**Phase 4 exit check**: README and ARCHITECTURE accurate against the shipped manifests; no
-CHANGELOG entry yet.
+**Phase 4 exit check**: README and ARCHITECTURE accurate against the shipped manifests; CHANGELOG
+entry added with the v2.1.0 release prep.
 
 ## Phase 5: Full Verification + Review
 
@@ -237,8 +242,11 @@ CHANGELOG entry yet.
       - Acceptance: `npm run verify:k8s` exits 0 end-to-end; `verify-report.md` records the pass
         and the verification environment.
       - Verify: the report entry plus the command's exit code.
-      - Files: `openspec/changes/kubernetes-support/verify-report.md` (created here if not
-        already).
+      - Files: `openspec/changes/archive/2026-10-03-kubernetes-support/verify-report.md` (created
+        here if not already).
+      - Status (2026-10-12): **open — not run.** Spec promoted and change archived before this run,
+        on the maintainer's expectation that it will pass against the v2.1.0 image. If the run fails,
+        the spec in `openspec/specs/kubernetes-deployment/` and this record must be corrected.
 
 - [x] 5.3 `code-review-and-quality` pass over the whole change (manifests, script, CI, docs),
       comparing the implementation against every scenario in `specs/kubernetes-deployment/spec.md`.
