@@ -26,6 +26,33 @@ The system MUST expose `POST /api/config` and MUST reject any request that does 
 - WHEN the request body is a structurally and semantically valid configuration
 - THEN the request proceeds to validation and write
 
+### Requirement: Sidecar starts without a write token
+
+The sidecar MUST start and keep serving read-only routes when `CONFIG_WRITE_TOKEN` is unset or
+empty, and MUST reject every `POST /api/config` request in that state. A missing token MUST never
+make a write succeed.
+
+#### Scenario: Token not configured
+
+- GIVEN the sidecar starts with `CONFIG_WRITE_TOKEN` unset
+- WHEN it finishes starting
+- THEN the process stays up and `GET /api/status` is served
+- AND every `POST /api/config` request responds `401`, whatever header it sends
+- AND the mounted `dashboard.yaml` is not read or modified
+
+### Requirement: Read-only status route
+
+The sidecar MUST expose `GET /api/status` without requiring the write token. The route is read-only
+and returns only the cached status of monitored applications, never URLs or other configuration.
+Its behavior is specified by the `app-status-check` capability.
+
+#### Scenario: Status served without the token
+
+- GIVEN the sidecar has no write token configured, or the request carries none
+- WHEN `GET /api/status` is called
+- THEN the response is `200` with the cached statuses
+- AND no write route becomes reachable as a result
+
 ### Requirement: Server-side schema validation
 
 The endpoint MUST validate every request body against the same `DashboardConfigSchema` used by the

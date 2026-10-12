@@ -164,6 +164,10 @@ Decision needed before apply: No — resolved during design review, see `design.
       - Acceptance: README accurately describes the new field/env var and its behavior.
       - Verify: manual read-through against `design.md`.
       - Files: `README.md`.
+      - Result (2026-10-12): the `CHANGELOG.md` v2.1.0 entry was added on the release branch,
+        `specs/app-status-check/spec.md` was promoted into `openspec/specs/`, the `config-write-api`
+        spec gained the decoupled-startup and `GET /api/status` requirements, and this change was
+        archived.
 
 - [x] 3.4 Run the complete `ng test` and `server/` test suites together; `npx tsc -p server/tsconfig.json`.
       - Acceptance: everything green, no regressions in existing suites.

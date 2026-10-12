@@ -43,3 +43,12 @@ contract was exercised by hand — see task 5.2 notes once the full automated ru
 **Disposition**: Stage A is GREEN and repeatable. Stage B's read-only assertion is blocked on a
 future release publishing an image that includes `4fb3440`; re-run `npm run verify:k8s` in full
 once that image exists. No manifest or script change is warranted to work around this.
+
+## Disposition update — 2026-10-12
+
+The full `npm run verify:k8s` run against a published image that includes `4fb3440` has **not**
+happened yet: it can only run once the v2.1.0 image is published. The v2.1.0 release prep promoted
+`specs/kubernetes-deployment/spec.md` into `openspec/specs/` and archived this change before that
+run, on the maintainer's decision (correcting the spec after the release would need another
+release). Task 5.2 stays open. If the post-release run fails, correct the promoted spec and record
+the failure here instead of marking 5.2 done.

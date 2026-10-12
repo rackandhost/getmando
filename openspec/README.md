@@ -49,8 +49,10 @@ The folders are the index — `ls specs/` for what's built, `ls changes/` for wh
 progress, `ls changes/archive/` for history. This table only adds the release each capability
 shipped in, which the folders don't record; add a row when a spec is promoted into `specs/`.
 
-| Capability          | Shipped in | Notes                                                         |
-| ------------------- | ---------- | ------------------------------------------------------------- |
-| `app-favorites`     | v1.0.0     | `favorite` flag + virtual Favorites category                  |
-| `yaml-configurator` | v2.0.0     | `/configure` browser editor; first-run-without-YAML behaviour |
-| `config-write-api`  | v2.0.0     | `POST /api/config` write sidecar; `:ro` → `:rw` volume change |
+| Capability              | Shipped in | Notes                                                         |
+| ----------------------- | ---------- | ------------------------------------------------------------- |
+| `app-favorites`         | v1.0.0     | `favorite` flag + virtual Favorites category                  |
+| `yaml-configurator`     | v2.0.0     | `/configure` browser editor; first-run-without-YAML behaviour |
+| `config-write-api`      | v2.0.0     | `POST /api/config` write sidecar; `:ro` → `:rw` volume change |
+| `app-status-check`      | v2.1.0     | opt-in `healthCheck` badge; `GET /api/status` on the sidecar  |
+| `kubernetes-deployment` | v2.1.0     | Kustomize base in `deploy/kubernetes/`; `npm run verify:k8s`  |
