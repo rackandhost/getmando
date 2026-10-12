@@ -125,22 +125,35 @@ let clusterCreated = false;
 let portForward = null;
 let activeRuntimeEnv = {};
 
+// Resolves once the previous port-forward has actually exited. kill() only sends SIGTERM, so a
+// replacement spawned straight away can still find the local port bound ("address already in use")
+// and leave nothing listening, which made the PVC-persistence step time out intermittently.
 function stopPortForward() {
-  if (portForward && portForward.exitCode === null) {
-    portForward.kill();
-  }
+  const child = portForward;
   portForward = null;
+  if (!child || child.exitCode !== null) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    child.once('exit', resolve);
+    child.kill();
+  });
 }
 
-function startPortForward(runtimeEnv) {
-  stopPortForward();
-  portForward = spawn(
+async function startPortForward(runtimeEnv) {
+  await stopPortForward();
+  const child = spawn(
     KUBECTL,
     ['port-forward', '-n', NAMESPACE, `svc/${DEPLOYMENT}`, `${LOCAL_PORT}:80`],
     spawnOptions({ env: runtimeEnv, stdio: ['ignore', 'ignore', 'ignore'] }),
   );
-  portForward.on('exit', () => {
-    portForward = null;
+  portForward = child;
+  child.on('exit', () => {
+    // Only clear our own reference: a restarted forward must not be forgotten when its
+    // predecessor's exit event fires late.
+    if (portForward === child) {
+      portForward = null;
+    }
   });
 }
 
@@ -270,7 +283,7 @@ async function runStageB() {
       { env: runtimeEnv, stdio: 'inherit' },
     );
 
-    startPortForward(runtimeEnv);
+    await startPortForward(runtimeEnv);
     await waitForHttp('/health');
 
     const root = await getJsonOrText('/');
@@ -317,7 +330,7 @@ async function runStageB() {
       ['rollout', 'status', `deployment/${DEPLOYMENT}`, '-n', NAMESPACE, `--timeout=${ROLLOUT_TIMEOUT}`],
       { env: runtimeEnv, stdio: 'inherit' },
     );
-    startPortForward(runtimeEnv);
+    await startPortForward(runtimeEnv);
     await waitForHttp('/health');
 
     const write = await postConfig(WRITE_TOKEN);
@@ -338,7 +351,7 @@ async function runStageB() {
       ['rollout', 'status', `deployment/${DEPLOYMENT}`, '-n', NAMESPACE, `--timeout=${ROLLOUT_TIMEOUT}`],
       { env: runtimeEnv, stdio: 'inherit' },
     );
-    startPortForward(runtimeEnv);
+    await startPortForward(runtimeEnv);
     await waitForHttp('/health');
 
     const configAfterReschedule = await getJsonOrText('/config/dashboard.yaml');
