@@ -1,5 +1,65 @@
 # Changelog
 
+## v2.1.0
+
+### New Features
+
+- **App Status Indicator**: Applications can opt in to a live health badge with `healthCheck: true`. Dashboard cards show a green ✓ when the app answers and a red ✕ when it does not. Checks run server-side from the `config-write-api` sidecar, so they reflect reachability from the server rather than the viewer's browser and are not blocked by CORS or mixed content. Any HTTP response (2xx–5xx) counts as up; only a connection error or timeout counts as down. Self-signed TLS certificates are accepted for these checks only. Apps without `healthCheck: true` are never probed, so existing `dashboard.yaml` files behave exactly as before.
+- **`GET /api/status`**: New unauthenticated, read-only sidecar endpoint returning each monitored app's status and last-checked time. It exposes no URLs or other configuration, and mirrors the already-public `GET /config/dashboard.yaml`.
+- **`STATUS_CHECK_INTERVAL_MS`**: New environment variable (default `60000`, validated and clamped) controlling how often the sidecar re-checks monitored apps. The dashboard follows the cadence the server reports, and only polls while at least one app is monitored.
+- **Health Check Toggle in the Configurator**: The `/configure` app editor now has a `healthCheck` toggle, preserved across save, load, import, and export.
+- **Kubernetes Deployment**: Added a Kustomize base in `deploy/kubernetes/` (namespace, Deployment with the config-write sidecar, Service, Ingress, PVC for `dashboard.yaml`, and an example write-token Secret), with a README section covering kind, k3s, and Talos, including the StorageClass caveat. Deploy with `kubectl apply -k deploy/kubernetes` (never `apply -f`). The base pins the published image by digest, and a new `npm run verify:k8s` script checks the manifests and, when `kind` is available, runs them on a throwaway cluster.
+
+### Changed
+
+- **Sidecar Starts Without `CONFIG_WRITE_TOKEN`**: The `config-write-api` sidecar no longer exits at startup when the token is unset. Read-only deployments now get status checks, while `POST /api/config` keeps rejecting every write with `401`. Deployments that set the token are unaffected.
+
+### Accessibility
+
+- **Status Badge**: The badge is decorative (`aria-hidden`) and the state is part of the card's accessible name (for example, "Open Plex, currently up"). A check mark versus a cross keeps the state distinguishable without relying on color (WCAG 1.4.1).
+
+### CI & Tooling
+
+- **Kubernetes Manifest Validation**: CI builds the kustomization and validates it with `kubeconform -strict`. The `kubeconform` download is verified against its published SHA-256 checksum before it runs.
+- **Automatic Digest Pinning**: The Docker publish workflow pins the digest of each newly published image into `deploy/kubernetes/`, committed through a bypass-scoped bot account so the `main` branch ruleset stays in force.
+- **Windows Portability**: `scripts/check-focused-tests.mjs` now guards its `pathToFileURL` entry-point check so it also runs on Windows.
+
+### Testing & Quality
+
+- **Status Check Coverage**: Added server tests for the status poller, checker, and `GET /api/status` route (real local HTTP, HTTPS, and TCP servers; fake timers), and frontend tests for `AppStatusService` and the card badge, including AXE checks.
+
+### Documentation
+
+- **Status Indicator and Kubernetes Guides**: Documented the status indicator, the `healthCheck` field, and `STATUS_CHECK_INTERVAL_MS` in the README, documented Kubernetes deployment (including digest precedence), and added `deploy/kubernetes/` to the `ARCHITECTURE.md` repository layout.
+
+### Changed Files
+
+- `.github/workflows/docker-publish.yml`
+- `.github/workflows/test.yml`
+- `ARCHITECTURE.md`
+- `README.md`
+- `deploy/kubernetes/*`
+- `package.json`
+- `scripts/check-focused-tests.mjs`
+- `scripts/verify-k8s.mjs`
+- `server/src/app.ts`
+- `server/src/index.ts`
+- `server/src/status-checker.ts`
+- `server/src/status-poller.ts`
+- `src/app/core/models/dashboard.models.ts`
+- `src/app/core/services/app-status.service.ts`
+- `src/app/core/services/app.service.ts`
+- `src/app/core/services/yaml-codec.service.ts`
+- `src/app/features/configurator/components/collection-editor.component.html`
+- `src/app/features/configurator/components/collection-editor.component.ts`
+- `src/app/features/configurator/configurator.store.ts`
+- `src/app/shared/components/app-card/app-card.component.html`
+- `src/app/shared/components/app-card/app-card.component.ts`
+
+### Summary
+
+Adds an opt-in, server-side health badge for dashboard apps and first-class Kubernetes deployment manifests. Fully backward compatible: `healthCheck` defaults to `false`, no `dashboard.yaml` change is required, and the `:rw` volume guidance from v2.0.0 is unchanged. `Dockerfile`, `entrypoint.sh`, and `nginx.conf` are unchanged; the only behavior change for existing deployments is that the sidecar no longer needs `CONFIG_WRITE_TOKEN` to start.
+
 ## v2.0.0
 
 ### ⚠️ Breaking Changes
