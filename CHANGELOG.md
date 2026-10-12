@@ -1,5 +1,34 @@
 # Changelog
 
+## v2.1.1
+
+### Bug Fixes
+
+- **Kubernetes Smoke Test Port-Forward**: `npm run verify:k8s` could fail intermittently at its PVC-persistence step with `Timed out waiting for /health via port-forward`. The script restarted `kubectl port-forward` on the same local port without waiting for the previous process to exit, so the new forward could die with "address already in use". It now waits for the previous forward to exit before starting the next one, and a late exit event no longer clears the reference to the new forward. Only the verification script changed; the image and the manifests are untouched.
+
+### Testing & Quality
+
+- **Kubernetes Runtime Verification**: The Kustomize base was verified end to end on a kind cluster against the published v2.1.0 image: `kubectl apply -k` and rollout, `POST /api/config` rejected with `401` when no write token is configured, Save with the token served back, and the saved configuration surviving a pod deletion.
+
+### Documentation
+
+- **Release Markers**: The README current-release marker and pinned-tag references now point at v2.1.1, and the verification result is recorded in the archived `kubernetes-support` change.
+
+### Changed Files
+
+- `README.md`
+- `openspec/changes/archive/2026-10-03-kubernetes-support/tasks.md`
+- `openspec/changes/archive/2026-10-03-kubernetes-support/verify-report.md`
+- `package-lock.json`
+- `package.json`
+- `scripts/verify-k8s.mjs`
+- `server/package-lock.json`
+- `server/package.json`
+
+### Summary
+
+Patch release with no runtime change to the dashboard or the sidecar: the published image differs from v2.1.0 only by its version number. It fixes the Kubernetes verification script and records the successful runtime verification of the Kubernetes base.
+
 ## v2.1.0
 
 ### Bug Fixes

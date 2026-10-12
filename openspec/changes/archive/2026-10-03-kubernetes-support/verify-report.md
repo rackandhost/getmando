@@ -50,5 +50,38 @@ The full `npm run verify:k8s` run against a published image that includes `4fb34
 happened yet: it can only run once the v2.1.0 image is published. The v2.1.0 release prep promoted
 `specs/kubernetes-deployment/spec.md` into `openspec/specs/` and archived this change before that
 run, on the maintainer's decision (correcting the spec after the release would need another
-release). Task 5.2 stays open. If the post-release run fails, correct the promoted spec and record
-the failure here instead of marking 5.2 done.
+release). Task 5.2 stayed open until Attempt 2 below, which passed. Had it failed, the promoted spec
+and this record would have had to be corrected instead of marking 5.2 done.
+
+## Attempt 2 — 2026-10-12 (post-release, v2.1.0 image)
+
+Run on a GitHub Actions runner because the maintainer's local runtime (rootless podman inside a
+distrobox) cannot satisfy kind's cgroup-delegation check. The runner executed `npm run verify:k8s`
+from a throwaway branch cut from `origin/main` at `c2d698a` (digest pin for v2.1.0), which has since
+been deleted.
+
+**Environment**: `ubuntu-latest` (Linux 6.17.0-1022-azure, x86_64), Docker 28.0.4, kind v0.33.0
+(node image `kindest/node:v1.37.0`), kubectl v1.37.1 (Kustomize v5.8.1), Node 22.23.3. Image:
+`ghcr.io/rackandhost/getmando@sha256:990ce6bfa5d5823492cbef7f1f59c24c13ee042f229056c93950e63e6d6fdb35`
+(`linux/amd64`, `linux/arm64`).
+
+| Run | Script | Result |
+| --- | --- | --- |
+| 38270246239 | as released in v2.1.0 | FAILED at the PVC-persistence step |
+| 38270698626 | as released, plus temporary diagnostics | FAILED at the same step; log shows the cause |
+| 38271139764 | with the port-forward fix | **passed** (exit 0) |
+
+**What the passing run covered**: Stage A (5 documents built); `kubectl apply -k` and rollout; `GET /`
+and `GET /health`; `GET /config/dashboard.yaml` below 500; `POST /api/config` without a token → 401
+(the assertion that returned 502 with the v2.0.0 image); write-token Secret created and Deployment
+restarted; Save → 200 and the saved config served back; pod deleted and rescheduled with the saved
+config still served from the PVC.
+
+**Failure cause in runs 1–2**: not the image or the manifests. The rescheduled pod was `1/1 Running`
+with its endpoint and the pinned digest. The restarted `kubectl port-forward` failed with
+`bind: address already in use`: `stopPortForward()` only sent SIGTERM and `startPortForward()` spawned
+the replacement immediately, and the old process's exit handler also cleared the reference to the new
+one. Fixed in `scripts/verify-k8s.mjs` (v2.1.1) by awaiting the previous process's exit.
+
+**Disposition**: task 5.2 passed. The result is for the v2.1.0 image with the fixed script; the
+v2.1.1 image differs from it only by its version number and was not run separately.
