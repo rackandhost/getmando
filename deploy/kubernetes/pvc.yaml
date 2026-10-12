@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: getmando-config
+  labels:
+    app.kubernetes.io/name: getmando
+    app.kubernetes.io/part-of: getmando
+    app.kubernetes.io/component: dashboard
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 64Mi
+  # No storageClassName on purpose: the claim uses the cluster's default StorageClass, which is
+  # what every k3s/k8s/Talos-with-provisioner install already has. Vanilla Talos ships no default
+  # one — patch this in yourself (e.g. `storageClassName: local-path`) or the claim stays Pending.

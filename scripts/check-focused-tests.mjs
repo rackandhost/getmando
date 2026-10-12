@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const FOCUSED_TEST_PATTERNS = [
   {
@@ -152,7 +152,9 @@ async function collectTestFiles(rootDir, currentDir = rootDir) {
     }
 
     const absolutePath = path.join(currentDir, entry.name);
-    const relativePath = path.relative(rootDir, absolutePath);
+    // Normalize to POSIX separators so reported paths (and isTestFilePath's `/`-anchored regex)
+    // are identical on every platform; on Linux this is a no-op.
+    const relativePath = path.relative(rootDir, absolutePath).split(path.sep).join('/');
 
     if (!isTestFilePath(relativePath)) {
       continue;
@@ -192,6 +194,6 @@ async function main() {
   process.exitCode = 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }
