@@ -74,14 +74,17 @@ public/
   img/                    static backgrounds and branding
 server/                   config-write-api sidecar (own package.json and tests)
   src/
-    index.ts              environment parsing and listen
-    app.ts                Fastify instance: authenticated POST /api/config
+    index.ts              environment parsing, status poller start, listen
+    app.ts                Fastify instance: authenticated POST /api/config, public GET /api/status
     write-config.ts       atomic file write with .bak rotation
+    status-poller.ts      periodic checks of healthCheck apps, in-memory status cache
+    status-checker.ts     one reachability check (any HTTP response is up)
 ```
 
 Root build and delivery files are [angular.json](angular.json), [proxy.conf.json](proxy.conf.json),
-[Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). CI workflows
-live in [.github/workflows](.github/workflows).
+[Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). Kubernetes
+deployment manifests (the Kustomize base) live in [deploy/kubernetes](deploy/kubernetes). CI
+workflows live in [.github/workflows](.github/workflows).
 
 ### Dependency Rules
 
@@ -228,7 +231,7 @@ Output paths:
 ## Config Write Sidecar
 
 `server/` is a standalone Fastify service, bundled into the production image and started beside
-nginx. It exposes one route, `POST /api/config`:
+nginx. It exposes two routes; `POST /api/config` writes the configuration:
 
 1. An `onRequest` hook compares the `x-config-token` header to `CONFIG_WRITE_TOKEN` before Fastify
    parses the body; a mismatch returns `401` and the payload is never read.
@@ -241,15 +244,43 @@ nginx. It exposes one route, `POST /api/config`:
    `dashboard.yaml.bak`, then renames the temp file into place. A failure at any step leaves the
    live file intact.
 
-[index.ts](server/src/index.ts) requires `CONFIG_WRITE_TOKEN` (it exits with code 1 without one)
-and reads `CONFIG_PATH` (default `/app/config/dashboard.yaml`), `PORT` (default 3000), and `HOST`.
+[index.ts](server/src/index.ts) reads `CONFIG_WRITE_TOKEN` (empty when unset, so the hook rejects
+every write with `401` while the process still starts), `CONFIG_PATH` (default
+`/app/config/dashboard.yaml`), `PORT` (default 3000), `HOST`, and `STATUS_CHECK_INTERVAL_MS`.
 In the container, nginx proxies `/api/` to `127.0.0.1:3000`, and [entrypoint.sh](entrypoint.sh)
 starts the sidecar in the background then execs nginx, with `tini` as PID 1. Locally, `npm run dev`
 ([scripts/dev.sh](scripts/dev.sh)) runs both processes and [proxy.conf.json](proxy.conf.json)
 forwards `/api` from the dev server to the sidecar.
 
 Without `CONFIG_WRITE_TOKEN`, or with the config mounted read-only, the dashboard still serves
-normally — only Save fails, and Copy/Download remain available.
+normally — only Save fails, Copy/Download remain available, and status checks keep working.
+
+## App Status Checks
+
+Applications with `healthCheck: true` show a status badge. The check runs in the sidecar, so it
+reflects reachability from the server rather than the viewer's browser and is not subject to CORS
+or mixed content.
+
+- [status-poller.ts](server/src/status-poller.ts) runs once at startup and then every
+  `STATUS_CHECK_INTERVAL_MS` (default 60000, clamped between 1 second and Node's maximum timer
+  delay). Each cycle re-reads `CONFIG_PATH`, so edits made outside the write API are picked up,
+  checks every `healthCheck: true` application in parallel, and caches `{status, checkedAt}` per
+  application id in memory. A missing or invalid file keeps the previous cache, entries for
+  applications no longer monitored are pruned, and a cycle that outlasts the interval makes the
+  next tick skip instead of overlapping.
+- [status-checker.ts](server/src/status-checker.ts) treats any HTTP response, whatever its status
+  code, as `up`. A network failure, or a response that does not start within the 5 second total
+  deadline, is `down`. TLS verification is disabled for this request only.
+- `GET /api/status` is unauthenticated and read-only and returns
+  `{intervalMs, apps: {id: {status, checkedAt}}}`, with no URLs or other configuration. It works
+  without `CONFIG_WRITE_TOKEN`, and nginx forwards it with the rest of `/api/`.
+- `AppStatusService` polls that endpoint only while the loaded configuration has at least one
+  monitored application, starting and stopping reactively. It learns the cadence from `intervalMs`
+  (floor of 5 seconds), retries a failed poll every 15 seconds up to four times, then stops until
+  the page reloads, keeping the last known statuses.
+- `AppCardComponent` renders the badge when `healthCheck` is true and a status exists. The badge is
+  decorative: the state is part of the card's accessible name, and a check mark versus a cross keeps
+  it distinguishable without colour.
 
 ## State and Interaction Flow
 
@@ -278,6 +309,8 @@ Examples:
 - `ThemeService` owns theme mode and resolved light/dark signals.
 - `ConfiguratorStore` owns the editor draft, dirty flag, and validation errors for the lifetime of
   the `configure` route.
+- `AppStatusService` owns the statuses signal keyed by application id and its polling lifecycle (see
+  App Status Checks).
 
 Use RxJS for HTTP, browser event streams, debounce, or multi-source asynchronous orchestration. Do
 not introduce `BehaviorSubject` as a general store or wrap synchronous signal state in observables.
@@ -402,7 +435,9 @@ runtime file. `ENTRYPOINT` is `tini -- /entrypoint.sh`, which backgrounds the si
 nginx as the foreground process.
 
 On pushes to `main`, the Docker workflow builds `linux/amd64` and `linux/arm64` images and publishes
-`latest`, package-version, and commit-SHA tags to GHCR. A separate workflow reads the version from
+`latest`, package-version, and commit-SHA tags to GHCR. It then pins the new image digest into
+[deploy/kubernetes](deploy/kubernetes) through a bypass-scoped bot account, and CI validates that
+Kustomize base with `kubectl kustomize` and kubeconform. A separate workflow reads the version from
 `package.json`, tags `v<version>`, and creates the matching GitHub release.
 
 ## Change Map
@@ -413,10 +448,12 @@ On pushes to `main`, the Docker workflow builds `linux/amd64` and `linux/arm64` 
 | Mounted-config outcomes        | `YamlLoaderService`, `dashboard.initializer.ts`                            | Retry boundary, each `MountedConfigResult`, warning ownership          |
 | Configurator editing or export | `ConfiguratorStore`, `configurator-page.component`, `YamlCodecService`     | Draft validation, per-field errors, canonical YAML, empty-draft guard  |
 | Config write / Save            | `ConfigWriteService`, `server/src/app.ts`, `write-config.ts`, `nginx.conf` | Token auth, shared-schema rejection, atomic write + `.bak`, proxy path |
+| App status badges              | `AppStatusService`, `app-card`, `status-poller.ts`, `status-checker.ts`    | Opt-in default, any response is up, polls only while monitored         |
 | Theme or backgrounds           | `ThemeService`, `SettingsService`, dashboard view                          | Precedence, storage failures, auto media changes, both backgrounds     |
 | Search or categories           | `SearchService`, `CategoryService`, `AppService`                           | Local UI state, computed filtering, keyboard behavior                  |
 | Notifications or errors        | Producer, `NotificationService`, `GlobalErrorHandler`                      | One notification owner, safe copy, diagnostics, root toast             |
 | Deployment or config mount     | `angular.json`, Dockerfile, nginx config, `entrypoint.sh`                  | Output path, cache rules, mount path, `/api` proxy, health, multi-arch |
+| Kubernetes manifests           | `deploy/kubernetes/`, `docker-publish.yml`, `scripts/verify-k8s.mjs`       | `kubectl kustomize` + kubeconform, `npm run verify:k8s`, digest pin    |
 
 Keep this document descriptive, not aspirational. When ownership or a flow changes, update the
 relevant diagram and change-map row in the same work unit.
