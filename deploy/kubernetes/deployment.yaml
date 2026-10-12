@@ -28,7 +28,7 @@ spec:
       containers:
         - name: dashboard
           # Readable fallback tag; the kustomization pins the image by digest (see kustomization.yaml).
-          image: ghcr.io/rackandhost/getmando:v2.0.0
+          image: ghcr.io/rackandhost/getmando:v2.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
