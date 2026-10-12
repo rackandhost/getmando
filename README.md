@@ -7,7 +7,7 @@
 </p>
 
 ![Version](https://badgen.net/github/release/rackandhost/getmando/stable)
-![Angular](https://img.shields.io/badge/Angular-21.1.0-red)
+![Angular](https://img.shields.io/badge/Angular-21.2.25-red)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)
 ![Github stars](https://badgen.net/github/stars/rackandhost/getmando?icon=github&label=stars)
 ![Github last-commit](https://img.shields.io/github/last-commit/rackandhost/getmando)
@@ -216,13 +216,13 @@ controller's own defaults) — the shipped Ingress is HTTP-only.
 ### Image pinning
 
 The base pins the image **by digest**, so an applied manifest runs exactly what was reviewed — a
-tag can be repushed upstream, a digest cannot. The release tag (`v2.0.0` at the time of writing)
+tag can be repushed upstream, a digest cannot. The release tag (`v2.1.0` at the time of writing)
 is recorded as a comment next to the digest; the publish workflow rewrites both automatically on
 every push to `main`.
 
 **Which reference wins?** Under `kubectl apply -k` (and under Flux/Argo CD, which consume the
 same base) the digest replaces the Deployment's `image:` tag outright — the cluster runs
-`ghcr.io/rackandhost/getmando@sha256:…`, never the tag. The `:v2.0.0` visible in
+`ghcr.io/rackandhost/getmando@sha256:…`, never the tag. The `:v2.1.0` visible in
 `deployment.yaml` is a readable fallback for humans, kept in sync by the same release pipeline.
 
 > **Avoid `kubectl apply -f deploy/kubernetes/deployment.yaml`.** It bypasses the digest pin
