@@ -59,7 +59,7 @@
     "@angular-eslint/builder": "^21.4.0",
     "@angular/build": "^21.2.23",
     "@angular/cli": "^21.2.23",
-    "@angular/compiler-cli": "^21.2.22",
+    "@angular/compiler-cli": "^21.2.25",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@testing-library/angular": "^19.1.0",
