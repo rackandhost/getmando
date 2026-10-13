@@ -51,16 +51,17 @@ Both buttons MUST keep their accessible names and routes.
 ### Requirement: Sticky dock (desktop)
 
 On viewports wider than 600 px and at least 720 px high, the header, clock section, search bar and
-tab bar MUST be wrapped in one sticky container (the dock) at `top: 0`. In the _top_ state it is
-transparent. When the scroll state becomes _scrolled_ (`scrollY > 40`; back to _top_ when
-`scrollY ≤ 4`) the dock MUST gain the band background, `blur(22px) saturate(160%)` and edge shadow of
-`design.md` § 3.1, the header padding MUST drop from 24 px to 12 px, and the tab gap from 28 px to
-12 px. The app grid scrolls beneath the dock. On viewports shorter than 720 px the dock MUST NOT be
-sticky.
+tab bar MUST be wrapped in one container (the dock) that is sticky at `top: 0` whenever the shared
+scroll state of `design-system` ("Scroll-state stability") is _Top_ or _Scrolled_. In _Top_ it is
+transparent. In _Scrolled_ the dock MUST gain the band background, `blur(22px) saturate(160%)` and
+edge shadow of `design.md` § 3.1, the header padding MUST drop from 24 px to 12 px, and the tab gap
+from 28 px to 12 px. The app grid scrolls beneath the dock. In _Static_ (viewport shorter than
+720 px, not enough content to keep scrolling after compaction, or circuit breaker) the dock MUST NOT
+be sticky and MUST keep its _Top_ look.
 
 #### Scenario: Entering the scrolled state
 
-- GIVEN the dashboard at scroll position 0 on a 1440 × 900 viewport
+- GIVEN the dashboard with 5 rows of apps at scroll position 0 on a 1440 × 900 viewport
 - WHEN the page scrolls to 41 px
 - THEN the dock shows the band and its height drops from about 584 px to about 278 px
 - AND the cards continue to scroll beneath it
@@ -72,11 +73,23 @@ sticky.
 - THEN the state remains scrolled
 - AND at 4 px it returns to the top state
 
-#### Scenario: No oscillation at the threshold
+#### Scenario: Few apps — no compaction and no animation loop
 
-- GIVEN the page is scrolled to exactly 41 px
-- WHEN the dock changes height and the document height changes accordingly
-- THEN the scrolled state does not flip back and forth
+- GIVEN a 1440 × 900 viewport and apps filling 1, 2 or 3 rows
+- WHEN the user scrolls up and down, resizes slightly, or toggles the theme
+- THEN the dock stays in its _Top_ look, is not sticky, and no height or padding transition ever runs
+
+#### Scenario: Boundary row count
+
+- GIVEN a 1440 × 900 viewport
+- WHEN the number of rows goes from 3 to 4
+- THEN compaction becomes available and, after the user scrolls past 40 px, the dock changes state exactly once
+
+#### Scenario: Search shrinks the page while scrolled
+
+- GIVEN the dock is _Scrolled_ with many apps
+- WHEN the user types a query that leaves a single row
+- THEN the dock returns to its _Top_ look as _Static_ in one step and does not animate back and forth
 
 #### Scenario: Short viewport
 
@@ -116,8 +129,22 @@ NOT be an `aria-live` region and MUST NOT blink.
 
 - GIVEN `showSeconds: true`
 - WHEN the clock renders
-- THEN a two-digit seconds value updates every second beside the minutes
-- AND assistive technology is not notified on each update
+- THEN a two-digit seconds value in IBM Plex Mono (`max(14px, 0.18em)`, `--muted`, tabular figures) updates every second beside the minutes
+- AND it is `aria-hidden`, so assistive technology is not notified on each update
+- AND its contrast on the widget is at least 4.5 : 1
+
+#### Scenario: Seconds in the compact row
+
+- GIVEN `showSeconds: true` and the _Scrolled_ state
+- WHEN the clock collapses to a single row
+- THEN the seconds stay visible at 14 px
+
+#### Scenario: Date pill follows dateFormat
+
+- GIVEN `dateFormat: d MMMM yyyy` on Tuesday 13 October 2026
+- WHEN the clock renders
+- THEN the weekday pill reads `TUESDAY` and the date pill reads `13 OCTOBER 2026`
+- AND changing `dateFormat` to `dd/MM` changes only the date pill
 
 #### Scenario: Colon never pulses
 
@@ -283,8 +310,8 @@ loading state MUST keep its current behaviour.
 ### Requirement: Mobile sticky dock
 
 At and below 600 px the header and clock MUST scroll away normally and MUST NOT collapse. The search
-bar and the tab bar MUST be wrapped in a sticky dock at `top: 0` (113 px: padding-top 12, search 44,
-gap 12, tabs 45), bleeding to the container edges and gaining the band, blur and shadow once the
+bar and the tab bar MUST be wrapped in a dock that is sticky at `top: 0` in the _Top_ and _Scrolled_ states of the shared scroll state (113 px: padding-top 12, search 44,
+gap 12, tabs 45; the search height change 60 → 44 px is its Δ), bleeding to the container edges and gaining the band, blur and shadow once the
 scrolled state is active. Tab gap is 12 px. On viewports shorter than 500 px the dock MUST NOT be
 sticky.
 
@@ -300,6 +327,12 @@ sticky.
 - GIVEN a 390 px viewport
 - WHEN the clock renders
 - THEN the digits are 88 px (`clamp(88px, 11vw, 150px)`) and the widget does not collapse
+
+#### Scenario: Few apps on mobile
+
+- GIVEN a 390 × 844 viewport and only 2 app cards
+- WHEN the user scrolls
+- THEN the search and tab bar do not become sticky or animate, because the page cannot keep scrolling after compaction
 
 #### Scenario: Landscape phone
 

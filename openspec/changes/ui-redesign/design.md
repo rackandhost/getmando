@@ -43,21 +43,24 @@ calculations made for this document; **[amend]** are accessibility amendments to
 
 ## 2. Decisions
 
-| #   | Decision                                                                                                                                                                                                                                                                                                                                                                                                  | Rationale                                                                                                           | Alternative rejected                                                                           |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| D1  | Tokens = CSS variables + Tailwind `@theme inline`                                                                                                                                                                                                                                                                                                                                                         | Matches Tailwind 4 setup already in `styles.css`; one source for both themes; testable by reading the variables     | Inline styles per component (what the mockup does) — violates repo rules and duplicates values |
-| D2  | Keep `.dark` class strategy                                                                                                                                                                                                                                                                                                                                                                               | `ThemeService` and every spec rely on it                                                                            | `prefers-color-scheme` only — breaks the manual toggle                                         |
-| D3  | **Self-host fonts** with `@fontsource-variable/nunito` and `@fontsource/ibm-plex-mono` (Latin + Latin-Extended `woff2`; IBM Plex Mono weights 400/500/600; Nunito Variable covers 400–800; families `'Nunito Variable'` and `'IBM Plex Mono'`) — **decided and installed (D-c)**; wiring (`@font-face` for the two subsets only, so other scripts are not copied to `dist`) happens in the implementation | Self-hosted product, may run offline/air-gapped; no third-party request per page view                               | Google Fonts `<link>` as in the mockup                                                         |
-| D4  | Scroll hysteresis exactly as the prototype: enter `scrollY > 40`, leave `scrollY ≤ 4` **[src]**                                                                                                                                                                                                                                                                                                           | Prevents flicker/oscillation when the dock changes height                                                           | Single threshold                                                                               |
-| D5  | Minute digits via `-webkit-text-stroke` + accent fill                                                                                                                                                                                                                                                                                                                                                     | Supported by all evergreen browsers; matches mockup                                                                 | SVG text / background-clip — heavier, harder to size responsively                              |
-| D6  | Initials icons keep using `IconService.generateInitialsIcon` (SVG `<img>`) inside the 44 px tile                                                                                                                                                                                                                                                                                                          | The mockup's `mark/tint/ink` tiles are the same feature rendered with Plex Mono; no schema/service change warranted | Re-implement initials as text tiles with a per-app palette                                     |
-| D7  | **Static colon** (no blink) **[amend]**                                                                                                                                                                                                                                                                                                                                                                   | Satisfies WCAG 2.2.2 without a pause control; the pulse is decorative                                               | Pulse guarded by `prefers-reduced-motion` — still fails 2.2.2 for everyone else                |
-| D8  | Whole-page scroll, sticky dock, footer in flow **[src]**                                                                                                                                                                                                                                                                                                                                                  | It is what the prototype does; the compact-on-scroll states depend on `window` scroll                               | Keep inner scroll container                                                                    |
-| D9  | `scroll-padding-top` = live dock height (CSS variable set from a `ResizeObserver`)                                                                                                                                                                                                                                                                                                                        | Focused controls and anchor jumps never sit under the dock (WCAG 2.4.11)                                            | Hard-coded offsets (the prototype hard-codes `104`/`96` for the configurator nav)              |
-| D10 | Opaque fallback surfaces under `@supports not (backdrop-filter: blur(1px))`                                                                                                                                                                                                                                                                                                                               | Blur on 10–20 elements is expensive on low-power GPUs; keeps text legible when unsupported                          | Assume support                                                                                 |
-| D11 | **Legibility floor** layer under every glass surface **[amend]**                                                                                                                                                                                                                                                                                                                                          | Contrast must hold over any user background image, not only the sample photos                                       | Rely on the scrim alone — fails AA for dark photos in light theme                              |
-| D12 | Two-tone focus ring **[amend]**                                                                                                                                                                                                                                                                                                                                                                           | Visible on any backdrop in both themes                                                                              | Single accent ring — 1.5 : 1 against some light-theme backdrops                                |
-| D13 | Dock sticks only on tall-enough viewports **[amend]**                                                                                                                                                                                                                                                                                                                                                     | Dock is 286 px when scrolled (desktop): ≥ 40 % of a 700 px viewport                                                 | Always sticky                                                                                  |
+| #   | Decision                                                                                                                                                                                                                                                                                                                                                                                                  | Rationale                                                                                                                                                                                                                                        | Alternative rejected                                                                           |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| D1  | Tokens = CSS variables + Tailwind `@theme inline`                                                                                                                                                                                                                                                                                                                                                         | Matches Tailwind 4 setup already in `styles.css`; one source for both themes; testable by reading the variables                                                                                                                                  | Inline styles per component (what the mockup does) — violates repo rules and duplicates values |
+| D2  | Keep `.dark` class strategy                                                                                                                                                                                                                                                                                                                                                                               | `ThemeService` and every spec rely on it                                                                                                                                                                                                         | `prefers-color-scheme` only — breaks the manual toggle                                         |
+| D3  | **Self-host fonts** with `@fontsource-variable/nunito` and `@fontsource/ibm-plex-mono` (Latin + Latin-Extended `woff2`; IBM Plex Mono weights 400/500/600; Nunito Variable covers 400–800; families `'Nunito Variable'` and `'IBM Plex Mono'`) — **decided and installed (D-c)**; wiring (`@font-face` for the two subsets only, so other scripts are not copied to `dist`) happens in the implementation | Self-hosted product, may run offline/air-gapped; no third-party request per page view                                                                                                                                                            | Google Fonts `<link>` as in the mockup                                                         |
+| D4  | Scroll hysteresis as in the prototype (enter `scrollY > 40`, leave `scrollY ≤ 4` **[src]**) **plus** capacity gating (D14)                                                                                                                                                                                                                                                                                | Hysteresis alone does **not** prevent the loop when the page is short: compaction shrinks the document, the browser clamps `scrollY`, the state flips back, the dock grows, and it repeats (simulated: 40 flips in 40 steps with 2 rows of apps) | Hysteresis only; a single threshold                                                            |
+| D5  | Minute digits via `-webkit-text-stroke` + accent fill                                                                                                                                                                                                                                                                                                                                                     | Supported by all evergreen browsers; matches mockup                                                                                                                                                                                              | SVG text / background-clip — heavier, harder to size responsively                              |
+| D6  | Initials icons keep using `IconService.generateInitialsIcon` (SVG `<img>`) inside the 44 px tile                                                                                                                                                                                                                                                                                                          | The mockup's `mark/tint/ink` tiles are the same feature rendered with Plex Mono; no schema/service change warranted                                                                                                                              | Re-implement initials as text tiles with a per-app palette                                     |
+| D7  | **Static colon** (no blink) **[amend]**                                                                                                                                                                                                                                                                                                                                                                   | Satisfies WCAG 2.2.2 without a pause control; the pulse is decorative                                                                                                                                                                            | Pulse guarded by `prefers-reduced-motion` — still fails 2.2.2 for everyone else                |
+| D8  | Whole-page scroll, sticky dock, footer in flow **[src]**                                                                                                                                                                                                                                                                                                                                                  | It is what the prototype does; the compact-on-scroll states depend on `window` scroll                                                                                                                                                            | Keep inner scroll container                                                                    |
+| D9  | `scroll-padding-top` = live dock height (CSS variable set from a `ResizeObserver`)                                                                                                                                                                                                                                                                                                                        | Focused controls and anchor jumps never sit under the dock (WCAG 2.4.11)                                                                                                                                                                         | Hard-coded offsets (the prototype hard-codes `104`/`96` for the configurator nav)              |
+| D10 | Opaque fallback surfaces under `@supports not (backdrop-filter: blur(1px))`                                                                                                                                                                                                                                                                                                                               | Blur on 10–20 elements is expensive on low-power GPUs; keeps text legible when unsupported                                                                                                                                                       | Assume support                                                                                 |
+| D11 | **Legibility floor** layer under every glass surface **[amend]**                                                                                                                                                                                                                                                                                                                                          | Contrast must hold over any user background image, not only the sample photos                                                                                                                                                                    | Rely on the scrim alone — fails AA for dark photos in light theme                              |
+| D12 | Two-tone focus ring **[amend]**                                                                                                                                                                                                                                                                                                                                                                           | Visible on any backdrop in both themes                                                                                                                                                                                                           | Single accent ring — 1.5 : 1 against some light-theme backdrops                                |
+| D13 | Dock sticks only on tall-enough viewports **[amend]**                                                                                                                                                                                                                                                                                                                                                     | Dock is 286 px when scrolled (desktop): ≥ 40 % of a 700 px viewport                                                                                                                                                                              | Always sticky                                                                                  |
+| D14 | **State-independent eligibility**: compaction is allowed only if the page still scrolls after the dock shrinks (`R = (docTop − viewport) − Δ ≥ 80`, dropped at `R < 56`), computed from the _Top-layout_ document height                                                                                                                                                                                  | Removes the feedback between the state and its own trigger: eligibility does not change when the state flips, so the system has a fixed point                                                                                                    | Compare `scrollY` after the flip and revert — still flickers once                              |
+| D15 | `scrollbar-gutter: stable` on the root and `overflow-anchor: none` on the page container                                                                                                                                                                                                                                                                                                                  | A scrollbar appearing/disappearing changes `vw`-based `clamp()` sizes (clock, padding) and thus heights → second loop source; scroll anchoring would adjust `scrollTop` behind our back                                                          | Default scrollbar / anchoring                                                                  |
+| D16 | **Circuit breaker**: more than 4 state changes within 2 s latch the dock in _Static_ until the viewport size or the content height changes                                                                                                                                                                                                                                                                | Safety net against any unforeseen loop (font load, zoom, extension CSS)                                                                                                                                                                          | None — an infinite animation loop is the worst failure mode here                               |
 
 ## 3. Design tokens
 
@@ -86,7 +89,8 @@ calculations made for this document; **[amend]** are accessibility amendments to
 | `--chrome-line`                                              | `rgba(255,255,255,0.14)`                                                  | `rgba(255,255,255,0.75)`                                                  |
 | `--icon-tile`                                                | `linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))` | `linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.70))` |
 | `--menu` (engine popover)                                    | `rgba(21,24,28,0.92)`                                                     | `rgba(255,255,255,0.90)`                                                  |
-| `--field` (configurator inputs) **[measured]**               | `rgba(8,10,12,0.55)`                                                      | derived (Q10): `rgba(255,255,255,0.7)`                                    |
+| `--field` (configurator inputs) **[measured]**               | `rgba(8,10,12,0.55)`                                                      | `rgba(255,255,255,0.7)` (derived)                                         |
+| `--field-border` **[amend]**                                 | `rgba(255,255,255,0.45)` (mockup 0.10)                                    | `rgba(22,24,27,0.55)` (derived)                                           |
 | `--floor-bar` / `--floor-card` / `--floor-clock` **[amend]** | `0.15` / `0.35` / `0.15`                                                  | `0.55` / `0.80` / `0.90`                                                  |
 | `--focus` / `--focus-halo` **[amend]**                       | `#F0B04A` / `rgba(13,15,17,0.9)`                                          | `#16181B` / `rgba(255,255,255,0.9)`                                       |
 
@@ -158,22 +162,83 @@ opacities are constants, **not** user settings.
 
 ## 4. Behaviour
 
-### 4.1 Scroll behaviour **[src] + [measured]**
+### 4.1 Scroll behaviour **[src] + [measured] + [amend]**
 
-State machine (window scroll, shared by dashboard and configurator):
+#### State machine
+
+Three states, owned by `ScrollStateService` (window scroll; shared by dashboard and configurator):
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Top
+    [*] --> Static
+    Static --> Top: eligible
+    Top --> Static: not eligible
     Top --> Scrolled: scrollY > 40
     Scrolled --> Top: scrollY ≤ 4
+    Scrolled --> Static: not eligible
+    Top --> Static: breaker tripped
+    Scrolled --> Static: breaker tripped
 ```
 
-**Dashboard, desktop.** One sticky container — the _dock_ — wraps header + clock + search + tabs
+- **Static** — dock/header **not sticky**, top-state look, no band, no compaction. Used when the page
+  cannot meaningfully scroll after compaction, when the viewport is too small (D13), or after the
+  circuit breaker trips.
+- **Top** — eligible, `scrollY ≤ 4` (or not yet past 40): sticky, transparent, large layout.
+- **Scrolled** — eligible, past the threshold: sticky, band, compact layout.
+
+#### Eligibility (capacity gating, D14)
+
+Let `Δ` be the height the dock loses when compacting (measured: ≈ 306 px desktop dashboard, ≈ 16 px
+mobile dock, ≈ 10 px configurator header; `Δ = H_top − H_scrolled`, where `H_top` is the last
+measured Top-layout height and `H_scrolled` the token constant `--dock-height-compact`), and
+`docTop` the document height _as it would be in the Top layout_
+(`docTop = scrollHeight + (state is Scrolled ? Δ : 0)`). The remaining scroll capacity after
+compaction is
+
+`R = (docTop − innerHeight) − Δ`
+
+Eligible when `R ≥ 80` and the viewport guards of D13 pass; once eligible it stays so until `R < 56`
+(24 px dead band). Because `R` is derived from the Top-layout height, flipping between Top and Scrolled
+never changes it: there is no feedback between the state and its own eligibility. When _Scrolled_,
+the document is `Δ` shorter, so after the flip `maxScrollY ≥ R + 0 ≥ 56 > 40`: the browser never clamps
+`scrollY` below the 40 px threshold and the state cannot be knocked back by the flip itself.
+
+Worked example (desktop dock, viewport 900 px, Δ = 306 px, 5 columns of 171 px cards, 14 px gap):
+
+| App rows | `docTop` (px) | Capacity (`docTop − 900`) | `R`   | Result                           |
+| -------- | ------------- | ------------------------- | ----- | -------------------------------- |
+| 1        | 894           | −6                        | −312  | Static — nothing to scroll       |
+| 2        | 1079          | 179                       | −127  | Static (naive scheme loops here) |
+| 3        | 1264          | 364                       | 58    | Static                           |
+| 4        | 1449          | 549                       | 243   | Eligible: Top ⇄ Scrolled         |
+| ≥ 5      | ≥ 1634        | ≥ 734                     | ≥ 428 | Eligible                         |
+
+Simulated closed loop (scroll intent 200 px held, browser clamping `scrollY` to the document):
+hysteresis-only gives 40 state changes in 40 steps at 2 rows (infinite); gated gives 0 changes at
+1–3 rows and exactly 1 at ≥ 4 rows.
+
+#### Rules that keep it loop-free
+
+1. State changes are decided in one place, from `scrollY` and the eligibility values — never from a
+   `ResizeObserver` callback synchronously (observer callbacks only _record_ heights and schedule a
+   `requestAnimationFrame` re-evaluation, avoiding "ResizeObserver loop" errors and same-frame feedback).
+2. `scrollbar-gutter: stable` on `html` (D15) so the scrollbar appearing/disappearing cannot change
+   `vw`-driven sizes; `overflow-anchor: none` on the page container.
+3. Dwell: after any state change, further changes are ignored until the transition has finished
+   (≥ 400 ms, or immediately under reduced motion).
+4. Circuit breaker (D16): more than 4 changes in 2 s ⇒ **Static** until the viewport size or the
+   content height changes; logged once through `LoggerService` (diagnostics only, no notification).
+5. Eligibility is re-evaluated when app count/filter, viewport size, fonts or the dock height change
+   — e.g. typing a search that leaves one row moves Top/Scrolled → Static in one step, once.
+
+#### Dashboard, desktop
+
+One sticky container — the _dock_ — wraps header + clock + search + tabs
 (`position: sticky; top: 0; z-index: 20`). Cards scroll underneath it.
 
-| Aspect                    | Top                                              | Scrolled                                                                                                                                             |
+| Aspect                    | Static / Top                                     | Scrolled                                                                                                                                             |
 | ------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dock position             | Static: normal flow · Top: sticky                | sticky                                                                                                                                               |
 | Dock background / blur    | transparent / none                               | band + `blur(22px) saturate(160%)` + edge shadow (§ 3.1)                                                                                             |
 | Dock height               | 584 px                                           | ≈ 278 px (286 expanded)                                                                                                                              |
 | Header                    | padding 24                                       | padding 12 (height 81)                                                                                                                               |
@@ -181,27 +246,34 @@ stateDiagram-v2
 | Search height / max-width | 60 / 1360                                        | 44 / 440 (centred), or 52 / 1360 while _expanded_                                                                                                    |
 | Search _expanded_         | —                                                | input focused **or** query non-empty **or** engine menu open                                                                                         |
 | Tab gap                   | 28                                               | 12                                                                                                                                                   |
-| Document height           | —                                                | shrinks by the difference — hysteresis prevents scroll oscillation                                                                                   |
 
-**Dashboard, mobile (`compact`, ≤ 600 px).** The header and clock scroll away normally. The dock is
-**search + tabs** only (113 px **[measured]**: padding-top 12, search 44, gap 12, tabs 45), sticky at `top: 0`, bleeding to
-the edges with `margin: 0 calc(-1 * clamp(16px,4vw,40px))` and padding `12px clamp(16px,4vw,40px) 0`,
-same band/blur/shadow as the desktop dock when scrolled. Clock does not shrink; tab gap 12.
+#### Dashboard, mobile (`compact`, ≤ 600 px)
 
-**Guard [amend]:** the desktop dock is sticky only at `min-height: 720px`; the mobile dock only at
-`min-height: 500px`; otherwise it scrolls with the page. `scroll-padding-top` equals the live dock
-height (D9).
+The header and clock scroll away normally. The dock is **search + tabs** only (113 px **[measured]**:
+padding-top 12, search 44, gap 12, tabs 45), sticky at `top: 0`, bleeding to the edges with
+`margin: 0 calc(-1 * clamp(16px,4vw,40px))` and padding `12px clamp(16px,4vw,40px) 0`; same
+band/blur/shadow as the desktop dock when _Scrolled_. Clock does not shrink; tab gap 12. The search
+height changes 60 → 44 px (Δ = 16 px), so the same eligibility rule applies with that Δ.
 
-**Configurator.** The header is sticky (`z-index: 30`): top state padding 24 and transparent;
-scrolled state padding 14, band + blur + shadow (same recipes). The side nav is sticky at
-`top: 104px`. _Scroll-spy_: the active section is the last of `start, metadata, settings, categories,
-applications, bookmarks, export` whose top ≤ 140 px (≤ 900 px viewport: 200 px); when the page is
-scrolled to the bottom (`innerHeight + scrollY ≥ scrollHeight − 4`) the last section is active.
-At ≤ 900 px the layout is one column and the side nav becomes a horizontal chip bar (sticky `top: 96`,
-padding 6, radius 16): items in a row without wrapping, native horizontal scroll with hidden
-scrollbar, vertical wheel maps to horizontal scroll, edge fades via mask (20 px left / 28 px right,
-shown only when overflowing on that side), and the active item is smooth-scrolled to the centre.
-At ≤ 600 px the `Back to dashboard` label is visually hidden (icon only).
+#### Viewport guards **[amend]**
+
+The desktop dock is sticky only at `min-height: 720px`; the mobile dock only at `min-height: 500px`;
+otherwise **Static**. `scroll-padding-top` equals the live dock height (D9).
+
+#### Configurator
+
+The header is sticky (`z-index: 30`): _Top_ padding 24 and transparent; _Scrolled_ padding 14, band +
+blur + shadow (same recipes); Δ ≈ 10 px with the same eligibility rule (it is practically always
+eligible; Static if the draft is shorter than the viewport). The side nav is sticky at `top: 104px`.
+_Scroll-spy_: the active section is the last of `start, metadata, settings, categories, applications,
+bookmarks, export` whose top ≤ 140 px (≤ 900 px viewport: 200 px); when the page is scrolled to the
+bottom (`innerHeight + scrollY ≥ scrollHeight − 4`) the last section is active. At ≤ 900 px the layout
+is one column and the side nav becomes a horizontal chip bar (sticky `top: 96`, padding 6, radius 16):
+items in a row without wrapping, native horizontal scroll with hidden scrollbar, vertical wheel maps to
+horizontal scroll, edge fades via mask (20 px left / 28 px right, only on an overflowing side), and the
+active item is smooth-scrolled to the centre. At ≤ 600 px the `Back to dashboard` label is visually
+hidden (icon only). The theme button toggles the theme exactly as on the dashboard (the prototype's
+button is not wired; the behaviour is the dashboard's).
 
 Transitions **[src]**: 0.25–0.4 s on `padding`, `font-size`, `max-width`, `height`, `opacity`,
 `background`, `box-shadow`, `transform`, `border-color`. All disabled under `prefers-reduced-motion:
@@ -213,10 +285,12 @@ reduce`.
   **static** (D7) with `padding: 0 0.06em`; minutes `--minute-fill` fill + `2px solid --accent` stroke
   (`-webkit-text-stroke`).
 - Weekday pill (accent background, `--accent-ink` text, `EEEE` uppercase) + date pill (`--pill-bg`,
-  1 px `--pill-line`, `--text`). Date text driven by the `dateFormat` setting (Q2); `datePosition`
+  1 px `--pill-line`, `--text`). The weekday pill is always the weekday (`EEEE`); the date pill renders the `dateFormat` setting uppercase (owner decision — the mockup's `13 OCTOBER` is sample output of a `d MMMM` format); `datePosition`
   `top|bottom` keeps working (pills above/below the digits); `showDate: false` hides both pills.
-- `showSeconds: true` → small seconds readout (Q3). Not drawn in the mockup; proposed: Plex Mono 600,
-  `0.18×` digits size, baseline-aligned after the minutes, `--muted`.
+- `showSeconds: true` → seconds readout (owner decision; not drawn in the mockup, so defined here):
+  IBM Plex Mono 600, `max(14px, 0.18em)` of the digit size, `--muted`, tabular figures, aligned to the
+  digit baseline after the minutes, `aria-hidden` (no per-second announcements). In the compact
+  scrolled row it stays at 14 px. Contrast on the widget ≥ 4.5 : 1 (token test).
 - One accessible name for the widget; digits and seconds are **not** an `aria-live` region.
 
 ### 4.3 Search
@@ -287,22 +361,23 @@ boundaries. This is exactly what the token test (§ 6) computes.
 
 ### Contrast results **[derived]** (with the amended tokens, worst case)
 
-| Pair                                           | Dark  | Light | Required | Result |
-| ---------------------------------------------- | ----- | ----- | -------- | ------ |
-| `--text` on card                               | 11.53 | 16.09 | 4.5      | pass   |
-| `--muted` on card (descriptions, tags)         | 6.89  | 7.82  | 4.5      | pass   |
-| `UP` on its pill                               | 5.65  | 4.69  | 4.5      | pass   |
-| `DOWN` on its pill                             | 4.67  | 4.61  | 4.5      | pass   |
-| `--text` on bar (header, search, tabs, footer) | 8.29  | 10.74 | 4.5      | pass   |
-| `--muted` on bar (inactive tab, footer text)   | 4.95  | 5.22  | 4.5      | pass   |
-| `--accent` underline on bar                    | 5.18  | 3.28  | 3        | pass   |
-| Clock hours on widget                          | 8.29  | 9.75  | 3        | pass   |
-| Colon + minute stroke (`--accent`) on widget   | 5.18  | 4.89  | 3        | pass   |
-| **Minute digits — fill only** (amended)        | 3.03  | 3.02  | 3        | pass   |
-| Date pill text on pill                         | 7.37  | 16.81 | 4.5      | pass   |
-| Weekday pill ink on accent                     | 9.83  | 5.43  | 4.5      | pass   |
-| Focus ring vs adjacent surface                 | 7.20  | 16.09 | 3        | pass   |
-| Hovered card `--muted` text                    | 7.08  | 8.34  | 4.5      | pass   |
+| Pair                                                        | Dark  | Light | Required | Result                                            |
+| ----------------------------------------------------------- | ----- | ----- | -------- | ------------------------------------------------- |
+| `--text` on card                                            | 11.53 | 16.09 | 4.5      | pass                                              |
+| `--muted` on card (descriptions, tags)                      | 6.89  | 7.82  | 4.5      | pass                                              |
+| `UP` on its pill                                            | 5.65  | 4.69  | 4.5      | pass                                              |
+| `DOWN` on its pill                                          | 4.67  | 4.61  | 4.5      | pass                                              |
+| `--text` on bar (header, search, tabs, footer)              | 8.29  | 10.74 | 4.5      | pass                                              |
+| `--muted` on bar (inactive tab, footer text)                | 4.95  | 5.22  | 4.5      | pass                                              |
+| `--accent` underline on bar                                 | 5.18  | 3.28  | 3        | pass                                              |
+| Clock hours on widget                                       | 8.29  | 9.75  | 3        | pass                                              |
+| Colon + minute stroke (`--accent`) on widget                | 5.18  | 4.89  | 3        | pass                                              |
+| **Minute digits — fill only** (amended)                     | 3.03  | 3.02  | 3        | pass                                              |
+| Date pill text on pill                                      | 7.37  | 16.81 | 4.5      | pass                                              |
+| Weekday pill ink on accent                                  | 9.83  | 5.43  | 4.5      | pass                                              |
+| Focus ring vs adjacent surface                              | 7.20  | 16.09 | 3        | pass                                              |
+| Field border vs card and vs field (WCAG 1.4.11) **[amend]** | 3.52  | 3.66  | 3        | pass (mockup border at 10 %: 1.05 / 1.14 — fails) |
+| Hovered card `--muted` text                                 | 7.08  | 8.34  | 4.5      | pass                                              |
 
 Before amendments (mockup tokens, worst case): minute fill-only 2.02 (dark) / 1.16 (light); light
 accent on widget 1.51; light `--muted` on bar 2.41; light UP/DOWN pills 3.08 / 3.03; dark DOWN 4.00.
@@ -310,23 +385,24 @@ Disabled tabs during search (opacity 0.45) are an inactive component, exempt fro
 
 ## 6. Verification
 
-| Layer       | What                                                                                                                                                                                                                                                                                                                                                                |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit        | `design-tokens.spec.ts`: parse the token CSS, composite each pair of § 5 over black and white backdrops through the surface stack, assert thresholds in both themes; `ScrollStateService` hysteresis (41 → scrolled, 5 stays, 4 → top); clock formatting for pills, `datePosition`, `showSeconds`, `showDate`; static colon; configurator scroll-spy selection rule |
-| Component   | Existing component specs updated for new markup: status pill text, card aria-label unchanged, tab `aria-pressed`, switch `role`/`aria-checked`, listbox/option semantics, side-nav `aria-current`                                                                                                                                                                   |
-| a11y        | axe on `/` and `/configure`, dark + light, 1440 and 390 px, with the dock in both states; keyboard walk header → search → tabs → cards → footer; focus under the dock                                                                                                                                                                                               |
-| Visual      | Render the states of `mockup/states/*` with the same sample data; compare; owner sign-off on declared amendments                                                                                                                                                                                                                                                    |
-| Performance | Lighthouse desktop before/after; scroll jank with 20 cards and blur on a low-end device                                                                                                                                                                                                                                                                             |
-| Build       | `ng build`, `ng lint`, `ng test`, `npm run format:check`                                                                                                                                                                                                                                                                                                            |
+| Layer       | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | `design-tokens.spec.ts`: parse the token CSS, composite each pair of § 5 over black and white backdrops through the surface stack, assert thresholds in both themes; `ScrollStateService` hysteresis (41 → scrolled, 5 stays, 4 → top); **closed-loop fixed-point test**: simulate the document (height depends on the state, `scrollY` clamped to it) for 1…12 app rows, viewports 500–1200 px high, Δ ∈ {10, 16, 306}, random scroll intents and random content/viewport changes — assert at most 1 state change per input and that holding the input constant converges within 2 steps (the naive scheme fails this at 2 rows); circuit-breaker latch; eligibility dead band (R = 80 on, 56 off); clock formatting for pills, `datePosition`, `showSeconds`, `showDate`; static colon; configurator scroll-spy selection rule |
+| Component   | Existing component specs updated for new markup: status pill text, card aria-label unchanged, tab `aria-pressed`, switch `role`/`aria-checked`, listbox/option semantics, side-nav `aria-current`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| a11y        | axe on `/` and `/configure`, dark + light, 1440 and 390 px, with the dock in both states; keyboard walk header → search → tabs → cards → footer; focus under the dock                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Smoke       | Browser run with 1, 2, 3, 4 and 10 rows of apps at 900 px and at 390 × 844: scroll in steps, count class/attribute changes of the dock with a `MutationObserver` (≤ 1 per user scroll direction), no animation running at rest (`document.getAnimations()` empty after 1 s)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Visual      | Render the states of `mockup/states/*` with the same sample data; compare; owner sign-off on declared amendments                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Performance | Lighthouse desktop before/after; scroll jank with 20 cards and blur on a low-end device                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Build       | `ng build`, `ng lint`, `ng test`, `npm run format:check`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ## 7. Gaps in the mockup (assumptions taken)
 
-| Gap                                                                                       | Assumption in the specs                                                           |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Configurator has **only the dark theme** (its theme button is not wired in the prototype) | Light configurator derived from the dashboard's light tokens (Q10)                |
-| Tablet breakpoints of the dashboard                                                       | Keep today's ladder: 1 col, `md` 2, `lg` 3, `xl` `itemsPerRow`                    |
-| `compact` is a prop of the prototype, not a breakpoint                                    | Mobile layout applies at ≤ 600 px (the only mobile breakpoint the mockup defines) |
-| Loading, error, toast and light-theme engine/empty states beyond the screenshots          | Same recipes; owner reviews after implementation                                  |
-| Header logo asset                                                                         | Keep `img/mando.png`                                                              |
-| Sample data uses `itemsPerRow: 5`; schema default is 4                                    | Layout driven by the setting, not hard-coded                                      |
-| Date pill omits the year; seconds not drawn                                               | Q2 / Q3 in `proposal.md`                                                          |
+| Gap                                                                                       | Assumption in the specs                                                                                                   |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Configurator has **only the dark theme** (its theme button is not wired in the prototype) | Light configurator derived from the dashboard's light tokens; the theme button works as on the dashboard (owner decision) |
+| Tablet breakpoints of the dashboard                                                       | Keep today's ladder: 1 col, `md` 2, `lg` 3, `xl` `itemsPerRow`                                                            |
+| `compact` is a prop of the prototype, not a breakpoint                                    | Mobile layout applies at ≤ 600 px (the only mobile breakpoint the mockup defines)                                         |
+| Loading, error, toast and light-theme engine/empty states beyond the screenshots          | Same recipes; owner reviews after implementation                                                                          |
+| Header logo asset                                                                         | Keep `img/mando.png`                                                                                                      |
+| Sample data uses `itemsPerRow: 5`; schema default is 4                                    | Layout driven by the setting, not hard-coded                                                                              |
+| Date pill omits the year; seconds not drawn                                               | Resolved: date pill follows `dateFormat`; seconds readout defined in § 4.2                                                |

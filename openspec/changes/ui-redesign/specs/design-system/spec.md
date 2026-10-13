@@ -171,6 +171,89 @@ redesign; state changes MUST apply instantly.
 - WHEN the page is scrolled past the compact threshold or a card is hovered
 - THEN the layout changes without animated transitions
 
+### Requirement: Scroll-state stability
+
+The sticky chrome (dashboard dock, mobile search/tabs dock, configurator header) MUST be driven by
+one shared scroll state with three values — _Static_, _Top_, _Scrolled_ — and MUST be free of
+feedback loops: no sequence of scroll positions, content heights or viewport sizes MAY cause the
+chrome to change state repeatedly without user input.
+
+1. The change _Top → Scrolled_ occurs at `scrollY > 40` and _Scrolled → Top_ at `scrollY ≤ 4`.
+2. Compaction is allowed (_eligible_) only if the page still scrolls after the chrome compacts:
+   `R = (docTop − viewportHeight) − Δ ≥ 80`, where `docTop` is the document height in the _Top_
+   layout and `Δ` the height the chrome loses when compacting. Once eligible it stays so until
+   `R < 56`. When not eligible the chrome is _Static_ (not sticky, no band, no compaction).
+3. The viewport guards (desktop dock ≥ 720 px high, mobile dock ≥ 500 px high) also force _Static_.
+4. After any state change further changes are ignored until its transition has finished (≥ 400 ms; none
+   under reduced motion).
+5. More than 4 state changes within 2 seconds MUST latch _Static_ until the viewport size or the
+   content height changes.
+6. The root MUST use `scrollbar-gutter: stable` and the page container `overflow-anchor: none`.
+7. Eligibility and state MUST NOT be changed from inside a `ResizeObserver` callback in the same
+   frame; observers only record measurements and schedule a re-evaluation.
+
+#### Scenario: Few apps never compact
+
+- GIVEN a 1440 × 900 viewport and apps filling only 2 rows
+- WHEN the user scrolls up and down repeatedly
+- THEN the dock never enters the _Scrolled_ state and no transition runs
+
+#### Scenario: Enough apps compact exactly once
+
+- GIVEN a 1440 × 900 viewport and apps filling 4 or more rows
+- WHEN the user scrolls past 40 px and holds the position
+- THEN the dock changes to _Scrolled_ once and stays there with no further state change
+
+#### Scenario: No clamp-induced flip-back
+
+- GIVEN the dock has just compacted and the document is Δ px shorter
+- WHEN the browser re-clamps `scrollY` to the new document height
+- THEN `scrollY` is still above 4 px and the state does not return to _Top_
+
+#### Scenario: Content shrinks while scrolled
+
+- GIVEN the _Scrolled_ state with 6 rows
+- WHEN the user types a search that leaves one row
+- THEN the dock moves to _Static_ in a single step and stays there
+
+#### Scenario: Fixed point for any input
+
+- GIVEN any combination of document height, viewport height, Δ and scroll intent within the tested ranges
+- WHEN the closed-loop test iterates the system with the input held constant
+- THEN the state reaches a fixed point within 2 iterations
+
+#### Scenario: Circuit breaker
+
+- GIVEN an unforeseen cause makes the state change 5 times within 2 seconds
+- WHEN the fifth change is requested
+- THEN the chrome latches _Static_ and remains there until the viewport size or content height changes
+- AND the event is logged once through `LoggerService` without a user notification
+
+#### Scenario: Scrollbar appears or disappears
+
+- GIVEN content that crosses the viewport height as the window is resized
+- WHEN the vertical scrollbar would appear or disappear
+- THEN the layout width does not change and no `vw`-based size changes because of it
+
+### Requirement: UI component boundaries
+
+The boundary of every text field, select and textarea, and the knob/track and selected state of switches
+and segmented controls MUST meet 3 : 1 against the adjacent colours (WCAG 1.4.11). `--field-border` is
+`rgba(255,255,255,0.45)` in dark and `rgba(22,24,27,0.55)` in light; a selected segment MUST combine
+`--surface-2`, a `--field-border` outline and `--text` colour.
+
+#### Scenario: Field border contrast
+
+- GIVEN a configurator text field in each theme
+- WHEN the border contrast against its card and against the field fill is computed at the worst-case backdrop
+- THEN it is at least 3 : 1
+
+#### Scenario: Selected segment is identifiable without colour alone
+
+- GIVEN the Theme segmented control with `Dark` selected
+- WHEN it is rendered in either theme
+- THEN the selected segment has an outline and fill distinct from the others and `aria-checked="true"`
+
 ### Requirement: No behavioural change
 
 The redesign MUST NOT alter the configuration schema, settings semantics, routes, services' public

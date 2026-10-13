@@ -27,6 +27,12 @@ The header MUST be sticky at `top: 0`. In the top state it is transparent with 2
 padding; once the scroll state is _scrolled_ (`scrollY > 40`, back to top at `scrollY ≤ 4`) it MUST
 gain the band background, blur and shadow of `design.md` § 3.1 and reduce its padding to 14 px.
 
+#### Scenario: Short draft stays static
+
+- GIVEN a draft whose page is barely taller than the viewport
+- WHEN the user scrolls
+- THEN the header never flips between states and no padding transition loops
+
 #### Scenario: Header band appears
 
 - GIVEN the configurator at scroll position 0
@@ -127,7 +133,7 @@ choosing MUST change the same draft fields as the former controls.
 ### Requirement: Field styling
 
 Text inputs, selects and textareas MUST be 44 px high (textarea min 44), radius 10, field background
-token, 1 px `--line`, with the two-tone focus ring and a persistent `label` above (13/500).
+token, a 1 px `--field-border` (≥ 3 : 1 against the card and the field fill), with the two-tone focus ring and a persistent `label` above (13/500).
 Monospace is used for paths, URLs, format strings and YAML-like values (IBM Plex Mono).
 
 #### Scenario: Labelled field
@@ -216,6 +222,13 @@ header theme button MUST toggle the theme as on the dashboard.
 - GIVEN the configurator in dark theme
 - WHEN the user activates `Toggle theme`
 - THEN the whole configurator switches to the light tokens and all contrast requirements still hold
+- AND the choice is stored and applied exactly as the dashboard's theme toggle does
+
+#### Scenario: Theme is shared with the dashboard
+
+- GIVEN the user switches to light on the configurator
+- WHEN they follow `Back to dashboard`
+- THEN the dashboard is displayed in the light theme
 
 ## MODIFIED Requirements
 
