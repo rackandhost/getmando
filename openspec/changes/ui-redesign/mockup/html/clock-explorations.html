@@ -1,0 +1,783 @@
+<!DOCTYPE html><html lang="en" style="touch-action: none; overscroll-behavior: none; --dc-chrome-unit: 6.929577464788732px;"><head><style>
+    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  </style><script>
+(function () {
+  /* WebRTC is an egress channel the CSP cannot close, and Frame's runtime
+   * removes its constructors in the ARTIFACT realm only; this nested realm
+   * gets the same treatment so an artboard starts from the platform's
+   * baseline. (A page that goes looking can still find a constructor in a
+   * fresh child realm - the residual Frame accepts for every artifact.) */
+  try { delete window.RTCPeerConnection; } catch (e) {}
+  try { delete window.webkitRTCPeerConnection; } catch (e) {}
+  try { window.RTCPeerConnection = undefined; } catch (e) {}
+  try { window.webkitRTCPeerConnection = undefined; } catch (e) {}
+  var P = window.parent;
+  if (!P || P === window) return;
+  /* Liveness handshake (previewGuard.ts): mint a channel, keep one end
+   * in this closure, hand the other to the host before any authored
+   * byte runs. The port is a capability, not text - it cannot be read
+   * out of the document or serialized into a data:/blob: replacement,
+   * and it dies with this realm - so a pong is proof the document the
+   * HOST assembled is the one alive in the frame. The host binds the
+   * first hello per generation; nothing authored runs earlier, so this
+   * one always wins that race. */
+  try {
+    /* The pong path is UNCURRIED at t=0: every native it touches is
+     * captured as a value before any authored byte runs, and invoked
+     * through a captured Reflect.apply - authored prototype poisoning
+     * of MessagePort.prototype.postMessage or a trapping
+     * MessageEvent.prototype.data getter must never see this port or
+     * steal a send path. And every pong ECHOES the ping's nonce: a pong
+     * is only proof of life for the ping that asked, so stale pongs
+     * queued before a navigation prove nothing about the document that
+     * replaced this one. */
+    var applyH = Reflect.apply;
+    var getData = Object.getOwnPropertyDescriptor(MessageEvent.prototype, 'data').get;
+    var hasOwnH = Object.prototype.hasOwnProperty;
+    var ch = new MessageChannel();
+    var portPost = MessagePort.prototype.postMessage.bind(ch.port1);
+    ch.port1.onmessage = function (ev) {
+      var d = null;
+      try { d = applyH(getData, ev, []); } catch (e) { return; }
+      if (d == null || typeof d !== 'object') return;
+      if (!applyH(hasOwnH, d, ['__om_ping'])) return;
+      try { portPost({ __om_pong: d.__om_ping }); } catch (e) {}
+    };
+    P.postMessage({ __om_hello: 1 }, '*', [ch.port2]);
+  } catch (e) {}
+  /* Self-navigation tripwire: pagehide fires while THIS document is
+   * being torn down. The message is DELIVERED after the document is
+   * destroyed, so it arrives with e.source === null - the host accepts
+   * exactly that shape (a live-source forgery of it only blanks the
+   * forger's own preview). It is one tripwire, not the verdict: the
+   * port probe above is what decides, on every load. The listener is
+   * an unreachable closure - authored code has no reference to remove
+   * it, and P is captured at t=0 before anything authored runs. */
+  try {
+    window.addEventListener('pagehide', function () {
+      try { P.postMessage({ __om_nav_away: 1 }, '*'); } catch (e) {}
+    });
+  } catch (e) {}
+  /* Escape relay (np): while an artboard plays (full-window or in place)
+   * keyboard focus lives in HERE, so the host cannot hear Esc - relay
+   * it. Advisory only: the host acts on it solely to LEAVE Play, so a
+   * forged relay can do nothing worse than end the sender's own play.
+   * Capture phase, so authored handlers that stopPropagation still let
+   * it through. */
+  try {
+    window.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape' || ev.repeat) return;
+      try { P.postMessage({ __om_escape: 1 }, '*'); } catch (e) {}
+    }, true);
+  } catch (e) {}
+  /* Step relay: ArrowLeft / ArrowRight for the host's full-window Previous / Next, which cannot hear keys pressed in here. Not sent: a chord,
+   * a repeat, a script's event, a key for a field, arrow-key control or sideways-scrolling page, or one the design cancelled. */
+  try {
+    var ARROW_OWNER = "input,textarea,select,video,audio,canvas,[role=application],[role=scrollbar],[aria-roledescription=carousel],[aria-roledescription=slide],[role=textbox],[role=searchbox],[role=combobox],[role=spinbutton],[role=slider],[role=radiogroup],[role=radio],[role=tablist],[role=tab],[role=toolbar],[role=menu],[role=menubar],[role=menuitem],[role=menuitemradio],[role=menuitemcheckbox],[role=listbox],[role=option],[role=tree],[role=treegrid],[role=grid]";
+    var afterDispatch = window.setTimeout.bind(window);
+    var styleOf = window.getComputedStyle.bind(window);
+    /* the page itself scrolls sideways (by more than a stray scrollbar's width) and is not clipped there */
+    var pageScrollsSideways = function () {
+      var se = document.scrollingElement;
+      if (!se || se.scrollWidth - se.clientWidth <= 24) return false;
+      var clip = /hidden|clip/;
+      var hx = styleOf(document.documentElement).overflowX;
+      if (clip.test(hx)) return false;
+      return /auto|scroll/.test(hx) || !(document.body && clip.test(styleOf(document.body).overflowX));
+    };
+    /* a clicked box that scrolls sideways takes the arrows without having focus: remember where the last press landed */
+    var lastPress = null;
+    window.addEventListener('pointerdown', function (ev) { lastPress = (ev.composedPath && ev.composedPath()[0]) || ev.target; }, true);
+    var ownsArrows = function (ev) {
+      var path = ev.composedPath ? ev.composedPath() : [ev.target];
+      if (ev.target === document.body || ev.target === document.documentElement) {
+        for (var p = lastPress; p && p.nodeType === 1 && p.isConnected; p = p.parentElement || (p.parentNode && p.parentNode.host) || null) path.push(p);
+      }
+      for (var i = 0; i < path.length; i += 1) {
+        var n = path[i];
+        if (!n || n.nodeType !== 1) continue;
+        if (n.isContentEditable || (n.matches && n.matches(ARROW_OWNER))) return true;
+        /* a box in the design that scrolls sideways keeps its arrows too */
+        if (n.scrollWidth - n.clientWidth > 24 && /auto|scroll/.test(styleOf(n).overflowX)) return true;
+      }
+      return false;
+    };
+    window.addEventListener('keydown', function (ev) {
+      if ((ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') || ev.repeat || !ev.isTrusted) return;
+      if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey || ownsArrows(ev)) return;
+      if (pageScrollsSideways()) return;
+      var dir = ev.key === 'ArrowRight' ? 1 : -1;
+      afterDispatch(function () {
+        if (ev.defaultPrevented) return;
+        try { P.postMessage({ __om_step: dir }, '*'); } catch (e) {}
+      }, 0);
+    }, false);
+  } catch (e) {}
+  /* Link relay (advisory, not hardened). Any navigation here (even "#x", resolved off <base>) trips the
+   * host's guard, so every anchor click is cancelled at capture - invisibly: the design (and the edit picker)
+   * still read defaultPrevented as false, and their own preventDefault() means hands off. Otherwise, once the
+   * click has dispatched: "#id" scrolls the frame to its target, external http(s) is handed to the host, and a
+   * project path (href="Deck.dc.html") is offered to the host, which opens it only if it names an artboard. */
+  try {
+    var compatPage = window.__omEditor === 1; /* a migrated page at its own URL (buildCompatDoc): links name pages by their project path, as its shim does */
+    /* the project root (/_f/{ver}/project/) the runner stamped ahead of this script: a link is named relative to IT, so deck/a.html's
+     * "b.html" reads deck/b.html and its "../index.html" reads index.html; read once, here, before anything authored runs */
+    var projectRoot = compatPage && typeof window.__omProjectRoot === 'string' ? window.__omProjectRoot : null;
+    var LINK_SEL = 'a[*|href],area[href]'; /* *| also catches SVG xlink:href */
+    try { document.createElement('a').matches(LINK_SEL); } catch (e) { LINK_SEL = 'a[href],area[href]'; }
+    /* A native control between the click and the link owns the click: in current engines these act without the link navigating... */
+    var CONTROL_KEEPS_CLICK = 'input[type=checkbox],input[type=radio],input[type=file],input[type=color],summary,label,video[controls],audio[controls]';
+    /* ...while these (buttons, text/number/date/range inputs, selects) would still navigate it, so the navigation is cancelled but nothing opens. */
+    var CONTROL_SEL = CONTROL_KEEPS_CLICK + ',button,input,select,textarea';
+    /* a label counts only when it labels something, a summary only as its details' first summary: otherwise the link still navigates */
+    var ownsClick = function (n) {
+      if (n.localName === 'label') return !!n.control;
+      if (n.localName !== 'summary') return true;
+      var p = n.parentNode;
+      return !!p && p.localName === 'details' && p.querySelector(':scope > summary') === n;
+    };
+    var hit = function (ev) {
+      var path = ev.composedPath ? ev.composedPath() : [ev.target];
+      var control = null;
+      for (var i = 0; i < path.length; i += 1) {
+        var n = path[i];
+        if (!n || n.nodeType !== 1 || !n.matches) continue;
+        if (n.matches(LINK_SEL)) return { a: n, control: control };
+        if (control == null && n.matches(CONTROL_SEL) && ownsClick(n)) control = n;
+      }
+      return null;
+    };
+    var follow = function (a, aux) {
+      var raw = String(a.getAttribute('href') || '').trim();
+      if (raw === '') return; /* SVG xlink-only anchors, empty href: cancelled above, inert here */
+      if (raw.charAt(0) === '#') {
+        if (aux || raw === '#') return; /* a middle click never scrolls; a bare "#" is the "script owns it" idiom: inert */
+        var id = raw.slice(1);
+        try { id = decodeURIComponent(id); } catch (e) {}
+        var t = document.getElementById(id) || document.getElementsByName(id)[0];
+        /* in-frame scroll only: a fragment navigation or scrollIntoView can also scroll the host's containers */
+        try {
+          if (t) window.scrollBy(0, t.getBoundingClientRect().top);
+          else if (id.toLowerCase() === 'top') window.scrollTo(0, 0);
+        } catch (e) {}
+        return;
+      }
+      var url = null;
+      try { url = new URL(raw, document.baseURI); } catch (e) { return; }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+      var own = false;
+      try { own = url.origin === new URL(document.baseURI).origin; } catch (e) {}
+      if (own) {
+        if (aux || a.hasAttribute('download')) return; /* a same-origin download names no artboard (in compat mode the page shim saves it) */
+        var dir = compatPage ? (projectRoot !== null ? projectRoot : new URL('.', document.baseURI).pathname) : null;
+        if (dir !== null && url.pathname.indexOf(dir) !== 0) return; /* out of the project: not a page of it */
+        var rel = dir !== null ? url.pathname.slice(dir.length) : url.pathname.indexOf('/appifact/') === 0 ? url.pathname.slice(10) : url.pathname.slice(1);
+        try { rel = decodeURIComponent(rel); } catch (e) {}
+        try { P.postMessage({ __om_open: rel }, '*'); } catch (e) {}
+        return;
+      }
+      try { P.postMessage({ __om_link: url.href }, '*'); } catch (e) {}
+    };
+    var onLink = function (ev) {
+      var aux = ev.type === 'auxclick';
+      if (aux && ev.button !== 1) return;
+      var h = hit(ev);
+      if (h == null) return;
+      var a = h.a;
+      /* text being edited around the click (asked of the nearest HTML element: SVG nodes have no isContentEditable) */
+      var host = ev.target;
+      while (host && host.isContentEditable === undefined) host = host.parentNode;
+      var editing = !!(host && host.isContentEditable);
+      /* untouched: a control that keeps its click (any control, for a middle click), and a middle click in text being edited (paste) */
+      if ((h.control != null && (aux || h.control.matches(CONTROL_KEEPS_CLICK))) || (aux && editing)) return;
+      var handled = false;
+      var cancel = ev.preventDefault;
+      var claim = function () { handled = true; cancel.call(ev); };
+      try {
+        Object.defineProperty(ev, 'preventDefault', { value: claim, writable: true, configurable: true });
+        Object.defineProperty(ev, 'defaultPrevented', { get: function () { return handled; }, configurable: true });
+        Object.defineProperty(ev, 'returnValue', { get: function () { return !handled; }, set: function (v) { if (v === false) claim(); }, configurable: true });
+      } catch (e) {}
+      cancel.call(ev);
+      /* cancelled, nothing opens: a control the link would navigate past, a link in text being edited,
+       * and a middle button arriving as 'click' (auxclick carries the one relay for it) */
+      if (h.control != null || editing || (!aux && ev.button === 1)) return;
+      setTimeout(function () { if (!handled) follow(a, aux); }, 0);
+    };
+    window.addEventListener('click', onLink, true);
+    window.addEventListener('auxclick', onLink, true);
+  } catch (e) {}
+  var serialise = function (v) {
+    try { return JSON.stringify(v); } catch (e) { return JSON.stringify(String(v)); }
+  };
+  window.addEventListener('message', function (e) {
+    if (e.source !== P) return;
+    var d = e.data;
+    if (!d || d.__om_eval !== 1) return;
+    var reply = function (p) {
+      p.__om_eval_r = 1;
+      p.id = d.id;
+      e.source.postMessage(p, '*');
+    };
+    try {
+      var r = (0, eval)(d.code);
+      if (r && typeof r.then === 'function') {
+        r.then(
+          function (v) { reply({ ok: 1, v: serialise(v) }); },
+          function (err) { reply({ ok: 0, e: String(err) }); }
+        );
+      } else {
+        reply({ ok: 1, v: serialise(r) });
+      }
+    } catch (err) {
+      reply({ ok: 0, e: String(err) });
+    }
+  });
+})();
+</script><script>
+(function () {
+  /* Viewport guard */
+  var doc = document;
+  var align = function (lo, hi, cLo, cHi, mode) {
+    if (mode === 'start') return lo - cLo;
+    if (mode === 'end') return hi - cHi;
+    if (mode === 'center') return (lo + hi) / 2 - (cLo + cHi) / 2;
+    if ((lo >= cLo && hi <= cHi) || (lo < cLo && hi > cHi)) return 0; /* fully visible, or covering */
+    /* center-if-needed centres only a fully hidden target; a partly visible one moves to the nearest edge */
+    if (mode === 'center-if-needed' && (hi <= cLo || lo >= cHi)) return (lo + hi) / 2 - (cLo + cHi) / 2;
+    var fits = hi - lo <= cHi - cLo;
+    if (lo < cLo) return fits ? lo - cLo : hi - cHi;
+    return fits ? hi - cHi : lo - cLo;
+  };
+  var styleOf = function (n) {
+    try { return getComputedStyle(n); } catch (e) { return null; }
+  };
+  var set = function (v) { return !!v && v !== 'none' && v !== 'auto'; };
+  /* transform-like properties make a box the containing block of its absolute AND fixed descendants */
+  var containsFixed = function (cs) {
+    return set(cs.transform) || set(cs.translate) || set(cs.rotate) || set(cs.scale) || set(cs.perspective) || set(cs.filter) ||
+      set(cs.backdropFilter) || cs.transformStyle === 'preserve-3d' || /layout|paint|strict|content/.test(cs.contain || '') ||
+      /(^|,)\s*(transform|translate|rotate|scale|perspective|filter|backdrop-filter)\s*(,|$)/.test(cs.willChange || '');
+  };
+  var scrolls = function (n, cs) {
+    var v = cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY;
+    return /auto|scroll|hidden/.test(v) && (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth);
+  };
+  var up = function (n) {
+    if (n.assignedSlot) return n.assignedSlot;
+    var p = n.parentNode;
+    return p && p.nodeType === 11 && p.host ? p.host : p;
+  };
+  /* Reveal el inside this document only: each scrolling ancestor, then the frame's own viewport. Never the parent's. */
+  var reveal = function (el, block, inline, smooth) {
+    if (!el || typeof el.getClientRects !== 'function' || el.getClientRects().length === 0) return; /* no box: nothing to reveal */
+    var d = el.ownerDocument || doc;
+    var root = d.scrollingElement || d.documentElement;
+    /* Only boxes in el's containing-block chain can move it: an absolute box skips static ancestors up to a positioned or
+     * transform-like one; a fixed box skips everything up to a transform-like one (none: not even the viewport moves it). */
+    var es = styleOf(el);
+    var pos = (es && es.position) || 'static';
+    var seekAbs = pos === 'absolute', seekFixed = pos === 'fixed';
+    for (var n = up(el); n && n !== root && n.nodeType === 1; n = up(n)) {
+      var cs = styleOf(n);
+      if (!cs) continue;
+      pos = cs.position || 'static';
+      if (seekFixed ? !containsFixed(cs) : seekAbs && pos === 'static' && !containsFixed(cs)) continue;
+      seekAbs = pos === 'absolute';
+      seekFixed = pos === 'fixed';
+      if (!scrolls(n, cs)) continue;
+      var r = el.getBoundingClientRect();
+      var c = n.getBoundingClientRect();
+      var cTop = c.top + n.clientTop, cLeft = c.left + n.clientLeft;
+      var dy = align(r.top, r.bottom, cTop, cTop + n.clientHeight, block);
+      var dx = align(r.left, r.right, cLeft, cLeft + n.clientWidth, inline);
+      if (!dx && !dy) continue;
+      /* instant even under CSS scroll-behavior:smooth: the next step must read the settled position ('smooth' applies to the viewport step) */
+      if (typeof n.scrollTo === 'function') n.scrollTo({ left: n.scrollLeft + dx, top: n.scrollTop + dy, behavior: 'instant' });
+      else { n.scrollTop += dy; n.scrollLeft += dx; }
+    }
+    if (seekFixed) return;
+    var rr = el.getBoundingClientRect();
+    var vw = (root && root.clientWidth) || window.innerWidth, vh = (root && root.clientHeight) || window.innerHeight;
+    var wy = align(rr.top, rr.bottom, 0, vh, block);
+    var wx = align(rr.left, rr.right, 0, vw, inline);
+    if (wx || wy) window.scrollBy({ left: wx, top: wy, behavior: smooth ? 'smooth' : 'auto' });
+  };
+  var deepActive = function (el, d) {
+    var r = el.getRootNode ? el.getRootNode() : d; /* el's own (possibly closed) shadow root sees its activeElement */
+    var a = (r && 'activeElement' in r ? r : d).activeElement;
+    while (a && a.shadowRoot && a.shadowRoot.activeElement) a = a.shadowRoot.activeElement;
+    return a;
+  };
+  var within = function (a, el) {
+    for (var n = a; n; n = up(n)) if (n === el) return true;
+    return false;
+  };
+  var guardFocus = function (proto) {
+    if (!proto || typeof proto.focus !== 'function') return;
+    var native = proto.focus;
+    /* reveal only what actually took focus (el, or its delegate inside it), and only if focus moved - as the native does */
+    proto.focus = function focus(o) {
+      var d = this.ownerDocument || doc;
+      var before = deepActive(this, d);
+      native.call(this, o && o.focusVisible !== undefined ? { preventScroll: true, focusVisible: o.focusVisible } : { preventScroll: true });
+      if (o && o.preventScroll) return;
+      try { var a = deepActive(this, d); if (a && a !== before && within(a, this)) reveal(a, 'center-if-needed', 'center-if-needed', false); } catch (e) {}
+    };
+  };
+  guardFocus(window.HTMLElement && window.HTMLElement.prototype);
+  guardFocus(window.SVGElement && window.SVGElement.prototype);
+  guardFocus(window.MathMLElement && window.MathMLElement.prototype);
+  var E = window.Element;
+  if (E) {
+    E.prototype.scrollIntoView = function scrollIntoView(arg) {
+      var dict = arg == null || typeof arg === 'object';
+      var o = (dict && arg) || {};
+      var block = dict ? o.block || 'start' : arg ? 'start' : 'end';
+      try { reveal(this, block, o.inline || 'nearest', o.behavior === 'smooth'); } catch (e) {}
+    };
+    E.prototype.scrollIntoViewIfNeeded = function scrollIntoViewIfNeeded(center) {
+      var mode = center === undefined || center ? 'center-if-needed' : 'nearest';
+      try { reveal(this, mode, mode, false); } catch (e) {}
+    };
+  }
+})();
+</script><script>
+(function () {
+  var PREFIX = 'page:';
+  var memory = function () {
+    var m = Object.create(null);
+    return {
+      getItem: function (k) { return k in m ? m[k] : null; },
+      setItem: function (k, v) { m[k] = String(v); },
+      removeItem: function (k) { delete m[k]; },
+      key: function (i) { var ks = Object.keys(m); i = Math.floor(Number(i)) || 0; return i >= 0 && i < ks.length ? ks[i] : null; },
+      get length() { return Object.keys(m).length; }
+    };
+  };
+  var scope = function (real) {
+    var keys = function () {
+      var out = [];
+      for (var i = 0, n = real.length; i < n; i++) { var k = real.key(i); if (k !== null && k.indexOf(PREFIX) === 0) out.push(k.slice(PREFIX.length)); }
+      return out;
+    };
+    var api = {
+      getItem: function (k) { return real.getItem(PREFIX + String(k)); },
+      setItem: function (k, v) { real.setItem(PREFIX + String(k), String(v)); },
+      removeItem: function (k) { real.removeItem(PREFIX + String(k)); },
+      clear: function () { keys().forEach(function (k) { real.removeItem(PREFIX + k); }); },
+      key: function (i) { var ks = keys(); i = Math.floor(Number(i)) || 0; return i >= 0 && i < ks.length ? ks[i] : null; },
+      get length() { return keys().length; }
+    };
+    if (typeof Proxy !== 'function') return api;
+    var own = function (p) { return typeof p === 'string' && !(p in api) && p !== 'length'; };
+    return new Proxy(api, {
+      get: function (t, p) { if (p === 'length') return keys().length; if (p in api) return api[p]; if (!own(p)) return undefined; var v = real.getItem(PREFIX + p); return v === null ? undefined : v; },
+      set: function (t, p, v) { if (own(p)) real.setItem(PREFIX + p, String(v)); return true; },
+      deleteProperty: function (t, p) { if (own(p)) real.removeItem(PREFIX + p); return true; },
+      has: function (t, p) { return p in api || p === 'length' || (own(p) && real.getItem(PREFIX + p) !== null); },
+      ownKeys: function () { return keys(); },
+      getOwnPropertyDescriptor: function (t, p) { if (!own(p)) return undefined; var v = real.getItem(PREFIX + p); return v === null ? undefined : { value: v, writable: true, enumerable: true, configurable: true }; }
+    });
+  };
+  var natives = {};
+  var views = {};
+  ['localStorage', 'sessionStorage'].forEach(function (n) {
+    var real = null;
+    try { real = window[n]; } catch (e) { real = null; }
+    if (!real || typeof real.getItem !== 'function') real = memory();
+    natives[n] = real;
+    views[n] = scope(real);
+    try { Object.defineProperty(window, n, { value: views[n], configurable: true }); } catch (e) {}
+  });
+  /* 'storage' events, the same view: a write to the namespace (another artboard, another tab) reaches the page's listeners
+   * with its own key and the scoped store as storageArea; anything else on this origin (the editor's stash and prefs, a key
+   * outside the namespace) is not the page's and does not reach them. Registered first and capturing, so it runs before any
+   * listener the page adds, onstorage included. */
+  try {
+    window.addEventListener('storage', function (e) {
+      if (!e.isTrusted) return; /* one the page dispatched itself (a same-window sync idiom): its own traffic, already in its own terms */
+      var k = e.key;
+      var area = e.storageArea === natives.localStorage ? views.localStorage : e.storageArea === natives.sessionStorage ? views.sessionStorage : null;
+      if (k === null || (typeof k === 'string' && k.indexOf(PREFIX) === 0)) { /* a namespace key, or a whole-store clear (null): the page's, in its terms */
+        try { Object.defineProperties(e, { key: { value: k === null ? null : k.slice(PREFIX.length), configurable: true }, storageArea: { value: area, configurable: true } }); } catch (x) { e.stopImmediatePropagation(); }
+        return;
+      }
+      e.stopImmediatePropagation();
+    }, true);
+  } catch (e) {}
+})();
+</script>
+
+
+<meta charset="utf-8">
+<title>Clock explorations</title>
+<base href="/appifact/ClockLab.dc.html">
+<script>window.__dcFiles = {"ClockLab.dc.html":"\u003c!doctype html>\n\u003chtml lang=\"en\">\n\u003chead>\n\u003cmeta charset=\"utf-8\">\n\u003ctitle>Clock explorations\u003c/title>\n\u003cscript src=\"./support.js\">\u003c/script>\n\u003c/head>\n\u003cbody>\n\u003cx-dc>\n\u003chelmet>\n\u003clink rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Anton&amp;family=Bricolage+Grotesque:opsz,wght@12..96,200..800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Jost:wght@100;200&amp;family=Nunito:wght@800;900&amp;family=Outfit:wght@100;200&amp;family=Plus+Jakarta+Sans:wght@800&amp;display=swap\">\n\u003cstyle>\nbody{margin:0}\n\u003c/style>\n\u003c/helmet>\n\u003cdiv style=\"position: relative; width: 1440px; height: 1000px; overflow: hidden; background: #0D0F11; color: #EDEBE6; font-family: 'Nunito', system-ui, sans-serif\">\n  \u003cimg src=\"/_blob/1599971be0a3adc155bba9975162d875\" alt=\"\" aria-hidden=\"true\" style=\"position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(0.85)\">\n  \u003cdiv aria-hidden=\"true\" style=\"position: absolute; inset: 0; background: rgba(13,15,17,0.6)\">\u003c/div>\n\n  \u003cdiv style=\"position: relative; box-sizing: border-box; height: 100%; padding: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 20px\">\n\n    \u003csection aria-label=\"Option E\" style=\"position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; border-radius: 24px; border: 1px dashed rgba(255,255,255,0.14)\">\n      \u003cp style=\"position: absolute; top: 16px; left: 20px; margin: 0; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #B3B8C0\">E · Fichas de cristal (tipo flip)\u003c/p>\n      \u003cdiv style=\"display: flex; align-items: center; gap: 8px\">\n        \u003csc-for list=\"{{hDigits}}\" as=\"g\" hint-placeholder-count=\"2\">\n          \u003cspan style=\"position: relative; width: 74px; height: 104px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.10) 100%); border: 1px solid rgba(255,255,255,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 28px rgba(0,0,0,0.4); backdrop-filter: blur(16px); font: 800 76px/1 'Nunito', sans-serif; color: #FFFFFF\">\n            {{g}}\u003cspan aria-hidden=\"true\" style=\"position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,0.35); box-shadow: 0 1px 0 rgba(255,255,255,0.08)\">\u003c/span>\n          \u003c/span>\n        \u003c/sc-for>\n        \u003cspan aria-hidden=\"true\" style=\"display: flex; flex-direction: column; gap: 14px; padding: 0 4px; opacity: {{colon}}\">\u003cspan style=\"width: 10px; height: 10px; border-radius: 50%; background: #F0B04A\">\u003c/span>\u003cspan style=\"width: 10px; height: 10px; border-radius: 50%; background: #F0B04A\">\u003c/span>\u003c/span>\n        \u003csc-for list=\"{{mDigits}}\" as=\"g\" hint-placeholder-count=\"2\">\n          \u003cspan style=\"position: relative; width: 74px; height: 104px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.10) 100%); border: 1px solid rgba(255,255,255,0.18); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 28px rgba(0,0,0,0.4); backdrop-filter: blur(16px); font: 800 76px/1 'Nunito', sans-serif; color: #FFFFFF\">\n            {{g}}\u003cspan aria-hidden=\"true\" style=\"position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,0,0,0.35); box-shadow: 0 1px 0 rgba(255,255,255,0.08)\">\u003c/span>\n          \u003c/span>\n        \u003c/sc-for>\n      \u003c/div>\n      \u003cp style=\"margin: 0; display: flex; gap: 10px; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase\">\u003cspan style=\"padding: 4px 10px; border-radius: 999px; background: #F0B04A; color: #17110A\">{{weekday}}\u003c/span>\u003cspan style=\"padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); color: #EDEBE6\">{{dayMonth}}\u003c/span>\u003c/p>\n    \u003c/section>\n\n    \u003csection aria-label=\"Option F\" style=\"position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255,255,255,0.14)\">\n      \u003cp style=\"position: absolute; top: 16px; left: 20px; margin: 0; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #B3B8C0\">F · Outfit Thin — cifras de cristal esmerilado\u003c/p>\n      \u003cp style=\"margin: 0; font: 200 150px/0.9 'Outfit', sans-serif; letter-spacing: -0.04em; color: rgba(255,255,255,0.16); -webkit-text-stroke: 1.2px rgba(255,255,255,0.75); text-shadow: 0 0 24px rgba(255,255,255,0.28), 0 0 60px rgba(124,196,255,0.18)\">{{hh}}\u003cspan style=\"color: rgba(240,176,74,0.5); -webkit-text-stroke-color: #F0B04A; opacity: {{colon}}\">:\u003c/span>{{mm}}\u003c/p>\n      \u003cp style=\"margin: 0; display: flex; gap: 10px; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase\">\u003cspan style=\"padding: 4px 10px; border-radius: 999px; background: #F0B04A; color: #17110A\">{{weekday}}\u003c/span>\u003cspan style=\"padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); color: #EDEBE6\">{{dayMonth}}\u003c/span>\u003c/p>\n    \u003c/section>\n\n    \u003csection aria-label=\"Option G\" style=\"position: relative; display: flex; align-items: center; justify-content: center; gap: 26px; border-radius: 24px; border: 1px dashed rgba(255,255,255,0.14)\">\n      \u003cp style=\"position: absolute; top: 16px; left: 20px; margin: 0; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #B3B8C0\">G · Anton apilado — póster vertical\u003c/p>\n      \u003cdiv style=\"display: flex; flex-direction: column; align-items: flex-end; font: 400 148px/0.8 'Anton', sans-serif; letter-spacing: 0\">\n        \u003cspan style=\"color: rgba(255,255,255,0.16); -webkit-text-stroke: 1.5px rgba(255,255,255,0.8); text-shadow: 0 0 24px rgba(255,255,255,0.28), 0 0 60px rgba(124,196,255,0.18)\">{{hh}}\u003c/span>\n        \u003cspan style=\"color: transparent; -webkit-text-stroke: 2px #F0B04A\">{{mm}}\u003c/span>\n      \u003c/div>\n      \u003cp style=\"margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase\">\u003cspan style=\"padding: 4px 10px; border-radius: 999px; background: #F0B04A; color: #17110A\">{{weekday}}\u003c/span>\u003cspan style=\"padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); color: #EDEBE6\">{{dayMonth}}\u003c/span>\u003c/p>\n    \u003c/section>\n\n    \u003csection aria-label=\"Option H\" style=\"position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255,255,255,0.14)\">\n      \u003cp style=\"position: absolute; top: 16px; left: 20px; margin: 0; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #B3B8C0\">H · Jakarta ExtraBold — degradado del fondo\u003c/p>\n      \u003cp style=\"margin: 0; font: 800 132px/0.9 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.05em; background: linear-gradient(115deg, #7CC4FF 0%, #A98BFF 38%, #FF8A9B 68%, #F0B04A 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; filter: drop-shadow(0 10px 30px rgba(169,139,255,0.35))\">{{hh}}:{{mm}}\u003c/p>\n      \u003cp style=\"margin: 0; display: flex; gap: 10px; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase\">\u003cspan style=\"padding: 4px 10px; border-radius: 999px; background: #F0B04A; color: #17110A\">{{weekday}}\u003c/span>\u003cspan style=\"padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); color: #EDEBE6\">{{dayMonth}}\u003c/span>\u003c/p>\n    \u003c/section>\n\n    \u003csection aria-label=\"Option I\" style=\"position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255,255,255,0.14)\">\n      \u003cp style=\"position: absolute; top: 16px; left: 20px; margin: 0; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #B3B8C0\">I · Jost Thin — pantalla de bloqueo\u003c/p>\n      \u003cp style=\"margin: 0; display: flex; gap: 10px; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase\">\u003cspan style=\"padding: 4px 10px; border-radius: 999px; background: #F0B04A; color: #17110A\">{{weekday}}\u003c/span>\u003cspan style=\"padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); color: #EDEBE6\">{{dayMonth}}\u003c/span>\u003c/p>\n      \u003cp style=\"margin: 0; font: 100 172px/0.85 'Jost', sans-serif; letter-spacing: -0.03em; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.25), 0 18px 48px rgba(0,0,0,0.4)\">{{hh}}\u003cspan style=\"opacity: {{colon}}\">:\u003c/span>{{mm}}\u003c/p>\n    \u003c/section>\n\n    \u003csection aria-label=\"Option J\" style=\"position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255,255,255,0.14)\">\n      \u003cp style=\"position: absolute; top: 16px; left: 20px; margin: 0; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #B3B8C0\">J · Bricolage — contraste de pesos\u003c/p>\n      \u003cp style=\"margin: 0; display: flex; align-items: baseline; font-family: 'Bricolage Grotesque', sans-serif; font-size: 148px; line-height: 0.88; letter-spacing: -0.05em; text-shadow: 0 12px 34px rgba(0,0,0,0.45)\">\n        \u003cspan style=\"font-weight: 800; color: #FFFFFF\">{{hh}}\u003c/span>\u003cspan style=\"font-weight: 200; color: #F0B04A; opacity: {{colon}}; padding: 0 0.02em\">:\u003c/span>\u003cspan style=\"font-weight: 200; color: rgba(255,255,255,0.82)\">{{mm}}\u003c/span>\n      \u003c/p>\n      \u003cp style=\"margin: 0; display: flex; gap: 10px; font: 600 12px 'IBM Plex Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase\">\u003cspan style=\"padding: 4px 10px; border-radius: 999px; background: #F0B04A; color: #17110A\">{{weekday}}\u003c/span>\u003cspan style=\"padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); color: #EDEBE6\">{{dayMonth}}\u003c/span>\u003c/p>\n    \u003c/section>\n\n  \u003c/div>\n\u003c/div>\n\u003c/x-dc>\n\u003cscript type=\"text/x-dc\" data-dc-script data-props='{\"$preview\":{\"width\":1440,\"height\":1000}}'>\nclass Component extends DCLogic {\n  constructor(props) {\n    super(props);\n    this.state = { now: new Date() };\n  }\n  componentDidMount() {\n    this.timer = setInterval(() => this.setState({ now: new Date() }), 1000);\n  }\n  componentWillUnmount() {\n    clearInterval(this.timer);\n  }\n  renderVals() {\n    const d = this.state.now;\n    const pad = (n) => String(n).padStart(2, '0');\n    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];\n    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\n    const hh = pad(d.getHours());\n    const mm = pad(d.getMinutes());\n    return {\n      hh, mm,\n      hDigits: hh.split(''), mDigits: mm.split(''),\n      colon: d.getSeconds() % 2 === 0 ? 1 : 0.35,\n      weekday: days[d.getDay()],\n      dayMonth: d.getDate() + ' ' + months[d.getMonth()]\n    };\n  }\n}\n\u003c/script>\n\u003c/body>\n\u003c/html>\n"}; window.__dcRootPath = "ClockLab.dc.html";</script>
+<script>
+(function () {
+  var real = window.fetch.bind(window);
+  var ROOT = typeof window.__dcProjectRoot === 'string' ? window.__dcProjectRoot : null;
+  var IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', svg: 'image/svg+xml' };
+  var TEXT_MIME = { html: 'text/html', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json' };
+  /* The requested URL as a project key: relative to the root file's folder ('../x' too, and the
+   * runtime's encoded '..%2FName.dc.html'), or absolute under <base> (/appifact/...) - resolveRef in preview.ts. */
+  var norm = function (u) {
+    if (u && typeof u === 'object' && typeof u.url === 'string') u = u.url;
+    u = String(u).split('#')[0].split('?')[0];
+    // dc-runtime boot() re-fetches location.href to re-adopt its own raw
+    // bytes (camelCase attr repair). In a srcdoc document that URL is
+    // about:srcdoc, which fetch() can't load - serve the root source from
+    // the map instead, keeping the fidelity pass working.
+    if (u === 'about:srcdoc' || u === String(location.href)) {
+      return window.__dcRootPath || u;
+    }
+    var dir = String(window.__dcRootPath || '').replace(/[^/]*$/, '');
+    /* an absolute URL counts only on this document's own base origin, under /appifact/ or under the stamped project folder */
+    if (/^[a-z][a-z0-9+.-]*:/i.test(u) || u.slice(0, 2) === '//') {
+      try { var abs = new URL(u, document.baseURI), base = new URL(document.baseURI); if (abs.origin !== base.origin || (abs.pathname.indexOf('/appifact/') !== 0 && (ROOT === null || abs.pathname.indexOf(ROOT) !== 0))) return null; u = abs.pathname; } catch (e) { return null; }
+    }
+    /* with the published base, a path under the project folder is read as the same path under /appifact/ */
+    if (ROOT !== null && u.indexOf(ROOT) === 0) u = '/appifact/' + u.slice(ROOT.length);
+    if (u.indexOf('/appifact/') === 0) { u = u.slice(10); dir = ''; }
+    else if (u.charAt(0) === '/') dir = '';
+    try { u = decodeURIComponent(u); } catch (e) {}
+    var out = [];
+    var segs = (dir + u).split('/');
+    for (var s = 0; s < segs.length; s += 1) {
+      if (segs[s] === '' || segs[s] === '.') continue;
+      if (segs[s] === '..') out.pop(); else out.push(segs[s]);
+    }
+    return out.join('/');
+  };
+  /* the stored file a URL names, read live from the map: {key, mime, text, bytes (images)} or null */
+  var lookup = function (url) {
+    var key = norm(url);
+    var files = window.__dcFiles || {};
+    if (key === null || !Object.prototype.hasOwnProperty.call(files, key)) return null;
+    var ext = key.slice(key.lastIndexOf('.') + 1).toLowerCase();
+    var img = IMAGE_MIME[ext];
+    var text = String(files[key]);
+    var bytes = null;
+    if (img) { try { var bin = atob(text); bytes = new Uint8Array(bin.length); for (var b = 0; b < bin.length; b += 1) bytes[b] = bin.charCodeAt(b); } catch (e) { img = ''; bytes = null; } }
+    return { key: key, mime: img || TEXT_MIME[ext] || 'text/plain', text: text, bytes: bytes };
+  };
+  window.__dcLookup = lookup;
+  window.fetch = function (url, opts) {
+    var f = lookup(url);
+    if (f) return Promise.resolve(new Response(f.bytes || f.text, { status: 200, headers: { 'Content-Type': f.mime } }));
+    if (ROOT === null) return real(url, opts);
+    /* a document with the published base reports to the editor a file under the project folder that was answered 403, 404 or 410 (ADDRESS_REFUSED) */
+    return real(url, opts).then(function (r) { if (r && (r.status === 403 || r.status === 404 || r.status === 410) && String(r.url).indexOf(window.origin + ROOT) === 0) { try { window.parent.postMessage({ __dc_address_refused: 1, u: r.url }, '*'); } catch (e) {} } return r; });
+  };
+})();
+
+(function () {
+  var X = window.XMLHttpRequest, lookup = window.__dcLookup;
+  if (!X || !X.prototype || typeof lookup !== 'function') return;
+  var P = X.prototype, realOpen = P.open, realSend = P.send, realHeader = P.setRequestHeader, realMime = P.overrideMimeType, realAbort = P.abort;
+  var SHADOWED = ['readyState', 'status', 'statusText', 'response', 'responseText', 'responseXML', 'responseURL', 'getResponseHeader', 'getAllResponseHeaders'];
+  var set = function (x, k, v) { try { Object.defineProperty(x, k, { value: v, configurable: true, writable: true }); } catch (e) {} };
+  /* a reused object gets its native accessors back before each open */
+  var clear = function (x) { for (var i = 0; i < SHADOWED.length; i += 1) { try { delete x[SHADOWED[i]]; } catch (e) {} } };
+  var fire = function (x, type) { try { x.dispatchEvent(new Event(type)); } catch (e) {} };
+  P.open = function (method, url) {
+    clear(this);
+    var f = /^get$/i.test(String(method)) ? lookup(url) : null;
+    if (!f) { this.__dcHit = null; return realOpen.apply(this, arguments); }
+    /* a reused object: quiesce any native request still in flight, as a native open would */
+    if (this.__dcHit === null) { try { realAbort.apply(this); } catch (e) {} }
+    this.__dcHit = { f: f, async: arguments.length < 3 || !!arguments[2] };
+    set(this, 'readyState', 1);
+    set(this, 'status', 0);
+    fire(this, 'readystatechange');
+  };
+  P.setRequestHeader = function () { if (!this.__dcHit) return realHeader.apply(this, arguments); };
+  if (realMime) P.overrideMimeType = function () { if (!this.__dcHit) return realMime.apply(this, arguments); };
+  P.abort = function () {
+    var hit = this.__dcHit;
+    if (!hit) return realAbort.apply(this, arguments);
+    this.__dcHit = null;
+    if (hit.sent && !hit.done) { set(this, 'readyState', 4); fire(this, 'readystatechange'); fire(this, 'abort'); fire(this, 'loadend'); }
+    clear(this);
+  };
+  P.send = function () {
+    var hit = this.__dcHit;
+    if (!hit) return realSend.apply(this, arguments);
+    if (hit.sent) return;
+    hit.sent = true;
+    var x = this, f = hit.f, rt = '';
+    try { rt = String(x.responseType || ''); } catch (e) {}
+    var done = function () {
+      if (x.__dcHit !== hit) return; /* aborted or re-opened */
+      /* as text: the file's characters (an image's bytes decoded, as fetch().text() gives), never the map's base64 */
+      var text = f.bytes ? new TextDecoder().decode(f.bytes) : f.text;
+      var body = text;
+      try {
+        if (rt === 'arraybuffer') body = f.bytes ? f.bytes.buffer.slice(0) : new TextEncoder().encode(f.text).buffer;
+        else if (rt === 'blob') body = new Blob([f.bytes || f.text], { type: f.mime });
+        else if (rt === 'json') body = JSON.parse(text);
+        else if (rt === 'document') body = new DOMParser().parseFromString(text, f.mime === 'text/html' ? 'text/html' : f.mime === 'image/svg+xml' ? 'image/svg+xml' : 'application/xml');
+      } catch (e) { body = null; }
+      set(x, 'status', 200);
+      set(x, 'statusText', 'OK');
+      try { set(x, 'responseURL', String(new URL('/appifact/' + f.key.split('/').map(encodeURIComponent).join('/'), document.baseURI))); } catch (e) {}
+      set(x, 'response', body);
+      if (rt === '' || rt === 'text') set(x, 'responseText', text);
+      if (rt === 'document') set(x, 'responseXML', body);
+      x.getResponseHeader = function (n) { return /^content-type$/i.test(String(n)) ? f.mime : null; };
+      x.getAllResponseHeaders = function () { return 'content-type: ' + f.mime + '\r\n'; };
+      set(x, 'readyState', 4);
+      hit.done = true;
+      fire(x, 'readystatechange');
+      fire(x, 'load');
+      fire(x, 'loadend');
+    };
+    if (hit.async) setTimeout(done, 0); else done();
+  };
+})();
+
+window.__dcRun = (function () {
+  var has = Object.prototype.hasOwnProperty;
+  var fail = function (key) { try { window.parent.postMessage({ __dc_boot_failed: 1, e: 'a script of this design did not load: ' + key }, '*'); } catch (e) {} };
+  /* a blob: URL that did not load: a file whose text the frame has still runs (inline, at that point); only a URL-only part fails the boot */
+  var recover = function (key, attrs) { var files = window.__dcFiles || {}; if (!has.call(files, key)) return fail(key); var s = document.createElement('script'); for (var a in attrs) { if (has.call(attrs, a) && !/^(async|defer|integrity|crossorigin)$/i.test(a)) { try { s.setAttribute(a, String(attrs[a])); } catch (e) {} } } s.text = String(files[key]) + '\n//# sourceURL=/appifact/' + encodeURI(key); (document.head || document.documentElement).appendChild(s); };
+  /* the parser's tip: a script the parser itself is executing right now (no node follows it anywhere up the tree) -
+   * the only place a document.write lands in place rather than re-opening the document */
+  var atTip = function (el) { for (var n = el; n; n = n.parentNode) { if (n.nextSibling) return false; } return true; };
+  return function (key, attrs) {
+    var files = window.__dcFiles || {}, urls = window.__dcPartUrls || {};
+    var url = has.call(urls, key) ? urls[key] : null;
+    if (url === null && !has.call(files, key)) return;
+    attrs = attrs || {};
+    /* defer/async: after the parse, in document order (as every deferred script here has always run) */
+    var later = has.call(attrs, 'defer') || has.call(attrs, 'async');
+    var cur = document.currentScript;
+    if (document.readyState === 'loading' && cur && atTip(cur)) {
+      /* written where the tag stood, this IS the tag the page wrote: parser-blocking (or natively deferred), same
+       * attributes; a part loads by the page URL every artboard shares (one compile), any other file by a URL of its own */
+      if (url === null && later) { try { url = URL.createObjectURL(new Blob([String(files[key]), '\n//# sourceURL=/appifact/' + encodeURI(key)], { type: 'text/javascript' })); } catch (e) { url = null; } }
+      if (url !== null) {
+        var h = '<' + 'script src="' + url + '"' + (later ? ' defer' : '');
+        for (var n in attrs) { if (has.call(attrs, n) && /^[\w:.-]+$/.test(n) && !/^(async|defer|integrity|crossorigin)$/i.test(n)) h += ' ' + n + '="' + String(attrs[n]).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'; }
+        try {
+          document.write(h + '></' + 'script>');
+          var w = document.scripts[document.scripts.length - 1]; /* the tag just written (the parser inserts it before write returns) */
+          if (w && w !== cur && w.getAttribute('src') === url) { w.addEventListener('error', function () { recover(key, attrs); }); return; }
+          /* the write did not land (a Trusted Types default policy rewrote it, say): load it the other way rather than not at all */
+        } catch (e) {}
+      }
+    }
+    var run = function () {
+      var s = document.createElement('script');
+      for (var a in attrs) { if (has.call(attrs, a) && (url === null || !/^(async|defer|integrity|crossorigin)$/i.test(a))) { try { s.setAttribute(a, String(attrs[a])); } catch (e) {} } }
+      if (has.call(files, key)) s.text = String(files[key]) + '\n//# sourceURL=/appifact/' + encodeURI(key);
+      else { s.async = false; s.src = url; s.addEventListener('error', function () { recover(key, attrs); }); } /* no text on hand (not expected: the bootloader hands every part's text): by URL, in insertion order */
+      /* where the tag stood (document.currentScript keeps its position and data- attributes), else the head */
+      var c = document.currentScript;
+      if (c && c.parentNode) c.parentNode.insertBefore(s, c); else (document.head || document.documentElement).appendChild(s);
+      /* an external script fires 'load' once it has run; the inline stand-in has run by now, so fire it for onload= handlers */
+      if (has.call(files, key)) { try { s.dispatchEvent(new Event('load')); } catch (e) {} }
+    };
+    if (later && document.readyState === 'loading') document.addEventListener('readystatechange', function g() { document.removeEventListener('readystatechange', g); run(); });
+    else run();
+  };
+})();
+
+(function () {
+  var files = window.__dcFiles || {};
+  var blobs = window.__dcPartBlobs || {}, urls = window.__dcPartUrls || {}; /* two-phase boot: a part keeps the page's URL (shared), else its Blob */
+  var imports = {}, has = Object.prototype.hasOwnProperty;
+  var n = 0;
+  for (var k in files) {
+    if (!has.call(files, k) || !/\.m?js$/i.test(k) || /(^|\/)support\.js$/.test(k)) continue;
+    var url;
+    if (has.call(urls, k)) url = urls[k];
+    else { try { url = URL.createObjectURL(blobs[k] instanceof Blob ? blobs[k] : new Blob([String(files[k])], { type: 'text/javascript' })); } catch (e) { continue; } }
+    imports['/appifact/' + k.split('/').map(encodeURIComponent).join('/')] = url;
+    imports[k] = url;
+    n += 1;
+  }
+  if (n === 0) return;
+  var s = document.createElement('script');
+  s.type = 'importmap';
+  s.textContent = JSON.stringify({ imports: imports });
+  (document.head || document.documentElement).appendChild(s);
+})();
+</script>
+<script>
+(function (variants) {
+  var seen = Object.create(null);
+  var add = function (href) {
+    variants(href).forEach(function (v) {
+      if (seen[v]) return;
+      seen[v] = 1;
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = v;
+      l.setAttribute('data-font-variant', '');
+      l.onerror = function () { l.remove(); };
+      document.head.appendChild(l);
+    });
+  };
+  /* a complete statement only: url(...) closed, or a whole quoted string - a helmet <style> streams in mid-URL */
+  var IMPORT = /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^"')\s]+))\s*\)|"([^"]*)"|'([^']*)')/g;
+  var scan = function (n) {
+    if (n.tagName === 'LINK' && !n.hasAttribute('data-font-variant') && /\bstylesheet\b/i.test(n.rel)) { seen[n.href] = 1; add(n.href); }
+    else if (n.tagName === 'STYLE') { var css = (n.textContent || '').replace(/\/\*[\s\S]*?\*\//g, ''), m; while ((m = IMPORT.exec(css))) add((m[1] || m[2] || m[3] || m[4] || m[5] || '').trim()); }
+  };
+  var rescan = function () { Array.prototype.forEach.call(document.head.children, scan); };
+  /* head children as they arrive, and a mounted <style> whose text is replaced in place (the helmet runtime streams it) */
+  new MutationObserver(function (rs) { rs.forEach(function (r) { var t = r.target.nodeType === 3 ? r.target.parentNode : r.target; if (t && t.tagName === 'STYLE') scan(t); else if (t === document.head) r.addedNodes.forEach(scan); }); }).observe(document.head, { childList: true, subtree: true, characterData: true });
+  document.addEventListener('DOMContentLoaded', rescan);
+  rescan();
+})(function (h) { return (function lpt(e,t){let n="https://fonts.googleapis.com/css2?";if(typeof e!="string"||e.length>1024||e.slice(0,n.length)!==n)return[];let r=e.slice(n.length).split("&");if(r.some(i=>i.slice(0,5)==="text="))return[];let o=[];for(let i of r){if(i.slice(0,7)!=="family=")continue;let s=o.length+16,a=i.slice(7).replace(/%20| /g,"+"),l=a.indexOf(":"),c=l<0?a:a.slice(0,l);if(!/^[A-Za-z0-9][A-Za-z0-9+._-]{0,99}$/.test(c))continue;let u=[["0","400"]];if(l>=0){let m=a.indexOf("@",l),h=a.slice(l+1,m<0?l:m).split(","),g=h.indexOf("ital"),b=h.indexOf("wght");if(m<0||h.some(y=>y!=="ital"&&y!=="wght"))continue;u=[];for(let y of a.slice(m+1).split(";")){let v=y.split(","),w=[g<0?"0":v[g]??"",b<0?"400":v[b]??""];if(v.length!==h.length||!/^[01]$/.test(w[0])||!/^[1-9]\d{0,3}(?:\.\.[1-9]\d{0,3})?$/.test(w[1])){u=[];break}u.push(w)}if(u.length===0)continue}let d=u.map(m=>m[0]+","+m[1]),f=t!==void 0&&Object.prototype.hasOwnProperty.call(t,c.replace(/\+/g," ").toLowerCase())?t[c.replace(/\+/g," ").toLowerCase()]:void 0,p;if(f!==void 0){let m=(h,g)=>u.some(b=>b[0]===h&&g>=Number(b[1].split("..")[0])&&g<=Number(b[1].split("..").pop()));p=[];for(let h of f.italic?["0","1"]:["0"]){if(f.wght===void 0){for(let b of f.statics??[])m(h,b)||p.push(h+","+String(b));continue}let g=0;for(let b=f.wght[0];b<=f.wght[1]+100;b+=100){let y=b<=f.wght[1]&&!m(h,b);y&&g===0&&(g=b),!y&&g!==0&&(p.push(h+","+String(g)+(b-100>g?".."+String(b-100):"")),g=0)}}}else{let m=g=>Number(g[1].split("..").pop())>=600,h=u.filter(g=>g[0]==="0");p=h.map(g=>"1,"+g[1]).concat(h.some(m)?[]:["0,700"],u.some(m)?[]:["1,700"])}for(let m of p){let h=n+"family="+c+":ital,wght@"+m+"&display=swap";d.indexOf(m)<0&&o.indexOf(h)<0&&o.length<s&&o.push(h)}}return o})(h, {"inter":{"wght":[100,900],"italic":true},"roboto":{"wght":[100,900],"italic":true},"open sans":{"wght":[300,800],"italic":true},"lato":{"statics":[100,300,400,700,900],"italic":true},"montserrat":{"wght":[100,900],"italic":true},"poppins":{"statics":[100,200,300,400,500,600,700,800,900],"italic":true},"raleway":{"wght":[100,900],"italic":true},"nunito":{"wght":[200,1000],"italic":true},"playfair display":{"wght":[400,900],"italic":true},"merriweather":{"wght":[300,900],"italic":true},"work sans":{"wght":[100,900],"italic":true},"dm sans":{"wght":[100,1000],"italic":true},"manrope":{"wght":[200,800],"italic":false},"space grotesk":{"wght":[300,700],"italic":false},"lora":{"wght":[400,700],"italic":true},"bebas neue":{"statics":[400],"italic":false},"caveat":{"wght":[400,700],"italic":false}}); });</script>
+<script src="/_f/1791909415-2fab/artifact-type/dc-runtime.js"></script><style>x-dc{display:none!important}</style>
+<script>(function (s) { if (!window.React || !window.ReactDOM || typeof window.__dcUpdate !== 'function') { try { s = s && s.previousElementSibling; window.parent.postMessage({ __dc_boot_failed: 1, e: 'the artboard runtime did not load', u: s && s.getAttribute('src') }, '*'); } catch (e) {} } })(document.currentScript);</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Bricolage+Grotesque:opsz,wght@12..96,200..800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Jost:wght@100;200&amp;family=Nunito:wght@800;900&amp;family=Outfit:wght@100;200&amp;family=Plus+Jakarta+Sans:wght@800&amp;display=swap" data-dc-tpl="1"><style data-dc-tpl="2">
+body{margin:0}
+</style><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,400&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,500&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,600&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,100&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,200&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,700&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@1,700&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..700&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,1000&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@1,200..1000&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:ital,wght@0,700&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@1,800&amp;display=swap" data-font-variant=""><style data-dc-editor-style="">body:not([data-dc-editor-overlay-hidden]) [data-dc-editor-hover][data-dc-editor-hover-stroke]:not([data-dc-editor-selected]){filter:drop-shadow(0 0 calc(1*var(--dc-chrome-unit,1px)) color-mix(in srgb,#2a78d6 90%,transparent)) drop-shadow(0 0 calc(2*var(--dc-chrome-unit,1px)) color-mix(in srgb,#2a78d6 55%,transparent))!important;}body:not([data-dc-editor-overlay-hidden]):not([data-dc-editor-proxy="copy"]) [data-dc-editor-dragging],body:not([data-dc-editor-overlay-hidden]):not([data-dc-editor-proxy]) [data-dc-dragging],body[data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]{outline:calc(2*var(--dc-chrome-unit,1px)) solid #2a78d6!important;outline-offset:calc(-1*var(--dc-chrome-unit,1px))!important;opacity:0.55!important;}body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging],body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging],body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging]>*,body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging]>*{opacity:0!important;outline:none!important;}[data-dc-editor-drag-proxy],[data-dc-editor-drag-proxy] *{pointer-events:none!important;}body[data-dc-editor-on]:not([data-dc-editor-tool="interact"]) *{cursor:default!important;user-select:none!important;}body[data-dc-editor-on]:not([data-dc-editor-tool="interact"]) :not([data-dc-editor-overlay-root]):not([data-dc-editor-overlay-root] *){pointer-events:auto!important;transition:none!important;animation:none!important;}body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]),body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]){pointer-events:none!important;}body[data-dc-editor-move] :not([data-dc-editor-overlay-root]):not([data-dc-editor-overlay-root] *){pointer-events:auto!important;transition:none!important;animation-duration:0s!important;animation-delay:0s!important;}body[data-dc-editor-on][data-dc-editor-tool="rect"] *,body[data-dc-editor-on][data-dc-editor-tool="frame"] *,body[data-dc-editor-on][data-dc-editor-tool="grid"] *,body[data-dc-editor-on][data-dc-editor-tool="oval"] *,body[data-dc-editor-on][data-dc-editor-tool="arrow"] *,body[data-dc-editor-on][data-dc-editor-tool="line"] *{cursor:crosshair!important;}body[data-dc-editor-on][data-dc-editor-tool="text"] *{cursor:text!important;}body[data-dc-editor-on][data-dc-editor-tool="draw"] *{cursor:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2216%22%20height=%2216%22%20viewBox=%220%200%2016%2016%22%3E%3Cpath%20d=%22M2%2014l1-4%208-8a2.1%202.1%200%200%201%203%203l-8%208-4%201z%22%20fill=%22%23333%22%20stroke=%22%23fff%22%20stroke-width=%221%22/%3E%3C/svg%3E') 1 15, crosshair!important;}body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent],body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent] *{cursor:grab!important;}body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent]:active,body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent]:active *{cursor:grabbing!important;}body[data-dc-editor-on] [data-dc-editor-editing][contenteditable][contenteditable],body[data-dc-editor-on] [data-dc-editor-editing][contenteditable][contenteditable] *,body[data-dc-editor-on] [data-dc-editor-svg-editing]{cursor:text!important;}body[data-dc-editor-on] [data-dc-editor-editing="import"]{outline:none!important;}html:not([data-dc-canvas]):has(body[data-dc-editor-on]:not([data-dc-capturing]) .sc-host){background:var(--dc-editor-backdrop,#ededeb);}html:not([data-dc-canvas]) body[data-dc-editor-on]:not([data-dc-capturing]):has(.sc-host){background:var(--dc-editor-backdrop,#ededeb);}html:not([data-dc-canvas]) body[data-dc-editor-on] .sc-host:not(.sc-host .sc-host){min-height:calc(100vh - var(--dc-editor-host-vpad,0px));}html:not([data-dc-canvas]) body[data-dc-editor-on]:not([data-dc-capturing]) .sc-host:not(.sc-host .sc-host){background:var(--dc-editor-host-bg,#fff);}html[data-dc-frameless],html[data-dc-frameless] body[data-dc-editor-on],html[data-dc-frameless] body[data-dc-editor-on] .sc-host:not(.sc-host .sc-host){background:transparent!important;min-height:0!important;}html:has(body[data-dc-capturing]),body[data-dc-capturing]{transition:none!important;}html[data-dc-canvas]{overflow:hidden;}html[data-dc-canvas] body[data-dc-editor-on] .sc-host:not(.sc-host .sc-host)::before{content:"";position:absolute;left:-100000px;top:-100000px;width:200000px;height:200000px;pointer-events:none;background:repeating-linear-gradient(45deg,var(--dc-editor-hatch-ink,rgba(0,0,0,.05)) 0 8px,transparent 8px 16px);clip-path:polygon(0 0,100% 0,100% 50%,50% 50%,50% 100%,0 100%);}</style></head>
+<body>
+<div id="dc-root"><div class="sc-host" data-sc-name="ClockLab"><div data-dc-tpl="3" style="position: relative; width: 1440px; height: 1000px; overflow: hidden; background: rgb(13, 15, 17); color: rgb(237, 235, 230); font-family: Nunito, system-ui, sans-serif;">
+  <img data-dc-tpl="4" src="/_blob/1599971be0a3adc155bba9975162d875" alt="" aria-hidden="true" style="position: absolute; inset: 0px; width: 100%; height: 100%; object-fit: cover; filter: saturate(0.85);">
+  <div data-dc-tpl="5" aria-hidden="true" style="position: absolute; inset: 0px; background: rgba(13, 15, 17, 0.6);"></div>
+
+  <div data-dc-tpl="6" style="position: relative; box-sizing: border-box; height: 100%; padding: 32px; display: grid; grid-template-columns: repeat(3, minmax(0px, 1fr)); grid-template-rows: repeat(2, minmax(0px, 1fr)); gap: 20px;">
+
+    <section data-dc-tpl="7" aria-label="Option E" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.14);">
+      <p data-dc-tpl="8" style="position: absolute; top: 16px; left: 20px; margin: 0px; font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(179, 184, 192);">E · Fichas de cristal (tipo flip)</p>
+      <div data-dc-tpl="9" style="display: flex; align-items: center; gap: 8px;">
+        
+          <span data-dc-tpl="11" style="position: relative; width: 74px; height: 104px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: rgba(255, 255, 255, 0.28) 0px 1px 0px inset, rgba(0, 0, 0, 0.4) 0px 12px 28px; backdrop-filter: blur(16px); font: 800 76px / 1 Nunito, sans-serif; color: rgb(255, 255, 255);">
+            <span class="sc-interp">1</span><span data-dc-tpl="12" aria-hidden="true" style="position: absolute; left: 0px; right: 0px; top: 50%; height: 1px; background: rgba(0, 0, 0, 0.35); box-shadow: rgba(255, 255, 255, 0.08) 0px 1px 0px;"></span>
+          </span>
+        
+          <span data-dc-tpl="11" style="position: relative; width: 74px; height: 104px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: rgba(255, 255, 255, 0.28) 0px 1px 0px inset, rgba(0, 0, 0, 0.4) 0px 12px 28px; backdrop-filter: blur(16px); font: 800 76px / 1 Nunito, sans-serif; color: rgb(255, 255, 255);">
+            <span class="sc-interp">8</span><span data-dc-tpl="12" aria-hidden="true" style="position: absolute; left: 0px; right: 0px; top: 50%; height: 1px; background: rgba(0, 0, 0, 0.35); box-shadow: rgba(255, 255, 255, 0.08) 0px 1px 0px;"></span>
+          </span>
+        
+        <span data-dc-tpl="13" aria-hidden="true" style="display: flex; flex-direction: column; gap: 14px; padding: 0px 4px; opacity: 0.35;"><span data-dc-tpl="14" style="width: 10px; height: 10px; border-radius: 50%; background: rgb(240, 176, 74);"></span><span data-dc-tpl="15" style="width: 10px; height: 10px; border-radius: 50%; background: rgb(240, 176, 74);"></span></span>
+        
+          <span data-dc-tpl="17" style="position: relative; width: 74px; height: 104px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: rgba(255, 255, 255, 0.28) 0px 1px 0px inset, rgba(0, 0, 0, 0.4) 0px 12px 28px; backdrop-filter: blur(16px); font: 800 76px / 1 Nunito, sans-serif; color: rgb(255, 255, 255);">
+            <span class="sc-interp">4</span><span data-dc-tpl="18" aria-hidden="true" style="position: absolute; left: 0px; right: 0px; top: 50%; height: 1px; background: rgba(0, 0, 0, 0.35); box-shadow: rgba(255, 255, 255, 0.08) 0px 1px 0px;"></span>
+          </span>
+        
+          <span data-dc-tpl="17" style="position: relative; width: 74px; height: 104px; display: grid; place-items: center; border-radius: 16px; background: linear-gradient(rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 50%, rgba(255, 255, 255, 0.1) 100%); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: rgba(255, 255, 255, 0.28) 0px 1px 0px inset, rgba(0, 0, 0, 0.4) 0px 12px 28px; backdrop-filter: blur(16px); font: 800 76px / 1 Nunito, sans-serif; color: rgb(255, 255, 255);">
+            <span class="sc-interp">3</span><span data-dc-tpl="18" aria-hidden="true" style="position: absolute; left: 0px; right: 0px; top: 50%; height: 1px; background: rgba(0, 0, 0, 0.35); box-shadow: rgba(255, 255, 255, 0.08) 0px 1px 0px;"></span>
+          </span>
+        
+      </div>
+      <p data-dc-tpl="19" style="margin: 0px; display: flex; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.16em; text-transform: uppercase;"><span data-dc-tpl="20" style="padding: 4px 10px; border-radius: 999px; background: rgb(240, 176, 74); color: rgb(23, 17, 10);"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="21" style="padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.5); color: rgb(237, 235, 230);"><span class="sc-interp">13 October</span></span></p>
+    </section>
+
+    <section data-dc-tpl="22" aria-label="Option F" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.14);">
+      <p data-dc-tpl="23" style="position: absolute; top: 16px; left: 20px; margin: 0px; font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(179, 184, 192);">F · Outfit Thin — cifras de cristal esmerilado</p>
+      <p data-dc-tpl="24" style="margin: 0px; font: 200 150px / 0.9 Outfit, sans-serif; letter-spacing: -0.04em; color: rgba(255, 255, 255, 0.16); -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.75); text-shadow: rgba(255, 255, 255, 0.28) 0px 0px 24px, rgba(124, 196, 255, 0.18) 0px 0px 60px;"><span class="sc-interp">18</span><span data-dc-tpl="25" style="color: rgba(240, 176, 74, 0.5); -webkit-text-stroke-color: rgb(240, 176, 74); opacity: 0.35;">:</span><span class="sc-interp">43</span></p>
+      <p data-dc-tpl="26" style="margin: 0px; display: flex; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.16em; text-transform: uppercase;"><span data-dc-tpl="27" style="padding: 4px 10px; border-radius: 999px; background: rgb(240, 176, 74); color: rgb(23, 17, 10);"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="28" style="padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.5); color: rgb(237, 235, 230);"><span class="sc-interp">13 October</span></span></p>
+    </section>
+
+    <section data-dc-tpl="29" aria-label="Option G" style="position: relative; display: flex; align-items: center; justify-content: center; gap: 26px; border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.14);">
+      <p data-dc-tpl="30" style="position: absolute; top: 16px; left: 20px; margin: 0px; font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(179, 184, 192);">G · Anton apilado — póster vertical</p>
+      <div data-dc-tpl="31" style="display: flex; flex-direction: column; align-items: flex-end; font: 400 148px / 0.8 Anton, sans-serif; letter-spacing: 0px;">
+        <span data-dc-tpl="32" style="color: rgba(255, 255, 255, 0.16); -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.8); text-shadow: rgba(255, 255, 255, 0.28) 0px 0px 24px, rgba(124, 196, 255, 0.18) 0px 0px 60px;"><span class="sc-interp">18</span></span>
+        <span data-dc-tpl="33" style="color: transparent; -webkit-text-stroke: 2px rgb(240, 176, 74);"><span class="sc-interp">43</span></span>
+      </div>
+      <p data-dc-tpl="34" style="margin: 0px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.16em; text-transform: uppercase;"><span data-dc-tpl="35" style="padding: 4px 10px; border-radius: 999px; background: rgb(240, 176, 74); color: rgb(23, 17, 10);"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="36" style="padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.5); color: rgb(237, 235, 230);"><span class="sc-interp">13 October</span></span></p>
+    </section>
+
+    <section data-dc-tpl="37" aria-label="Option H" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.14);">
+      <p data-dc-tpl="38" style="position: absolute; top: 16px; left: 20px; margin: 0px; font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(179, 184, 192);">H · Jakarta ExtraBold — degradado del fondo</p>
+      <p data-dc-tpl="39" style="margin: 0px; font: 800 132px / 0.9 &quot;Plus Jakarta Sans&quot;, sans-serif; letter-spacing: -0.05em; background: linear-gradient(115deg, rgb(124, 196, 255) 0%, rgb(169, 139, 255) 38%, rgb(255, 138, 155) 68%, rgb(240, 176, 74) 100%) text; color: transparent; -webkit-text-fill-color: transparent; filter: drop-shadow(rgba(169, 139, 255, 0.35) 0px 10px 30px);"><span class="sc-interp">18</span>:<span class="sc-interp">43</span></p>
+      <p data-dc-tpl="40" style="margin: 0px; display: flex; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.16em; text-transform: uppercase;"><span data-dc-tpl="41" style="padding: 4px 10px; border-radius: 999px; background: rgb(240, 176, 74); color: rgb(23, 17, 10);"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="42" style="padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.5); color: rgb(237, 235, 230);"><span class="sc-interp">13 October</span></span></p>
+    </section>
+
+    <section data-dc-tpl="43" aria-label="Option I" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.14);">
+      <p data-dc-tpl="44" style="position: absolute; top: 16px; left: 20px; margin: 0px; font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(179, 184, 192);">I · Jost Thin — pantalla de bloqueo</p>
+      <p data-dc-tpl="45" style="margin: 0px; display: flex; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.16em; text-transform: uppercase;"><span data-dc-tpl="46" style="padding: 4px 10px; border-radius: 999px; background: rgb(240, 176, 74); color: rgb(23, 17, 10);"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="47" style="padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.5); color: rgb(237, 235, 230);"><span class="sc-interp">13 October</span></span></p>
+      <p data-dc-tpl="48" style="margin: 0px; font: 100 172px / 0.85 Jost, sans-serif; letter-spacing: -0.03em; color: rgb(255, 255, 255); text-shadow: rgba(0, 0, 0, 0.25) 0px 2px 4px, rgba(0, 0, 0, 0.4) 0px 18px 48px;"><span class="sc-interp">18</span><span data-dc-tpl="49" style="opacity: 0.35;">:</span><span class="sc-interp">43</span></p>
+    </section>
+
+    <section data-dc-tpl="50" aria-label="Option J" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; border-radius: 24px; border: 1px dashed rgba(255, 255, 255, 0.14);">
+      <p data-dc-tpl="51" style="position: absolute; top: 16px; left: 20px; margin: 0px; font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(179, 184, 192);">J · Bricolage — contraste de pesos</p>
+      <p data-dc-tpl="52" style="margin: 0px; display: flex; align-items: baseline; font-family: &quot;Bricolage Grotesque&quot;, sans-serif; font-size: 148px; line-height: 0.88; letter-spacing: -0.05em; text-shadow: rgba(0, 0, 0, 0.45) 0px 12px 34px;">
+        <span data-dc-tpl="53" style="font-weight: 800; color: rgb(255, 255, 255);"><span class="sc-interp">18</span></span><span data-dc-tpl="54" style="font-weight: 200; color: rgb(240, 176, 74); opacity: 0.35; padding: 0px 0.02em;">:</span><span data-dc-tpl="55" style="font-weight: 200; color: rgba(255, 255, 255, 0.82);"><span class="sc-interp">43</span></span>
+      </p>
+      <p data-dc-tpl="56" style="margin: 0px; display: flex; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.16em; text-transform: uppercase;"><span data-dc-tpl="57" style="padding: 4px 10px; border-radius: 999px; background: rgb(240, 176, 74); color: rgb(23, 17, 10);"><span class="sc-interp">Tuesday</span></span><span data-dc-tpl="58" style="padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.5); color: rgb(237, 235, 230);"><span class="sc-interp">13 October</span></span></p>
+    </section>
+
+  </div></div></div></div>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { now: new Date() };
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => this.setState({ now: new Date() }), 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+  renderVals() {
+    const d = this.state.now;
+    const pad = (n) => String(n).padStart(2, '0');
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return {
+      hh, mm,
+      hDigits: hh.split(''), mDigits: mm.split(''),
+      colon: d.getSeconds() % 2 === 0 ? 1 : 0.35,
+      weekday: days[d.getDay()],
+      dayMonth: d.getDate() + ' ' + months[d.getMonth()]
+    };
+  }
+}
+</script>
+
+
+</body></html>

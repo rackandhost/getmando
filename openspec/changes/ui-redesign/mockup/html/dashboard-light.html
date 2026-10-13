@@ -1,0 +1,1100 @@
+<!DOCTYPE html><html lang="en" style="touch-action: none; overscroll-behavior: none; --dc-chrome-unit: 6.929577464788732px;"><head><style>
+    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  </style><script>
+(function () {
+  /* WebRTC is an egress channel the CSP cannot close, and Frame's runtime
+   * removes its constructors in the ARTIFACT realm only; this nested realm
+   * gets the same treatment so an artboard starts from the platform's
+   * baseline. (A page that goes looking can still find a constructor in a
+   * fresh child realm - the residual Frame accepts for every artifact.) */
+  try { delete window.RTCPeerConnection; } catch (e) {}
+  try { delete window.webkitRTCPeerConnection; } catch (e) {}
+  try { window.RTCPeerConnection = undefined; } catch (e) {}
+  try { window.webkitRTCPeerConnection = undefined; } catch (e) {}
+  var P = window.parent;
+  if (!P || P === window) return;
+  /* Liveness handshake (previewGuard.ts): mint a channel, keep one end
+   * in this closure, hand the other to the host before any authored
+   * byte runs. The port is a capability, not text - it cannot be read
+   * out of the document or serialized into a data:/blob: replacement,
+   * and it dies with this realm - so a pong is proof the document the
+   * HOST assembled is the one alive in the frame. The host binds the
+   * first hello per generation; nothing authored runs earlier, so this
+   * one always wins that race. */
+  try {
+    /* The pong path is UNCURRIED at t=0: every native it touches is
+     * captured as a value before any authored byte runs, and invoked
+     * through a captured Reflect.apply - authored prototype poisoning
+     * of MessagePort.prototype.postMessage or a trapping
+     * MessageEvent.prototype.data getter must never see this port or
+     * steal a send path. And every pong ECHOES the ping's nonce: a pong
+     * is only proof of life for the ping that asked, so stale pongs
+     * queued before a navigation prove nothing about the document that
+     * replaced this one. */
+    var applyH = Reflect.apply;
+    var getData = Object.getOwnPropertyDescriptor(MessageEvent.prototype, 'data').get;
+    var hasOwnH = Object.prototype.hasOwnProperty;
+    var ch = new MessageChannel();
+    var portPost = MessagePort.prototype.postMessage.bind(ch.port1);
+    ch.port1.onmessage = function (ev) {
+      var d = null;
+      try { d = applyH(getData, ev, []); } catch (e) { return; }
+      if (d == null || typeof d !== 'object') return;
+      if (!applyH(hasOwnH, d, ['__om_ping'])) return;
+      try { portPost({ __om_pong: d.__om_ping }); } catch (e) {}
+    };
+    P.postMessage({ __om_hello: 1 }, '*', [ch.port2]);
+  } catch (e) {}
+  /* Self-navigation tripwire: pagehide fires while THIS document is
+   * being torn down. The message is DELIVERED after the document is
+   * destroyed, so it arrives with e.source === null - the host accepts
+   * exactly that shape (a live-source forgery of it only blanks the
+   * forger's own preview). It is one tripwire, not the verdict: the
+   * port probe above is what decides, on every load. The listener is
+   * an unreachable closure - authored code has no reference to remove
+   * it, and P is captured at t=0 before anything authored runs. */
+  try {
+    window.addEventListener('pagehide', function () {
+      try { P.postMessage({ __om_nav_away: 1 }, '*'); } catch (e) {}
+    });
+  } catch (e) {}
+  /* Escape relay (np): while an artboard plays (full-window or in place)
+   * keyboard focus lives in HERE, so the host cannot hear Esc - relay
+   * it. Advisory only: the host acts on it solely to LEAVE Play, so a
+   * forged relay can do nothing worse than end the sender's own play.
+   * Capture phase, so authored handlers that stopPropagation still let
+   * it through. */
+  try {
+    window.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape' || ev.repeat) return;
+      try { P.postMessage({ __om_escape: 1 }, '*'); } catch (e) {}
+    }, true);
+  } catch (e) {}
+  /* Step relay: ArrowLeft / ArrowRight for the host's full-window Previous / Next, which cannot hear keys pressed in here. Not sent: a chord,
+   * a repeat, a script's event, a key for a field, arrow-key control or sideways-scrolling page, or one the design cancelled. */
+  try {
+    var ARROW_OWNER = "input,textarea,select,video,audio,canvas,[role=application],[role=scrollbar],[aria-roledescription=carousel],[aria-roledescription=slide],[role=textbox],[role=searchbox],[role=combobox],[role=spinbutton],[role=slider],[role=radiogroup],[role=radio],[role=tablist],[role=tab],[role=toolbar],[role=menu],[role=menubar],[role=menuitem],[role=menuitemradio],[role=menuitemcheckbox],[role=listbox],[role=option],[role=tree],[role=treegrid],[role=grid]";
+    var afterDispatch = window.setTimeout.bind(window);
+    var styleOf = window.getComputedStyle.bind(window);
+    /* the page itself scrolls sideways (by more than a stray scrollbar's width) and is not clipped there */
+    var pageScrollsSideways = function () {
+      var se = document.scrollingElement;
+      if (!se || se.scrollWidth - se.clientWidth <= 24) return false;
+      var clip = /hidden|clip/;
+      var hx = styleOf(document.documentElement).overflowX;
+      if (clip.test(hx)) return false;
+      return /auto|scroll/.test(hx) || !(document.body && clip.test(styleOf(document.body).overflowX));
+    };
+    /* a clicked box that scrolls sideways takes the arrows without having focus: remember where the last press landed */
+    var lastPress = null;
+    window.addEventListener('pointerdown', function (ev) { lastPress = (ev.composedPath && ev.composedPath()[0]) || ev.target; }, true);
+    var ownsArrows = function (ev) {
+      var path = ev.composedPath ? ev.composedPath() : [ev.target];
+      if (ev.target === document.body || ev.target === document.documentElement) {
+        for (var p = lastPress; p && p.nodeType === 1 && p.isConnected; p = p.parentElement || (p.parentNode && p.parentNode.host) || null) path.push(p);
+      }
+      for (var i = 0; i < path.length; i += 1) {
+        var n = path[i];
+        if (!n || n.nodeType !== 1) continue;
+        if (n.isContentEditable || (n.matches && n.matches(ARROW_OWNER))) return true;
+        /* a box in the design that scrolls sideways keeps its arrows too */
+        if (n.scrollWidth - n.clientWidth > 24 && /auto|scroll/.test(styleOf(n).overflowX)) return true;
+      }
+      return false;
+    };
+    window.addEventListener('keydown', function (ev) {
+      if ((ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') || ev.repeat || !ev.isTrusted) return;
+      if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey || ownsArrows(ev)) return;
+      if (pageScrollsSideways()) return;
+      var dir = ev.key === 'ArrowRight' ? 1 : -1;
+      afterDispatch(function () {
+        if (ev.defaultPrevented) return;
+        try { P.postMessage({ __om_step: dir }, '*'); } catch (e) {}
+      }, 0);
+    }, false);
+  } catch (e) {}
+  /* Link relay (advisory, not hardened). Any navigation here (even "#x", resolved off <base>) trips the
+   * host's guard, so every anchor click is cancelled at capture - invisibly: the design (and the edit picker)
+   * still read defaultPrevented as false, and their own preventDefault() means hands off. Otherwise, once the
+   * click has dispatched: "#id" scrolls the frame to its target, external http(s) is handed to the host, and a
+   * project path (href="Deck.dc.html") is offered to the host, which opens it only if it names an artboard. */
+  try {
+    var compatPage = window.__omEditor === 1; /* a migrated page at its own URL (buildCompatDoc): links name pages by their project path, as its shim does */
+    /* the project root (/_f/{ver}/project/) the runner stamped ahead of this script: a link is named relative to IT, so deck/a.html's
+     * "b.html" reads deck/b.html and its "../index.html" reads index.html; read once, here, before anything authored runs */
+    var projectRoot = compatPage && typeof window.__omProjectRoot === 'string' ? window.__omProjectRoot : null;
+    var LINK_SEL = 'a[*|href],area[href]'; /* *| also catches SVG xlink:href */
+    try { document.createElement('a').matches(LINK_SEL); } catch (e) { LINK_SEL = 'a[href],area[href]'; }
+    /* A native control between the click and the link owns the click: in current engines these act without the link navigating... */
+    var CONTROL_KEEPS_CLICK = 'input[type=checkbox],input[type=radio],input[type=file],input[type=color],summary,label,video[controls],audio[controls]';
+    /* ...while these (buttons, text/number/date/range inputs, selects) would still navigate it, so the navigation is cancelled but nothing opens. */
+    var CONTROL_SEL = CONTROL_KEEPS_CLICK + ',button,input,select,textarea';
+    /* a label counts only when it labels something, a summary only as its details' first summary: otherwise the link still navigates */
+    var ownsClick = function (n) {
+      if (n.localName === 'label') return !!n.control;
+      if (n.localName !== 'summary') return true;
+      var p = n.parentNode;
+      return !!p && p.localName === 'details' && p.querySelector(':scope > summary') === n;
+    };
+    var hit = function (ev) {
+      var path = ev.composedPath ? ev.composedPath() : [ev.target];
+      var control = null;
+      for (var i = 0; i < path.length; i += 1) {
+        var n = path[i];
+        if (!n || n.nodeType !== 1 || !n.matches) continue;
+        if (n.matches(LINK_SEL)) return { a: n, control: control };
+        if (control == null && n.matches(CONTROL_SEL) && ownsClick(n)) control = n;
+      }
+      return null;
+    };
+    var follow = function (a, aux) {
+      var raw = String(a.getAttribute('href') || '').trim();
+      if (raw === '') return; /* SVG xlink-only anchors, empty href: cancelled above, inert here */
+      if (raw.charAt(0) === '#') {
+        if (aux || raw === '#') return; /* a middle click never scrolls; a bare "#" is the "script owns it" idiom: inert */
+        var id = raw.slice(1);
+        try { id = decodeURIComponent(id); } catch (e) {}
+        var t = document.getElementById(id) || document.getElementsByName(id)[0];
+        /* in-frame scroll only: a fragment navigation or scrollIntoView can also scroll the host's containers */
+        try {
+          if (t) window.scrollBy(0, t.getBoundingClientRect().top);
+          else if (id.toLowerCase() === 'top') window.scrollTo(0, 0);
+        } catch (e) {}
+        return;
+      }
+      var url = null;
+      try { url = new URL(raw, document.baseURI); } catch (e) { return; }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+      var own = false;
+      try { own = url.origin === new URL(document.baseURI).origin; } catch (e) {}
+      if (own) {
+        if (aux || a.hasAttribute('download')) return; /* a same-origin download names no artboard (in compat mode the page shim saves it) */
+        var dir = compatPage ? (projectRoot !== null ? projectRoot : new URL('.', document.baseURI).pathname) : null;
+        if (dir !== null && url.pathname.indexOf(dir) !== 0) return; /* out of the project: not a page of it */
+        var rel = dir !== null ? url.pathname.slice(dir.length) : url.pathname.indexOf('/appifact/') === 0 ? url.pathname.slice(10) : url.pathname.slice(1);
+        try { rel = decodeURIComponent(rel); } catch (e) {}
+        try { P.postMessage({ __om_open: rel }, '*'); } catch (e) {}
+        return;
+      }
+      try { P.postMessage({ __om_link: url.href }, '*'); } catch (e) {}
+    };
+    var onLink = function (ev) {
+      var aux = ev.type === 'auxclick';
+      if (aux && ev.button !== 1) return;
+      var h = hit(ev);
+      if (h == null) return;
+      var a = h.a;
+      /* text being edited around the click (asked of the nearest HTML element: SVG nodes have no isContentEditable) */
+      var host = ev.target;
+      while (host && host.isContentEditable === undefined) host = host.parentNode;
+      var editing = !!(host && host.isContentEditable);
+      /* untouched: a control that keeps its click (any control, for a middle click), and a middle click in text being edited (paste) */
+      if ((h.control != null && (aux || h.control.matches(CONTROL_KEEPS_CLICK))) || (aux && editing)) return;
+      var handled = false;
+      var cancel = ev.preventDefault;
+      var claim = function () { handled = true; cancel.call(ev); };
+      try {
+        Object.defineProperty(ev, 'preventDefault', { value: claim, writable: true, configurable: true });
+        Object.defineProperty(ev, 'defaultPrevented', { get: function () { return handled; }, configurable: true });
+        Object.defineProperty(ev, 'returnValue', { get: function () { return !handled; }, set: function (v) { if (v === false) claim(); }, configurable: true });
+      } catch (e) {}
+      cancel.call(ev);
+      /* cancelled, nothing opens: a control the link would navigate past, a link in text being edited,
+       * and a middle button arriving as 'click' (auxclick carries the one relay for it) */
+      if (h.control != null || editing || (!aux && ev.button === 1)) return;
+      setTimeout(function () { if (!handled) follow(a, aux); }, 0);
+    };
+    window.addEventListener('click', onLink, true);
+    window.addEventListener('auxclick', onLink, true);
+  } catch (e) {}
+  var serialise = function (v) {
+    try { return JSON.stringify(v); } catch (e) { return JSON.stringify(String(v)); }
+  };
+  window.addEventListener('message', function (e) {
+    if (e.source !== P) return;
+    var d = e.data;
+    if (!d || d.__om_eval !== 1) return;
+    var reply = function (p) {
+      p.__om_eval_r = 1;
+      p.id = d.id;
+      e.source.postMessage(p, '*');
+    };
+    try {
+      var r = (0, eval)(d.code);
+      if (r && typeof r.then === 'function') {
+        r.then(
+          function (v) { reply({ ok: 1, v: serialise(v) }); },
+          function (err) { reply({ ok: 0, e: String(err) }); }
+        );
+      } else {
+        reply({ ok: 1, v: serialise(r) });
+      }
+    } catch (err) {
+      reply({ ok: 0, e: String(err) });
+    }
+  });
+})();
+</script><script>
+(function () {
+  /* Viewport guard */
+  var doc = document;
+  var align = function (lo, hi, cLo, cHi, mode) {
+    if (mode === 'start') return lo - cLo;
+    if (mode === 'end') return hi - cHi;
+    if (mode === 'center') return (lo + hi) / 2 - (cLo + cHi) / 2;
+    if ((lo >= cLo && hi <= cHi) || (lo < cLo && hi > cHi)) return 0; /* fully visible, or covering */
+    /* center-if-needed centres only a fully hidden target; a partly visible one moves to the nearest edge */
+    if (mode === 'center-if-needed' && (hi <= cLo || lo >= cHi)) return (lo + hi) / 2 - (cLo + cHi) / 2;
+    var fits = hi - lo <= cHi - cLo;
+    if (lo < cLo) return fits ? lo - cLo : hi - cHi;
+    return fits ? hi - cHi : lo - cLo;
+  };
+  var styleOf = function (n) {
+    try { return getComputedStyle(n); } catch (e) { return null; }
+  };
+  var set = function (v) { return !!v && v !== 'none' && v !== 'auto'; };
+  /* transform-like properties make a box the containing block of its absolute AND fixed descendants */
+  var containsFixed = function (cs) {
+    return set(cs.transform) || set(cs.translate) || set(cs.rotate) || set(cs.scale) || set(cs.perspective) || set(cs.filter) ||
+      set(cs.backdropFilter) || cs.transformStyle === 'preserve-3d' || /layout|paint|strict|content/.test(cs.contain || '') ||
+      /(^|,)\s*(transform|translate|rotate|scale|perspective|filter|backdrop-filter)\s*(,|$)/.test(cs.willChange || '');
+  };
+  var scrolls = function (n, cs) {
+    var v = cs.overflow + ' ' + cs.overflowX + ' ' + cs.overflowY;
+    return /auto|scroll|hidden/.test(v) && (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth);
+  };
+  var up = function (n) {
+    if (n.assignedSlot) return n.assignedSlot;
+    var p = n.parentNode;
+    return p && p.nodeType === 11 && p.host ? p.host : p;
+  };
+  /* Reveal el inside this document only: each scrolling ancestor, then the frame's own viewport. Never the parent's. */
+  var reveal = function (el, block, inline, smooth) {
+    if (!el || typeof el.getClientRects !== 'function' || el.getClientRects().length === 0) return; /* no box: nothing to reveal */
+    var d = el.ownerDocument || doc;
+    var root = d.scrollingElement || d.documentElement;
+    /* Only boxes in el's containing-block chain can move it: an absolute box skips static ancestors up to a positioned or
+     * transform-like one; a fixed box skips everything up to a transform-like one (none: not even the viewport moves it). */
+    var es = styleOf(el);
+    var pos = (es && es.position) || 'static';
+    var seekAbs = pos === 'absolute', seekFixed = pos === 'fixed';
+    for (var n = up(el); n && n !== root && n.nodeType === 1; n = up(n)) {
+      var cs = styleOf(n);
+      if (!cs) continue;
+      pos = cs.position || 'static';
+      if (seekFixed ? !containsFixed(cs) : seekAbs && pos === 'static' && !containsFixed(cs)) continue;
+      seekAbs = pos === 'absolute';
+      seekFixed = pos === 'fixed';
+      if (!scrolls(n, cs)) continue;
+      var r = el.getBoundingClientRect();
+      var c = n.getBoundingClientRect();
+      var cTop = c.top + n.clientTop, cLeft = c.left + n.clientLeft;
+      var dy = align(r.top, r.bottom, cTop, cTop + n.clientHeight, block);
+      var dx = align(r.left, r.right, cLeft, cLeft + n.clientWidth, inline);
+      if (!dx && !dy) continue;
+      /* instant even under CSS scroll-behavior:smooth: the next step must read the settled position ('smooth' applies to the viewport step) */
+      if (typeof n.scrollTo === 'function') n.scrollTo({ left: n.scrollLeft + dx, top: n.scrollTop + dy, behavior: 'instant' });
+      else { n.scrollTop += dy; n.scrollLeft += dx; }
+    }
+    if (seekFixed) return;
+    var rr = el.getBoundingClientRect();
+    var vw = (root && root.clientWidth) || window.innerWidth, vh = (root && root.clientHeight) || window.innerHeight;
+    var wy = align(rr.top, rr.bottom, 0, vh, block);
+    var wx = align(rr.left, rr.right, 0, vw, inline);
+    if (wx || wy) window.scrollBy({ left: wx, top: wy, behavior: smooth ? 'smooth' : 'auto' });
+  };
+  var deepActive = function (el, d) {
+    var r = el.getRootNode ? el.getRootNode() : d; /* el's own (possibly closed) shadow root sees its activeElement */
+    var a = (r && 'activeElement' in r ? r : d).activeElement;
+    while (a && a.shadowRoot && a.shadowRoot.activeElement) a = a.shadowRoot.activeElement;
+    return a;
+  };
+  var within = function (a, el) {
+    for (var n = a; n; n = up(n)) if (n === el) return true;
+    return false;
+  };
+  var guardFocus = function (proto) {
+    if (!proto || typeof proto.focus !== 'function') return;
+    var native = proto.focus;
+    /* reveal only what actually took focus (el, or its delegate inside it), and only if focus moved - as the native does */
+    proto.focus = function focus(o) {
+      var d = this.ownerDocument || doc;
+      var before = deepActive(this, d);
+      native.call(this, o && o.focusVisible !== undefined ? { preventScroll: true, focusVisible: o.focusVisible } : { preventScroll: true });
+      if (o && o.preventScroll) return;
+      try { var a = deepActive(this, d); if (a && a !== before && within(a, this)) reveal(a, 'center-if-needed', 'center-if-needed', false); } catch (e) {}
+    };
+  };
+  guardFocus(window.HTMLElement && window.HTMLElement.prototype);
+  guardFocus(window.SVGElement && window.SVGElement.prototype);
+  guardFocus(window.MathMLElement && window.MathMLElement.prototype);
+  var E = window.Element;
+  if (E) {
+    E.prototype.scrollIntoView = function scrollIntoView(arg) {
+      var dict = arg == null || typeof arg === 'object';
+      var o = (dict && arg) || {};
+      var block = dict ? o.block || 'start' : arg ? 'start' : 'end';
+      try { reveal(this, block, o.inline || 'nearest', o.behavior === 'smooth'); } catch (e) {}
+    };
+    E.prototype.scrollIntoViewIfNeeded = function scrollIntoViewIfNeeded(center) {
+      var mode = center === undefined || center ? 'center-if-needed' : 'nearest';
+      try { reveal(this, mode, mode, false); } catch (e) {}
+    };
+  }
+})();
+</script><script>
+(function () {
+  var PREFIX = 'page:';
+  var memory = function () {
+    var m = Object.create(null);
+    return {
+      getItem: function (k) { return k in m ? m[k] : null; },
+      setItem: function (k, v) { m[k] = String(v); },
+      removeItem: function (k) { delete m[k]; },
+      key: function (i) { var ks = Object.keys(m); i = Math.floor(Number(i)) || 0; return i >= 0 && i < ks.length ? ks[i] : null; },
+      get length() { return Object.keys(m).length; }
+    };
+  };
+  var scope = function (real) {
+    var keys = function () {
+      var out = [];
+      for (var i = 0, n = real.length; i < n; i++) { var k = real.key(i); if (k !== null && k.indexOf(PREFIX) === 0) out.push(k.slice(PREFIX.length)); }
+      return out;
+    };
+    var api = {
+      getItem: function (k) { return real.getItem(PREFIX + String(k)); },
+      setItem: function (k, v) { real.setItem(PREFIX + String(k), String(v)); },
+      removeItem: function (k) { real.removeItem(PREFIX + String(k)); },
+      clear: function () { keys().forEach(function (k) { real.removeItem(PREFIX + k); }); },
+      key: function (i) { var ks = keys(); i = Math.floor(Number(i)) || 0; return i >= 0 && i < ks.length ? ks[i] : null; },
+      get length() { return keys().length; }
+    };
+    if (typeof Proxy !== 'function') return api;
+    var own = function (p) { return typeof p === 'string' && !(p in api) && p !== 'length'; };
+    return new Proxy(api, {
+      get: function (t, p) { if (p === 'length') return keys().length; if (p in api) return api[p]; if (!own(p)) return undefined; var v = real.getItem(PREFIX + p); return v === null ? undefined : v; },
+      set: function (t, p, v) { if (own(p)) real.setItem(PREFIX + p, String(v)); return true; },
+      deleteProperty: function (t, p) { if (own(p)) real.removeItem(PREFIX + p); return true; },
+      has: function (t, p) { return p in api || p === 'length' || (own(p) && real.getItem(PREFIX + p) !== null); },
+      ownKeys: function () { return keys(); },
+      getOwnPropertyDescriptor: function (t, p) { if (!own(p)) return undefined; var v = real.getItem(PREFIX + p); return v === null ? undefined : { value: v, writable: true, enumerable: true, configurable: true }; }
+    });
+  };
+  var natives = {};
+  var views = {};
+  ['localStorage', 'sessionStorage'].forEach(function (n) {
+    var real = null;
+    try { real = window[n]; } catch (e) { real = null; }
+    if (!real || typeof real.getItem !== 'function') real = memory();
+    natives[n] = real;
+    views[n] = scope(real);
+    try { Object.defineProperty(window, n, { value: views[n], configurable: true }); } catch (e) {}
+  });
+  /* 'storage' events, the same view: a write to the namespace (another artboard, another tab) reaches the page's listeners
+   * with its own key and the scoped store as storageArea; anything else on this origin (the editor's stash and prefs, a key
+   * outside the namespace) is not the page's and does not reach them. Registered first and capturing, so it runs before any
+   * listener the page adds, onstorage included. */
+  try {
+    window.addEventListener('storage', function (e) {
+      if (!e.isTrusted) return; /* one the page dispatched itself (a same-window sync idiom): its own traffic, already in its own terms */
+      var k = e.key;
+      var area = e.storageArea === natives.localStorage ? views.localStorage : e.storageArea === natives.sessionStorage ? views.sessionStorage : null;
+      if (k === null || (typeof k === 'string' && k.indexOf(PREFIX) === 0)) { /* a namespace key, or a whole-store clear (null): the page's, in its terms */
+        try { Object.defineProperties(e, { key: { value: k === null ? null : k.slice(PREFIX.length), configurable: true }, storageArea: { value: area, configurable: true } }); } catch (x) { e.stopImmediatePropagation(); }
+        return;
+      }
+      e.stopImmediatePropagation();
+    }, true);
+  } catch (e) {}
+})();
+</script>
+
+
+<meta charset="utf-8">
+<title>Mando dashboard, light</title>
+<base href="/appifact/Light.dc.html">
+<script>window.__dcFiles = {"Light.dc.html":"\u003c!doctype html>\n\u003chtml lang=\"en\">\n\u003chead>\n\u003cmeta charset=\"utf-8\">\n\u003ctitle>Mando dashboard, light\u003c/title>\n\u003cscript src=\"./support.js\">\u003c/script>\n\u003c/head>\n\u003cbody>\n\u003cx-dc>\n\u003chelmet>\n\u003clink rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&amp;family=Nunito:wght@400;500;600;700;800&amp;display=swap\">\n\u003cstyle>\nbody{margin:0}\n\u003c/style>\n\u003c/helmet>\n\u003cdiv style=\"min-height: 1000px\">\n  \u003cdc-import name=\"Main\" dark=\"{{false}}\" hint-size=\"100%,1000px\">\u003c/dc-import>\n\u003c/div>\n\u003c/x-dc>\n\u003cscript type=\"text/x-dc\" data-dc-script data-props='{\"$preview\":{\"width\":1440,\"height\":1000}}'>\nclass Component extends DCLogic {\n  renderVals() {\n    return {};\n  }\n}\n\u003c/script>\n\u003c/body>\n\u003c/html>\n","Main.dc.html":"\u003c!doctype html>\n\u003chtml lang=\"en\">\n\u003chead>\n\u003cmeta charset=\"utf-8\">\n\u003ctitle>Mando dashboard\u003c/title>\n\u003cscript src=\"./support.js\">\u003c/script>\n\u003c/head>\n\u003cbody>\n\u003cx-dc>\n\u003chelmet>\n\u003clink rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n\u003clink rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&amp;family=Nunito:wght@400;500;600;700;800&amp;display=swap\">\n\u003cstyle>\nbody{margin:0}\n\u003c/style>\n\u003c/helmet>\n\u003cdiv style=\"position: relative; min-height: 1000px; overflow: clip; background: {{t.bg}}; color: {{t.text}}; font-family: 'Nunito', system-ui, sans-serif\">\n  \u003cimg src=\"{{bgImg}}\" alt=\"\" aria-hidden=\"true\" style=\"position: absolute; top: 0; left: 0; width: 100%; height: {{bgHeight}}; object-fit: cover; object-position: {{bgPosition}}; opacity: {{t.bgOpacity}}; filter: saturate(0.85); -webkit-mask-image: {{bgMask}}; mask-image: {{bgMask}}\">\n  \u003cdiv aria-hidden=\"true\" style=\"position: absolute; inset: 0; background: {{t.scrim}}\">\u003c/div>\n\n  \u003cdiv style=\"position: relative; box-sizing: border-box; max-width: 1360px; min-height: 1000px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); display: flex; flex-direction: column\">\n\n    \u003cdiv style=\"display: {{sticky.topDisplay}}; position: {{sticky.topPos}}; top: 0; z-index: 20; margin: 0 calc(-1 * clamp(16px, 4vw, 40px)); padding: 0 clamp(16px, 4vw, 40px) 16px; background: {{sticky.topBand}}; backdrop-filter: {{sticky.topBlur}}; -webkit-backdrop-filter: {{sticky.topBlur}}; box-shadow: {{sticky.topShadow}}; transition: background 0.25s ease, box-shadow 0.25s ease\">\n    \u003cheader style=\"display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: {{cs.headerPad}}; border-bottom: 1px solid {{t.line}}; transition: padding 0.3s ease\">\n      \u003cdiv style=\"display: flex; align-items: center; gap: 14px; min-width: 0; padding: {{t.chipPad}}; border-radius: 18px; background: {{t.chrome}}; border: 1px solid {{t.chromeLine}}; backdrop-filter: {{t.glass}}; -webkit-backdrop-filter: {{t.glass}}; box-shadow: {{t.glassShadow}}\">\n        \u003cimg src=\"/_blob/8a55ed262ec6c88c3a15abb6881db6f0\" alt=\"Mando\" style=\"width: 40px; height: 40px; border-radius: 10px; object-fit: cover\">\n        \u003cdiv style=\"min-width: 0\">\n          \u003ch1 style=\"margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em\">My dashboard\u003c/h1>\n          \u003cp style=\"margin: 2px 0 0; font-size: 13px; color: {{t.muted}}\">Simply and lovelly\u003c/p>\n        \u003c/div>\n      \u003c/div>\n      \u003cdiv style=\"display: flex; align-items: center; gap: 8px\">\n        \u003ca href=\"Configurator.dc.html\" aria-label=\"Open configurator\" style=\"width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; border: 1px solid {{t.btnLine}}; background: {{t.btn}}; backdrop-filter: {{t.glass}}; -webkit-backdrop-filter: {{t.glass}}; box-shadow: {{t.glassShadow}}; color: {{t.text}}\">\n          \u003csvg aria-hidden=\"true\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\u003cpath d=\"M4 7h10M18 7h2M4 17h4M12 17h8\">\u003c/path>\u003ccircle cx=\"16\" cy=\"7\" r=\"2\">\u003c/circle>\u003ccircle cx=\"10\" cy=\"17\" r=\"2\">\u003c/circle>\u003c/svg>\n        \u003c/a>\n        \u003cbutton type=\"button\" aria-label=\"Toggle theme\" onClick=\"{{toggleTheme}}\" style=\"width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; border: 1px solid {{t.btnLine}}; background: {{t.btn}}; backdrop-filter: {{t.glass}}; -webkit-backdrop-filter: {{t.glass}}; box-shadow: {{t.glassShadow}}; color: {{t.text}}; cursor: pointer; padding: 0\">\n          \u003csc-if value=\"{{dark}}\" hint-placeholder-val=\"{{true}}\">\n            \u003csvg aria-hidden=\"true\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\">\u003ccircle cx=\"12\" cy=\"12\" r=\"4\">\u003c/circle>\u003cpath d=\"M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\">\u003c/path>\u003c/svg>\n          \u003c/sc-if>\n          \u003csc-if value=\"{{light}}\" hint-placeholder-val=\"{{false}}\">\n            \u003csvg aria-hidden=\"true\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\u003cpath d=\"M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z\">\u003c/path>\u003c/svg>\n          \u003c/sc-if>\n        \u003c/button>\n      \u003c/div>\n    \u003c/header>\n\n    \u003csection aria-label=\"Clock\" style=\"padding: {{cs.sectionPad}}; display: flex; flex-direction: column; align-items: {{t.clockAlign}}; transition: padding 0.3s ease\">\n      \u003cdiv style=\"display: flex; flex-direction: {{cs.dir}}; align-items: {{cs.align}}; text-align: {{t.clockText}}; gap: {{cs.gap}}; padding: {{cs.widgetPad}}; transition: padding 0.3s ease, gap 0.3s ease; border-radius: 26px; background: {{cs.wBg}}; border: 1px solid {{cs.wLine}}; backdrop-filter: {{cs.wGlass}}; -webkit-backdrop-filter: {{cs.wGlass}}; box-shadow: {{cs.wShadow}}\">\n      \u003csc-if value=\"{{classicView}}\" hint-placeholder-val=\"{{false}}\">\n      \u003cp style=\"margin: 0; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 300; font-size: {{cs.timeSize}}; line-height: 0.95; letter-spacing: -0.05em; transition: font-size 0.3s ease\">{{time}}\u003c/p>\n      \u003cp style=\"margin: 0; padding-top: {{cs.dateTop}}; padding-left: {{cs.dateLeft}}; border-top: 1px solid {{cs.dateLineTop}}; border-left: 1px solid {{cs.dateLineLeft}}; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: {{t.muted}}\">{{date}}\u003c/p>\n      \u003c/sc-if>\n      \u003csc-if value=\"{{splitView}}\" hint-placeholder-val=\"{{true}}\">\n        \u003cp aria-label=\"{{time}}\" style=\"margin: 0; display: flex; align-items: baseline; font-family: 'Nunito', system-ui, sans-serif; font-weight: 800; font-size: {{cs.splitSize}}; line-height: 0.9; letter-spacing: -0.03em; transition: font-size 0.3s ease\">\n          \u003cspan aria-hidden=\"true\" style=\"color: {{t.clockInk}}\">{{hh}}\u003c/span>\u003cspan aria-hidden=\"true\" style=\"color: {{t.accent}}; opacity: {{colonOpacity}}; transition: opacity 0.4s ease; padding: 0 0.06em\">:\u003c/span>\u003cspan aria-hidden=\"true\" style=\"color: {{t.minFill}}; -webkit-text-stroke: {{cs.mStroke}} {{t.accent}}; paint-order: stroke fill\">{{mm}}\u003c/span>\n        \u003c/p>\n        \u003cp aria-label=\"{{date}}\" style=\"margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; font: 600 12px 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase\">\n          \u003cspan aria-hidden=\"true\" style=\"padding: 5px 11px; border-radius: 999px; background: {{t.accent}}; color: {{t.accentInk}}\">{{weekday}}\u003c/span>\n          \u003cspan aria-hidden=\"true\" style=\"padding: 5px 11px; border-radius: 999px; border: 1px solid {{t.pillLine}}; color: {{t.text}}; background: {{t.pillBg}}; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px)\">{{dayMonth}}\u003c/span>\n        \u003c/p>\n      \u003c/sc-if>\n      \u003c/div>\n    \u003c/section>\n\n    \u003cdiv style=\"position: {{sticky.searchPos}}; top: 0; z-index: 20; margin: {{sticky.searchMargin}}; padding: {{sticky.searchPad}}; background: {{sticky.searchBand}}; backdrop-filter: {{sticky.searchBlur}}; -webkit-backdrop-filter: {{sticky.searchBlur}}; box-shadow: {{sticky.searchShadow}}; transition: background 0.25s ease, box-shadow 0.25s ease\">\n    \u003cform role=\"search\" onSubmit=\"{{submit}}\" style=\"position: relative; width: 100%; max-width: {{cs.searchMax}}; margin: 0 auto; transition: max-width 0.35s ease\">\n      \u003cdiv style=\"display: flex; align-items: center; height: {{cs.searchH}}; transition: height 0.3s ease; box-sizing: border-box; border-radius: 16px; border: 1px solid {{t.searchLine}}; background: {{t.card}}; backdrop-filter: {{t.cardGlass}}; -webkit-backdrop-filter: {{t.cardGlass}}; box-shadow: {{t.cardShadow}}; padding: 0 8px 0 6px; gap: 4px\">\n        \u003cbutton type=\"button\" aria-label=\"Select search engine\" aria-haspopup=\"listbox\" aria-expanded=\"{{engineOpen}}\" onClick=\"{{toggleEngines}}\" style=\"flex: none; height: {{cs.ctrlH}}; transition: height 0.3s ease; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 0; border-radius: 10px; background: {{t.surface2}}; color: {{t.text}}; font: 500 14px 'Nunito', system-ui, sans-serif; cursor: pointer\">\n          \u003csvg aria-hidden=\"true\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\">\u003ccircle cx=\"11\" cy=\"11\" r=\"6.5\">\u003c/circle>\u003cpath d=\"M16 16l4.5 4.5\">\u003c/path>\u003c/svg>\n          \u003cspan>{{engineLabel}}\u003c/span>\n          \u003csvg aria-hidden=\"true\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\u003cpath d=\"M6 9l6 6 6-6\">\u003c/path>\u003c/svg>\n        \u003c/button>\n        \u003clabel for=\"mando-search\" style=\"position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)\">Search applications\u003c/label>\n        \u003cinput id=\"mando-search\" type=\"text\" enterkeyhint=\"search\" value=\"{{query}}\" onChange=\"{{onQuery}}\" onFocus=\"{{focusSearch}}\" onBlur=\"{{blurSearch}}\" placeholder=\"{{placeholder}}\" autocomplete=\"off\" style=\"flex: 1; min-width: 0; height: 44px; border: 0; outline: none; background: transparent; color: {{t.text}}; font: 400 {{cs.inputSize}} 'Nunito', system-ui, sans-serif; transition: font-size 0.3s ease; padding: 0 12px\">\n        \u003csc-if value=\"{{hasQuery}}\" hint-placeholder-val=\"{{false}}\">\n          \u003cbutton type=\"button\" aria-label=\"Clear search\" onClick=\"{{clear}}\" style=\"flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: {{t.muted}}; cursor: pointer; padding: 0\">\n            \u003csvg aria-hidden=\"true\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\">\u003cpath d=\"M6 6l12 12M18 6L6 18\">\u003c/path>\u003c/svg>\n          \u003c/button>\n          \u003cbutton type=\"submit\" aria-label=\"Search\" style=\"flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 10px; background: {{t.accent}}; color: {{t.accentInk}}; cursor: pointer; padding: 0\">\n            \u003csvg aria-hidden=\"true\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\u003cpath d=\"M5 12h14M13 6l6 6-6 6\">\u003c/path>\u003c/svg>\n          \u003c/button>\n        \u003c/sc-if>\n      \u003c/div>\n      \u003csc-if value=\"{{engineOpen}}\" hint-placeholder-val=\"{{false}}\">\n        \u003cul role=\"listbox\" aria-label=\"Search engines\" style=\"position: absolute; z-index: 5; top: 64px; left: 0; margin: 0; padding: 6px; list-style: none; min-width: 240px; border-radius: 14px; border: 1px solid {{t.searchLine}}; background: {{t.menu}}; backdrop-filter: {{t.cardGlass}}; -webkit-backdrop-filter: {{t.cardGlass}}; box-shadow: 0 18px 40px rgba(0,0,0,0.22)\">\n          \u003csc-for list=\"{{engines}}\" as=\"e\" hint-placeholder-count=\"3\">\n            \u003cli role=\"option\" aria-selected=\"{{e.selected}}\" tabindex=\"0\" onClick=\"{{e.pick}}\" style=\"display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 8px; cursor: pointer; font-size: 14px; background: {{e.bg}}; color: {{t.text}}\">\n              \u003cspan style=\"width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; font: 600 11px 'IBM Plex Mono', monospace; background: {{t.surface2}}; color: {{t.muted}}\">{{e.mark}}\u003c/span>\n              \u003cspan style=\"flex: 1\">{{e.name}}\u003c/span>\n              \u003csc-if value=\"{{e.selected}}\" hint-placeholder-val=\"{{false}}\">\n                \u003csvg aria-hidden=\"true\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\u003cpath d=\"M5 12.5l4.5 4.5L19 7.5\">\u003c/path>\u003c/svg>\n              \u003c/sc-if>\n            \u003c/li>\n          \u003c/sc-for>\n        \u003c/ul>\n      \u003c/sc-if>\n    \u003c/form>\n\n    \u003cnav aria-label=\"Categories\" style=\"margin-top: {{navGap}}; padding: {{t.barPad}}; border-radius: {{t.barRadius}}; background: {{t.chrome}}; border: 1px solid {{t.chromeLine}}; border-bottom: 1px solid {{t.barEdge}}; backdrop-filter: {{t.glass}}; -webkit-backdrop-filter: {{t.glass}}; box-shadow: {{t.glassShadow}}; overflow-x: auto; opacity: {{tabsOpacity}}\">\n      \u003cdiv style=\"display: flex; gap: 28px; min-width: max-content\">\n        \u003csc-for list=\"{{tabs}}\" as=\"c\" hint-placeholder-count=\"6\">\n          \u003cbutton type=\"button\" aria-pressed=\"{{c.selected}}\" disabled=\"{{hasQuery}}\" onClick=\"{{c.pick}}\" style=\"min-height: 44px; padding: 0 2px; margin-bottom: -1px; border: 0; border-bottom: 2px solid {{c.line}}; background: transparent; color: {{c.color}}; font: 500 15px 'Nunito', system-ui, sans-serif; white-space: nowrap; cursor: pointer\">{{c.name}}\u003c/button>\n        \u003c/sc-for>\n      \u003c/div>\n    \u003c/nav>\n    \u003c/div>\n    \u003c/div>\n\n    \u003csection aria-label=\"{{sectionLabel}}\" style=\"padding: 24px 0 40px; flex: 1\">\n      \u003csc-if value=\"{{hasItems}}\" hint-placeholder-val=\"{{true}}\">\n        \u003cul style=\"list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 14px\">\n          \u003csc-for list=\"{{items}}\" as=\"a\" hint-placeholder-count=\"10\">\n            \u003cli style=\"display: flex\">\n              \u003ca href=\"{{a.url}}\" aria-label=\"{{a.label}}\" style=\"flex: 1; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid {{a.line}}; background: {{a.bg}}; backdrop-filter: {{t.cardGlass}}; -webkit-backdrop-filter: {{t.cardGlass}}; box-shadow: {{a.shadow}}; transform: {{a.lift}}; transition: transform 0.25s cubic-bezier(.2,.8,.2,1), background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease; outline: none; color: {{t.text}}; text-decoration: none\" onMouseEnter=\"{{a.enter}}\" onMouseLeave=\"{{a.leave}}\" onFocus=\"{{a.enter}}\" onBlur=\"{{a.leave}}\">\n                \u003cdiv style=\"display: flex; align-items: flex-start; gap: 12px\">\n                  \u003csc-if value=\"{{a.hasImg}}\" hint-placeholder-val=\"{{false}}\">\n                    \u003cspan aria-hidden=\"true\" style=\"flex: none; width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; transform: {{a.iconScale}}; transition: transform 0.25s cubic-bezier(.2,.8,.2,1); background: {{t.iconTile}}; border: 1px solid {{t.cardLine}}; box-shadow: {{t.iconShadow}}\">\n                      \u003cimg src=\"{{a.img}}\" alt=\"\" style=\"width: 30px; height: 30px; object-fit: contain\">\n                    \u003c/span>\n                  \u003c/sc-if>\n                  \u003csc-if value=\"{{a.noImg}}\" hint-placeholder-val=\"{{true}}\">\n                    \u003cspan aria-hidden=\"true\" style=\"flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: {{a.iconScale}}; transition: transform 0.25s cubic-bezier(.2,.8,.2,1); background: {{a.tint}}; color: {{a.ink}}; font: 600 15px 'IBM Plex Mono', monospace; letter-spacing: -0.02em\">{{a.mark}}\u003c/span>\n                  \u003c/sc-if>\n                  \u003cdiv style=\"flex: 1; min-width: 0; padding-top: 2px\">\n                    \u003cp style=\"margin: 0; font-size: 16px; font-weight: 600; line-height: 1.25\">{{a.name}}\u003c/p>\n                  \u003c/div>\n                  \u003csc-if value=\"{{a.hasStatus}}\" hint-placeholder-val=\"{{true}}\">\n                    \u003cspan aria-hidden=\"true\" style=\"flex: none; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: {{a.statusBg}}; color: {{a.statusColor}}; font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: 0.08em\">\n                      \u003cspan style=\"width: 6px; height: 6px; border-radius: 50%; background: {{a.statusColor}}\">\u003c/span>{{a.statusLabel}}\n                    \u003c/span>\n                  \u003c/sc-if>\n                \u003c/div>\n                \u003csc-if value=\"{{showDescriptions}}\" hint-placeholder-val=\"{{true}}\">\n                  \u003cp style=\"margin: 0; font-size: 14px; line-height: 1.45; color: {{t.muted}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden\">{{a.description}}\u003c/p>\n                \u003c/sc-if>\n                \u003csc-if value=\"{{showLabels}}\" hint-placeholder-val=\"{{true}}\">\n                  \u003cdiv style=\"margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px\">\n                    \u003csc-for list=\"{{a.tags}}\" as=\"tag\" hint-placeholder-count=\"2\">\n                      \u003cspan style=\"height: 22px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 6px; border: 1px solid {{t.line}}; font: 400 12px 'IBM Plex Mono', monospace; color: {{t.muted}}\">{{tag}}\u003c/span>\n                    \u003c/sc-for>\n                  \u003c/div>\n                \u003c/sc-if>\n              \u003c/a>\n            \u003c/li>\n          \u003c/sc-for>\n        \u003c/ul>\n      \u003c/sc-if>\n      \u003csc-if value=\"{{noItems}}\" hint-placeholder-val=\"{{false}}\">\n        \u003cdiv style=\"display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 48px 32px; border-radius: 14px; border: 1px dashed {{t.lineStrong}}; background: {{t.surface}}\">\n          \u003csvg aria-hidden=\"true\" width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\">\u003ccircle cx=\"11\" cy=\"11\" r=\"6.5\">\u003c/circle>\u003cpath d=\"M16 16l4.5 4.5M8.5 11h5\">\u003c/path>\u003c/svg>\n          \u003ch2 style=\"margin: 0; font-size: 18px; font-weight: 600\">No applications found\u003c/h2>\n          \u003cp style=\"margin: 0; font-size: 14px; color: {{t.muted}}\">Try adjusting your search query or select a different category.\u003c/p>\n        \u003c/div>\n      \u003c/sc-if>\n    \u003c/section>\n\n    \u003cfooter style=\"display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding: {{t.footPad}}; margin-bottom: {{t.footGap}}; border-radius: {{t.barRadius}}; background: {{t.chrome}}; border: 1px solid {{t.chromeLine}}; border-top: 1px solid {{t.barEdge}}; backdrop-filter: {{t.glass}}; -webkit-backdrop-filter: {{t.glass}}; box-shadow: {{t.glassShadow}}; font: 400 12px 'IBM Plex Mono', monospace; color: {{t.muted}}\">\n      \u003cp style=\"margin: 0\">Powered by \u003ca href=\"https://getmando.rackandhost.com\" style=\"color: {{t.text}}\">Mando\u003c/a> v2.1.0\u003c/p>\n      \u003cp style=\"margin: 0; display: flex; align-items: center; gap: 6px\">Created with\n        \u003csvg role=\"img\" aria-label=\"love\" width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"{{t.accent}}\" stroke-width=\"2\" stroke-linejoin=\"round\">\u003cpath d=\"M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z\">\u003c/path>\u003c/svg>\n        by \u003ca href=\"https://rackandhost.com\" style=\"color: {{t.text}}\">Rack&amp;Host\u003c/a> 2026\u003c/p>\n    \u003c/footer>\n  \u003c/div>\n\u003c/div>\n\u003c/x-dc>\n\u003cscript type=\"text/x-dc\" data-dc-script data-props='{\"dark\":{\"editor\":\"boolean\",\"default\":true},\"accent\":{\"editor\":\"color\",\"default\":\"#F0B04A\",\"options\":[\"#F0B04A\",\"#7CC4FF\",\"#9BE07A\",\"#F28C6B\"]},\"compact\":{\"editor\":\"boolean\",\"default\":false},\"clockStyle\":{\"editor\":\"enum\",\"default\":\"split\",\"options\":[\"split\",\"classic\"]},\"showDescriptions\":{\"editor\":\"boolean\",\"default\":true},\"showLabels\":{\"editor\":\"boolean\",\"default\":true},\"overlayDark\":{\"editor\":\"range\",\"default\":0.6,\"min\":0,\"max\":1,\"step\":0.05},\"overlayLight\":{\"editor\":\"range\",\"default\":0.2,\"min\":0,\"max\":1,\"step\":0.05},\"$preview\":{\"width\":1440,\"height\":1000}}'>\nclass Component extends DCLogic {\n  constructor(props) {\n    super(props);\n    this.state = { now: new Date(), category: 'apps', query: '', engine: null, engineOpen: false, dark: null };\n  }\n  componentDidMount() {\n    this.timer = setInterval(() => this.setState({ now: new Date() }), 1000);\n    this.onScroll = (e) => {\n      const el = e && e.target;\n      const y = el && el !== document && typeof el.scrollTop === 'number' ? el.scrollTop : (window.scrollY || 0);\n      const scrolled = this.state.scrolled ? y > 4 : y > 40;\n      if (scrolled !== !!this.state.scrolled) this.setState({ scrolled });\n    };\n    document.addEventListener('scroll', this.onScroll, true);\n  }\n  componentWillUnmount() {\n    clearInterval(this.timer);\n    document.removeEventListener('scroll', this.onScroll, true);\n  }\n  renderVals() {\n    const dark = this.state.dark ?? (this.props.dark ?? true);\n    const accentDark = this.props.accent ?? '#F0B04A';\n    const t = dark ? {\n      bg: '#0D0F11', scrim: 'rgba(13,15,17,' + (this.props.overlayDark ?? 0.6) + ')', bgOpacity: 1, surface: '#15181C', surface2: 'rgba(255,255,255,0.07)',\n      line: 'rgba(255,255,255,0.10)', lineStrong: '#353B44', text: '#EDEBE6', muted: '#B3B8C0',\n      accent: accentDark, accentInk: '#17110A',\n      chrome: 'linear-gradient(180deg, rgba(34,38,45,0.58) 0%, rgba(18,21,25,0.40) 100%)', chromeLine: 'rgba(255,255,255,0.14)',\n      glass: 'blur(24px) saturate(160%)', glassShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(255,255,255,0.04), inset 0 0 18px rgba(255,255,255,0.04), 0 10px 32px rgba(0,0,0,0.35)', barEdge: 'rgba(255,255,255,0.14)',\n      btn: 'linear-gradient(180deg, rgba(34,38,45,0.58) 0%, rgba(18,21,25,0.40) 100%)', btnLine: 'rgba(255,255,255,0.14)',\n      iconTile: 'linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)', iconShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',\n      card: 'rgba(21,24,28,0.62)', cardLine: 'rgba(255,255,255,0.10)', searchLine: 'rgba(255,255,255,0.14)', menu: 'rgba(21,24,28,0.92)', cardGlass: 'blur(16px) saturate(150%)', cardShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 18px rgba(0,0,0,0.25)',\n      clockInk: '#EDEBE6', hourFill: 'rgba(255,255,255,0.16)', hourStroke: 'rgba(255,255,255,0.78)', hourGlow: '0 0 24px rgba(255,255,255,0.28), 0 0 60px rgba(124,196,255,0.18)', minFill: 'rgba(240,176,74,0.42)', minGlow: '0 0 26px rgba(240,176,74,0.30)', pillLine: 'rgba(255,255,255,0.5)', pillBg: 'rgba(255,255,255,0.04)',\n      clockGrad: 'linear-gradient(180deg, #FFFFFF 0%, #F3F1EC 40%, rgba(237,235,230,0.62) 100%)',\n      clockGlow: 'drop-shadow(0 2px 28px rgba(240,176,74,0.22)) drop-shadow(0 1px 2px rgba(0,0,0,0.45))',\n      clockDivider: 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%)',\n      dateShadow: '0 1px 12px rgba(0,0,0,0.6)',\n      cardHover: 'rgba(32,36,43,0.76)', cardLineHover: 'rgba(255,255,255,0.24)', cardShadowHover: 'inset 0 1px 0 rgba(255,255,255,0.16), 0 0 0 1px rgba(240,176,74,0.18), 0 16px 36px rgba(0,0,0,0.42)',\n      clockAlign: 'center', clockText: 'center', chipPad: '6px 16px 6px 6px', widgetPad: '22px 28px 20px', dateGap: '12px', dateLine: 'rgba(255,255,255,0.12)', barPad: '0 18px', barRadius: '16px', footPad: '14px 18px', footGap: '16px', up: '#46D396', upBg: 'rgba(70,211,150,0.12)', down: '#FF8A73', downBg: 'rgba(255,138,115,0.14)'\n    } : {\n      bg: '#F3F1EC', scrim: 'rgba(243,241,236,' + (this.props.overlayLight ?? 0.2) + ')', bgOpacity: 1, surface: '#FFFFFF', surface2: 'rgba(22,24,27,0.06)',\n      line: 'rgba(22,24,27,0.10)', lineStrong: '#CEC8BC', text: '#16181B', muted: '#474C54',\n      accent: '#9A5B00', accentInk: '#FFFFFF',\n      chrome: 'linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.42) 100%)', chromeLine: 'rgba(255,255,255,0.75)',\n      glass: 'blur(24px) saturate(180%)', glassShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(255,255,255,0.35), inset 0 0 18px rgba(255,255,255,0.25), 0 10px 32px rgba(30,36,50,0.14)', barEdge: 'rgba(255,255,255,0.75)',\n      iconTile: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 100%)', iconShadow: 'inset 0 1px 0 rgba(255,255,255,1), 0 2px 6px rgba(30,36,50,0.08)',\n      btn: 'linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.42) 100%)', btnLine: 'rgba(255,255,255,0.75)', card: 'rgba(255,255,255,0.72)', cardLine: 'rgba(255,255,255,0.8)', searchLine: 'rgba(255,255,255,0.85)', menu: 'rgba(255,255,255,0.9)', cardGlass: 'blur(16px) saturate(160%)', cardShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 18px rgba(30,36,50,0.08)',\n      clockInk: '#383E44', hourFill: 'rgba(22,24,27,0.14)', hourStroke: 'rgba(22,24,27,0.85)', hourGlow: '0 0 20px rgba(255,255,255,0.8), 0 10px 30px rgba(22,24,27,0.14)', minFill: 'rgba(154,91,0,0.32)', minGlow: '0 0 22px rgba(255,255,255,0.75)', pillLine: 'rgba(22,24,27,0.4)', pillBg: 'rgba(255,255,255,0.45)',\n      clockGrad: 'linear-gradient(180deg, #0F1113 0%, #22262B 50%, rgba(34,38,43,0.78) 100%)',\n      clockGlow: 'drop-shadow(0 2px 22px rgba(255,255,255,0.95)) drop-shadow(0 0 1px rgba(255,255,255,0.9))',\n      clockDivider: 'linear-gradient(180deg, rgba(22,24,27,0) 0%, rgba(22,24,27,0.3) 50%, rgba(22,24,27,0) 100%)',\n      dateShadow: '0 1px 10px rgba(255,255,255,0.95)',\n      cardHover: 'rgba(255,255,255,0.9)', cardLineHover: 'rgba(255,255,255,1)', cardShadowHover: 'inset 0 1px 0 rgba(255,255,255,1), 0 0 0 1px rgba(154,91,0,0.16), 0 16px 36px rgba(30,36,50,0.18)', clockAlign: 'center', clockText: 'center', chipPad: '6px 16px 6px 6px', widgetPad: '22px 28px 20px', dateGap: '12px', dateLine: 'rgba(22,24,27,0.10)', barPad: '0 18px', barRadius: '12px', footPad: '14px 18px', footGap: '16px', up: '#11724A', upBg: 'rgba(17,114,74,0.10)', down: '#B8341F', downBg: 'rgba(184,52,31,0.10)'\n    };\n    const apps = [\n      { id: 'plex', img: '/_blob/30ac41f3ec0dfdc86ede887841050a1c', name: 'Plex', description: 'Media server for movies, TV shows, and music', category: 'media', tags: ['media', 'streaming'], status: 'up', mark: 'Px', tint: '#E5A00D', ink: '#1A1204' },\n      { id: 'jellyfin', name: 'Jellyfin', description: 'Free software media system', category: 'media', tags: ['media', 'open-source'], status: 'up', mark: 'Jf', tint: '#6E52C9', ink: '#FFFFFF' },\n      { id: 'ombi', name: 'Ombi', description: 'Request media for your Plex/Jellyfin server', category: 'media', tags: ['requests', 'media'], status: null, mark: 'Om', tint: '#F08A2B', ink: '#1E0F02' },\n      { id: 'nextcloud', img: '/_blob/c607a0f337e553527a0549d60443cabf', name: 'Nextcloud', description: 'Productivity platform for file storage and collaboration', category: 'productivity', tags: ['cloud', 'files'], status: 'up', mark: 'Nc', tint: '#0067A0', ink: '#FFFFFF' },\n      { id: 'paperless', name: 'Paperless-ngx', description: 'Document management system', category: 'productivity', tags: ['documents', 'scanning'], status: null, mark: 'Pa', tint: '#17541F', ink: '#FFFFFF' },\n      { id: 'ha', img: '/_blob/a8bbd0bb012a3cf96dc5a9d295b1d2b1', name: 'Home Assistant', description: 'Open source home automation platform', category: 'home-automation', tags: ['smart-home', 'automation'], status: 'up', mark: 'HA', tint: '#18BCF2', ink: '#03212B' },\n      { id: 'mosquitto', name: 'Mosquitto', description: 'MQTT message broker', category: 'home-automation', tags: ['iot', 'mqtt'], status: 'down', mark: 'Mq', tint: '#3C5280', ink: '#FFFFFF' },\n      { id: 'portainer', img: '/_blob/f1caf634426bc16dc86fa3c3f2584d3c', name: 'Portainer', description: 'Docker management UI', category: 'networking', tags: ['docker', 'containers'], status: 'up', mark: 'Pt', tint: '#13BEF9', ink: '#032330' },\n      { id: 'pihole', name: 'Pi-hole', description: 'Network-wide ad blocking', category: 'networking', tags: ['dns', 'adblock'], status: 'up', mark: 'Ph', tint: '#96060C', ink: '#FFFFFF' },\n      { id: 'kuma', name: 'Uptime Kuma', description: 'Self-hosted monitoring tool', category: 'networking', tags: ['monitoring', 'uptime'], status: 'up', mark: 'UK', tint: '#5CDD8B', ink: '#052313' }\n    ];\n    const bookmarks = [\n      { id: 'google', name: 'Google', description: 'The google web', category: 'bookmarks', tags: ['web'], status: null, mark: 'G', tint: '#2F6FDB', ink: '#FFFFFF' }\n    ];\n    const cats = [\n      { id: 'apps', name: 'Apps' }, { id: 'bookmarks', name: 'Bookmarks' },\n      { id: 'home-automation', name: 'Home Automation' }, { id: 'media', name: 'Media' },\n      { id: 'networking', name: 'Networking' }, { id: 'productivity', name: 'Productivity' }\n    ];\n    const engineList = [\n      { id: null, name: 'Your apps', mark: '~' },\n      { id: 'startpage', name: 'Startpage', mark: 'S' },\n      { id: 'youtube', name: 'YouTube', mark: 'Y' }\n    ];\n    const { category, query, engine } = this.state;\n    const q = query.trim().toLowerCase();\n    const hasQuery = q.length > 0;\n    let pool = category === 'apps' ? apps : category === 'bookmarks' ? bookmarks : apps.filter((a) => a.category === category);\n    if (hasQuery && !engine) {\n      pool = apps.concat(bookmarks).filter((a) => (a.name + ' ' + a.description + ' ' + a.tags.join(' ')).toLowerCase().includes(q));\n    }\n    const items = pool.map((a) => {\n      const up = a.status === 'up';\n      return {\n        ...a,\n        url: 'https://' + a.id + '.example.com',\n        hasImg: !!a.img, noImg: !a.img,\n        bg: this.state.hover === a.id ? t.cardHover : t.card,\n        line: this.state.hover === a.id ? t.cardLineHover : t.cardLine,\n        shadow: this.state.hover === a.id ? t.cardShadowHover : t.cardShadow,\n        lift: this.state.hover === a.id ? 'translateY(-4px)' : 'translateY(0)',\n        iconScale: this.state.hover === a.id ? 'scale(1.08)' : 'scale(1)',\n        enter: () => this.setState({ hover: a.id }),\n        leave: () => { if (this.state.hover === a.id) this.setState({ hover: null }); },\n        hasStatus: a.status !== null,\n        statusLabel: up ? 'UP' : 'DOWN',\n        statusColor: up ? t.up : t.down,\n        statusBg: up ? t.upBg : t.downBg,\n        label: a.name + (a.status ? (up ? ', online' : ', offline') : '')\n      };\n    });\n    const current = engineList.find((e) => e.id === engine) || engineList[0];\n    const d = this.state.now;\n    const pad = (n) => String(n).padStart(2, '0');\n    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];\n    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\n    const compact = this.props.compact ?? false;\n    const on = !!this.state.scrolled;\n    const band = on ? (dark ? 'rgba(13,15,17,0.62)' : 'rgba(243,241,236,0.55)') : 'transparent';\n    const blur = on ? 'blur(22px) saturate(160%)' : 'none';\n    const shadow = on ? (dark ? '0 1px 0 rgba(255,255,255,0.08), 0 16px 32px -16px rgba(0,0,0,0.6)' : '0 1px 0 rgba(255,255,255,0.7), 0 16px 32px -16px rgba(30,36,50,0.25)') : 'none';\n    const sticky = compact ? {\n      topDisplay: 'contents', topPos: 'static', topBand: 'transparent', topBlur: 'none', topShadow: 'none',\n      searchPos: 'sticky', searchMargin: '0 calc(-1 * clamp(16px, 4vw, 40px))', searchPad: '12px clamp(16px, 4vw, 40px) 0',\n      searchBand: band, searchBlur: blur, searchShadow: shadow\n    } : {\n      topDisplay: 'block', topPos: 'sticky', topBand: band, topBlur: blur, topShadow: shadow,\n      searchPos: 'static', searchMargin: '0', searchPad: '0', searchBand: 'transparent', searchBlur: 'none', searchShadow: 'none'\n    };\n    const shrink = on && !compact;\n    const split = (this.props.clockStyle ?? 'split') === 'split';\n    const expanded = !!this.state.searchFocus || hasQuery || this.state.engineOpen;\n    const cs = {\n      headerPad: shrink ? '12px 0' : '24px 0',\n      sectionPad: shrink ? '12px 0 10px' : 'clamp(32px, 6vw, 64px) 0 clamp(20px, 3vw, 32px)',\n      dir: shrink ? 'row' : 'column',\n      align: shrink || split ? 'center' : t.clockAlign,\n      gap: shrink ? '16px' : (split ? '18px' : '12px'),\n      widgetPad: shrink ? '10px 22px' : (split ? 'clamp(20px, 2.5vw, 28px) clamp(28px, 4vw, 48px) clamp(18px, 2.2vw, 24px)' : t.widgetPad),\n      splitSize: shrink ? '40px' : 'clamp(88px, 11vw, 150px)',\n      hStroke: shrink ? '1px' : '1.5px',\n      mStroke: shrink ? '1.2px' : '2px',\n      timeSize: shrink ? '36px' : 'clamp(64px, 10vw, 112px)',\n      dateTop: shrink ? '0' : t.dateGap,\n      dateLeft: shrink ? '16px' : '0',\n      dateLineTop: shrink ? 'transparent' : t.dateLine,\n      dateLineLeft: shrink ? t.dateLine : 'transparent',\n      wBg: t.chrome,\n      wLine: t.chromeLine,\n      wGlass: t.glass,\n      wShadow: t.glassShadow,\n      searchH: !on ? '60px' : (expanded ? '52px' : '44px'),\n      searchMax: on && !expanded && !compact ? '440px' : '1360px',\n      ctrlH: on && !expanded ? '34px' : '44px',\n      inputSize: on && !expanded ? '15px' : '18px'\n    };\n    return {\n      t, dark, light: !dark, sticky, cs,\n      splitView: split, classicView: !split,\n      hh: pad(d.getHours()), mm: pad(d.getMinutes()),\n      colonOpacity: d.getSeconds() % 2 === 0 ? 1 : 0.3,\n      weekday: days[d.getDay()],\n      dayNum: String(d.getDate()),\n      monthYear: months[d.getMonth()] + ' ' + d.getFullYear(),\n      dayMonth: d.getDate() + ' ' + months[d.getMonth()],\n      navGap: compact || on ? '12px' : '28px',\n      bgPosition: this.props.bgPosition ?? '50% 50%',\n      bgHeight: this.props.bgHeight ?? '100%',\n      bgMask: this.props.bgHeight ? 'linear-gradient(180deg, #000 70%, transparent 100%)' : 'none',\n      bgImg: dark ? '/_blob/1599971be0a3adc155bba9975162d875' : '/_blob/48e6c594519a6134b76bfe111036c44e',\n      time: pad(d.getHours()) + ':' + pad(d.getMinutes()),\n      date: days[d.getDay()] + ' · ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear(),\n      query, hasQuery,\n      engineOpen: this.state.engineOpen,\n      engineLabel: engine ? current.name : 'Apps',\n      placeholder: engine ? 'Search on ' + current.name + '…' : 'Search your applications…',\n      engines: engineList.map((e) => ({ ...e, selected: e.id === engine, bg: e.id === engine ? t.surface2 : 'transparent', pick: () => this.setState({ engine: e.id, engineOpen: false }) })),\n      tabs: cats.map((c) => {\n        const sel = c.id === category && !hasQuery;\n        return { ...c, selected: sel, color: sel ? t.text : t.muted, line: sel ? t.accent : 'transparent', pick: () => this.setState({ category: c.id }) };\n      }),\n      tabsOpacity: hasQuery ? 0.45 : 1,\n      sectionLabel: category === 'bookmarks' ? 'Bookmarks' : 'Applications',\n      items, hasItems: items.length > 0, noItems: items.length === 0,\n      showDescriptions: this.props.showDescriptions ?? true,\n      showLabels: this.props.showLabels ?? true,\n      toggleTheme: () => this.setState({ dark: !dark }),\n      toggleEngines: () => this.setState({ engineOpen: !this.state.engineOpen }),\n      onQuery: (e) => this.setState({ query: e.target.value }),\n      clear: () => this.setState({ query: '' }),\n      focusSearch: () => this.setState({ searchFocus: true }),\n      blurSearch: () => this.setState({ searchFocus: false }),\n      submit: (e) => { e.preventDefault(); }\n    };\n  }\n}\n\u003c/script>\n\u003c/body>\n\u003c/html>\n"}; window.__dcRootPath = "Light.dc.html";</script>
+<script>
+(function () {
+  var real = window.fetch.bind(window);
+  var ROOT = typeof window.__dcProjectRoot === 'string' ? window.__dcProjectRoot : null;
+  var IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', svg: 'image/svg+xml' };
+  var TEXT_MIME = { html: 'text/html', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', json: 'application/json' };
+  /* The requested URL as a project key: relative to the root file's folder ('../x' too, and the
+   * runtime's encoded '..%2FName.dc.html'), or absolute under <base> (/appifact/...) - resolveRef in preview.ts. */
+  var norm = function (u) {
+    if (u && typeof u === 'object' && typeof u.url === 'string') u = u.url;
+    u = String(u).split('#')[0].split('?')[0];
+    // dc-runtime boot() re-fetches location.href to re-adopt its own raw
+    // bytes (camelCase attr repair). In a srcdoc document that URL is
+    // about:srcdoc, which fetch() can't load - serve the root source from
+    // the map instead, keeping the fidelity pass working.
+    if (u === 'about:srcdoc' || u === String(location.href)) {
+      return window.__dcRootPath || u;
+    }
+    var dir = String(window.__dcRootPath || '').replace(/[^/]*$/, '');
+    /* an absolute URL counts only on this document's own base origin, under /appifact/ or under the stamped project folder */
+    if (/^[a-z][a-z0-9+.-]*:/i.test(u) || u.slice(0, 2) === '//') {
+      try { var abs = new URL(u, document.baseURI), base = new URL(document.baseURI); if (abs.origin !== base.origin || (abs.pathname.indexOf('/appifact/') !== 0 && (ROOT === null || abs.pathname.indexOf(ROOT) !== 0))) return null; u = abs.pathname; } catch (e) { return null; }
+    }
+    /* with the published base, a path under the project folder is read as the same path under /appifact/ */
+    if (ROOT !== null && u.indexOf(ROOT) === 0) u = '/appifact/' + u.slice(ROOT.length);
+    if (u.indexOf('/appifact/') === 0) { u = u.slice(10); dir = ''; }
+    else if (u.charAt(0) === '/') dir = '';
+    try { u = decodeURIComponent(u); } catch (e) {}
+    var out = [];
+    var segs = (dir + u).split('/');
+    for (var s = 0; s < segs.length; s += 1) {
+      if (segs[s] === '' || segs[s] === '.') continue;
+      if (segs[s] === '..') out.pop(); else out.push(segs[s]);
+    }
+    return out.join('/');
+  };
+  /* the stored file a URL names, read live from the map: {key, mime, text, bytes (images)} or null */
+  var lookup = function (url) {
+    var key = norm(url);
+    var files = window.__dcFiles || {};
+    if (key === null || !Object.prototype.hasOwnProperty.call(files, key)) return null;
+    var ext = key.slice(key.lastIndexOf('.') + 1).toLowerCase();
+    var img = IMAGE_MIME[ext];
+    var text = String(files[key]);
+    var bytes = null;
+    if (img) { try { var bin = atob(text); bytes = new Uint8Array(bin.length); for (var b = 0; b < bin.length; b += 1) bytes[b] = bin.charCodeAt(b); } catch (e) { img = ''; bytes = null; } }
+    return { key: key, mime: img || TEXT_MIME[ext] || 'text/plain', text: text, bytes: bytes };
+  };
+  window.__dcLookup = lookup;
+  window.fetch = function (url, opts) {
+    var f = lookup(url);
+    if (f) return Promise.resolve(new Response(f.bytes || f.text, { status: 200, headers: { 'Content-Type': f.mime } }));
+    if (ROOT === null) return real(url, opts);
+    /* a document with the published base reports to the editor a file under the project folder that was answered 403, 404 or 410 (ADDRESS_REFUSED) */
+    return real(url, opts).then(function (r) { if (r && (r.status === 403 || r.status === 404 || r.status === 410) && String(r.url).indexOf(window.origin + ROOT) === 0) { try { window.parent.postMessage({ __dc_address_refused: 1, u: r.url }, '*'); } catch (e) {} } return r; });
+  };
+})();
+
+(function () {
+  var X = window.XMLHttpRequest, lookup = window.__dcLookup;
+  if (!X || !X.prototype || typeof lookup !== 'function') return;
+  var P = X.prototype, realOpen = P.open, realSend = P.send, realHeader = P.setRequestHeader, realMime = P.overrideMimeType, realAbort = P.abort;
+  var SHADOWED = ['readyState', 'status', 'statusText', 'response', 'responseText', 'responseXML', 'responseURL', 'getResponseHeader', 'getAllResponseHeaders'];
+  var set = function (x, k, v) { try { Object.defineProperty(x, k, { value: v, configurable: true, writable: true }); } catch (e) {} };
+  /* a reused object gets its native accessors back before each open */
+  var clear = function (x) { for (var i = 0; i < SHADOWED.length; i += 1) { try { delete x[SHADOWED[i]]; } catch (e) {} } };
+  var fire = function (x, type) { try { x.dispatchEvent(new Event(type)); } catch (e) {} };
+  P.open = function (method, url) {
+    clear(this);
+    var f = /^get$/i.test(String(method)) ? lookup(url) : null;
+    if (!f) { this.__dcHit = null; return realOpen.apply(this, arguments); }
+    /* a reused object: quiesce any native request still in flight, as a native open would */
+    if (this.__dcHit === null) { try { realAbort.apply(this); } catch (e) {} }
+    this.__dcHit = { f: f, async: arguments.length < 3 || !!arguments[2] };
+    set(this, 'readyState', 1);
+    set(this, 'status', 0);
+    fire(this, 'readystatechange');
+  };
+  P.setRequestHeader = function () { if (!this.__dcHit) return realHeader.apply(this, arguments); };
+  if (realMime) P.overrideMimeType = function () { if (!this.__dcHit) return realMime.apply(this, arguments); };
+  P.abort = function () {
+    var hit = this.__dcHit;
+    if (!hit) return realAbort.apply(this, arguments);
+    this.__dcHit = null;
+    if (hit.sent && !hit.done) { set(this, 'readyState', 4); fire(this, 'readystatechange'); fire(this, 'abort'); fire(this, 'loadend'); }
+    clear(this);
+  };
+  P.send = function () {
+    var hit = this.__dcHit;
+    if (!hit) return realSend.apply(this, arguments);
+    if (hit.sent) return;
+    hit.sent = true;
+    var x = this, f = hit.f, rt = '';
+    try { rt = String(x.responseType || ''); } catch (e) {}
+    var done = function () {
+      if (x.__dcHit !== hit) return; /* aborted or re-opened */
+      /* as text: the file's characters (an image's bytes decoded, as fetch().text() gives), never the map's base64 */
+      var text = f.bytes ? new TextDecoder().decode(f.bytes) : f.text;
+      var body = text;
+      try {
+        if (rt === 'arraybuffer') body = f.bytes ? f.bytes.buffer.slice(0) : new TextEncoder().encode(f.text).buffer;
+        else if (rt === 'blob') body = new Blob([f.bytes || f.text], { type: f.mime });
+        else if (rt === 'json') body = JSON.parse(text);
+        else if (rt === 'document') body = new DOMParser().parseFromString(text, f.mime === 'text/html' ? 'text/html' : f.mime === 'image/svg+xml' ? 'image/svg+xml' : 'application/xml');
+      } catch (e) { body = null; }
+      set(x, 'status', 200);
+      set(x, 'statusText', 'OK');
+      try { set(x, 'responseURL', String(new URL('/appifact/' + f.key.split('/').map(encodeURIComponent).join('/'), document.baseURI))); } catch (e) {}
+      set(x, 'response', body);
+      if (rt === '' || rt === 'text') set(x, 'responseText', text);
+      if (rt === 'document') set(x, 'responseXML', body);
+      x.getResponseHeader = function (n) { return /^content-type$/i.test(String(n)) ? f.mime : null; };
+      x.getAllResponseHeaders = function () { return 'content-type: ' + f.mime + '\r\n'; };
+      set(x, 'readyState', 4);
+      hit.done = true;
+      fire(x, 'readystatechange');
+      fire(x, 'load');
+      fire(x, 'loadend');
+    };
+    if (hit.async) setTimeout(done, 0); else done();
+  };
+})();
+
+window.__dcRun = (function () {
+  var has = Object.prototype.hasOwnProperty;
+  var fail = function (key) { try { window.parent.postMessage({ __dc_boot_failed: 1, e: 'a script of this design did not load: ' + key }, '*'); } catch (e) {} };
+  /* a blob: URL that did not load: a file whose text the frame has still runs (inline, at that point); only a URL-only part fails the boot */
+  var recover = function (key, attrs) { var files = window.__dcFiles || {}; if (!has.call(files, key)) return fail(key); var s = document.createElement('script'); for (var a in attrs) { if (has.call(attrs, a) && !/^(async|defer|integrity|crossorigin)$/i.test(a)) { try { s.setAttribute(a, String(attrs[a])); } catch (e) {} } } s.text = String(files[key]) + '\n//# sourceURL=/appifact/' + encodeURI(key); (document.head || document.documentElement).appendChild(s); };
+  /* the parser's tip: a script the parser itself is executing right now (no node follows it anywhere up the tree) -
+   * the only place a document.write lands in place rather than re-opening the document */
+  var atTip = function (el) { for (var n = el; n; n = n.parentNode) { if (n.nextSibling) return false; } return true; };
+  return function (key, attrs) {
+    var files = window.__dcFiles || {}, urls = window.__dcPartUrls || {};
+    var url = has.call(urls, key) ? urls[key] : null;
+    if (url === null && !has.call(files, key)) return;
+    attrs = attrs || {};
+    /* defer/async: after the parse, in document order (as every deferred script here has always run) */
+    var later = has.call(attrs, 'defer') || has.call(attrs, 'async');
+    var cur = document.currentScript;
+    if (document.readyState === 'loading' && cur && atTip(cur)) {
+      /* written where the tag stood, this IS the tag the page wrote: parser-blocking (or natively deferred), same
+       * attributes; a part loads by the page URL every artboard shares (one compile), any other file by a URL of its own */
+      if (url === null && later) { try { url = URL.createObjectURL(new Blob([String(files[key]), '\n//# sourceURL=/appifact/' + encodeURI(key)], { type: 'text/javascript' })); } catch (e) { url = null; } }
+      if (url !== null) {
+        var h = '<' + 'script src="' + url + '"' + (later ? ' defer' : '');
+        for (var n in attrs) { if (has.call(attrs, n) && /^[\w:.-]+$/.test(n) && !/^(async|defer|integrity|crossorigin)$/i.test(n)) h += ' ' + n + '="' + String(attrs[n]).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"'; }
+        try {
+          document.write(h + '></' + 'script>');
+          var w = document.scripts[document.scripts.length - 1]; /* the tag just written (the parser inserts it before write returns) */
+          if (w && w !== cur && w.getAttribute('src') === url) { w.addEventListener('error', function () { recover(key, attrs); }); return; }
+          /* the write did not land (a Trusted Types default policy rewrote it, say): load it the other way rather than not at all */
+        } catch (e) {}
+      }
+    }
+    var run = function () {
+      var s = document.createElement('script');
+      for (var a in attrs) { if (has.call(attrs, a) && (url === null || !/^(async|defer|integrity|crossorigin)$/i.test(a))) { try { s.setAttribute(a, String(attrs[a])); } catch (e) {} } }
+      if (has.call(files, key)) s.text = String(files[key]) + '\n//# sourceURL=/appifact/' + encodeURI(key);
+      else { s.async = false; s.src = url; s.addEventListener('error', function () { recover(key, attrs); }); } /* no text on hand (not expected: the bootloader hands every part's text): by URL, in insertion order */
+      /* where the tag stood (document.currentScript keeps its position and data- attributes), else the head */
+      var c = document.currentScript;
+      if (c && c.parentNode) c.parentNode.insertBefore(s, c); else (document.head || document.documentElement).appendChild(s);
+      /* an external script fires 'load' once it has run; the inline stand-in has run by now, so fire it for onload= handlers */
+      if (has.call(files, key)) { try { s.dispatchEvent(new Event('load')); } catch (e) {} }
+    };
+    if (later && document.readyState === 'loading') document.addEventListener('readystatechange', function g() { document.removeEventListener('readystatechange', g); run(); });
+    else run();
+  };
+})();
+
+(function () {
+  var files = window.__dcFiles || {};
+  var blobs = window.__dcPartBlobs || {}, urls = window.__dcPartUrls || {}; /* two-phase boot: a part keeps the page's URL (shared), else its Blob */
+  var imports = {}, has = Object.prototype.hasOwnProperty;
+  var n = 0;
+  for (var k in files) {
+    if (!has.call(files, k) || !/\.m?js$/i.test(k) || /(^|\/)support\.js$/.test(k)) continue;
+    var url;
+    if (has.call(urls, k)) url = urls[k];
+    else { try { url = URL.createObjectURL(blobs[k] instanceof Blob ? blobs[k] : new Blob([String(files[k])], { type: 'text/javascript' })); } catch (e) { continue; } }
+    imports['/appifact/' + k.split('/').map(encodeURIComponent).join('/')] = url;
+    imports[k] = url;
+    n += 1;
+  }
+  if (n === 0) return;
+  var s = document.createElement('script');
+  s.type = 'importmap';
+  s.textContent = JSON.stringify({ imports: imports });
+  (document.head || document.documentElement).appendChild(s);
+})();
+</script>
+<script>
+(function (variants) {
+  var seen = Object.create(null);
+  var add = function (href) {
+    variants(href).forEach(function (v) {
+      if (seen[v]) return;
+      seen[v] = 1;
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = v;
+      l.setAttribute('data-font-variant', '');
+      l.onerror = function () { l.remove(); };
+      document.head.appendChild(l);
+    });
+  };
+  /* a complete statement only: url(...) closed, or a whole quoted string - a helmet <style> streams in mid-URL */
+  var IMPORT = /@import\s+(?:url\(\s*(?:"([^"]*)"|'([^']*)'|([^"')\s]+))\s*\)|"([^"]*)"|'([^']*)')/g;
+  var scan = function (n) {
+    if (n.tagName === 'LINK' && !n.hasAttribute('data-font-variant') && /\bstylesheet\b/i.test(n.rel)) { seen[n.href] = 1; add(n.href); }
+    else if (n.tagName === 'STYLE') { var css = (n.textContent || '').replace(/\/\*[\s\S]*?\*\//g, ''), m; while ((m = IMPORT.exec(css))) add((m[1] || m[2] || m[3] || m[4] || m[5] || '').trim()); }
+  };
+  var rescan = function () { Array.prototype.forEach.call(document.head.children, scan); };
+  /* head children as they arrive, and a mounted <style> whose text is replaced in place (the helmet runtime streams it) */
+  new MutationObserver(function (rs) { rs.forEach(function (r) { var t = r.target.nodeType === 3 ? r.target.parentNode : r.target; if (t && t.tagName === 'STYLE') scan(t); else if (t === document.head) r.addedNodes.forEach(scan); }); }).observe(document.head, { childList: true, subtree: true, characterData: true });
+  document.addEventListener('DOMContentLoaded', rescan);
+  rescan();
+})(function (h) { return (function lpt(e,t){let n="https://fonts.googleapis.com/css2?";if(typeof e!="string"||e.length>1024||e.slice(0,n.length)!==n)return[];let r=e.slice(n.length).split("&");if(r.some(i=>i.slice(0,5)==="text="))return[];let o=[];for(let i of r){if(i.slice(0,7)!=="family=")continue;let s=o.length+16,a=i.slice(7).replace(/%20| /g,"+"),l=a.indexOf(":"),c=l<0?a:a.slice(0,l);if(!/^[A-Za-z0-9][A-Za-z0-9+._-]{0,99}$/.test(c))continue;let u=[["0","400"]];if(l>=0){let m=a.indexOf("@",l),h=a.slice(l+1,m<0?l:m).split(","),g=h.indexOf("ital"),b=h.indexOf("wght");if(m<0||h.some(y=>y!=="ital"&&y!=="wght"))continue;u=[];for(let y of a.slice(m+1).split(";")){let v=y.split(","),w=[g<0?"0":v[g]??"",b<0?"400":v[b]??""];if(v.length!==h.length||!/^[01]$/.test(w[0])||!/^[1-9]\d{0,3}(?:\.\.[1-9]\d{0,3})?$/.test(w[1])){u=[];break}u.push(w)}if(u.length===0)continue}let d=u.map(m=>m[0]+","+m[1]),f=t!==void 0&&Object.prototype.hasOwnProperty.call(t,c.replace(/\+/g," ").toLowerCase())?t[c.replace(/\+/g," ").toLowerCase()]:void 0,p;if(f!==void 0){let m=(h,g)=>u.some(b=>b[0]===h&&g>=Number(b[1].split("..")[0])&&g<=Number(b[1].split("..").pop()));p=[];for(let h of f.italic?["0","1"]:["0"]){if(f.wght===void 0){for(let b of f.statics??[])m(h,b)||p.push(h+","+String(b));continue}let g=0;for(let b=f.wght[0];b<=f.wght[1]+100;b+=100){let y=b<=f.wght[1]&&!m(h,b);y&&g===0&&(g=b),!y&&g!==0&&(p.push(h+","+String(g)+(b-100>g?".."+String(b-100):"")),g=0)}}}else{let m=g=>Number(g[1].split("..").pop())>=600,h=u.filter(g=>g[0]==="0");p=h.map(g=>"1,"+g[1]).concat(h.some(m)?[]:["0,700"],u.some(m)?[]:["1,700"])}for(let m of p){let h=n+"family="+c+":ital,wght@"+m+"&display=swap";d.indexOf(m)<0&&o.indexOf(h)<0&&o.length<s&&o.push(h)}}return o})(h, {"inter":{"wght":[100,900],"italic":true},"roboto":{"wght":[100,900],"italic":true},"open sans":{"wght":[300,800],"italic":true},"lato":{"statics":[100,300,400,700,900],"italic":true},"montserrat":{"wght":[100,900],"italic":true},"poppins":{"statics":[100,200,300,400,500,600,700,800,900],"italic":true},"raleway":{"wght":[100,900],"italic":true},"nunito":{"wght":[200,1000],"italic":true},"playfair display":{"wght":[400,900],"italic":true},"merriweather":{"wght":[300,900],"italic":true},"work sans":{"wght":[100,900],"italic":true},"dm sans":{"wght":[100,1000],"italic":true},"manrope":{"wght":[200,800],"italic":false},"space grotesk":{"wght":[300,700],"italic":false},"lora":{"wght":[400,700],"italic":true},"bebas neue":{"statics":[400],"italic":false},"caveat":{"wght":[400,700],"italic":false}}); });</script>
+<script src="/_f/1791909415-2fab/artifact-type/dc-runtime.js"></script><style>x-dc{display:none!important}</style>
+<script>(function (s) { if (!window.React || !window.ReactDOM || typeof window.__dcUpdate !== 'function') { try { s = s && s.previousElementSibling; window.parent.postMessage({ __dc_boot_failed: 1, e: 'the artboard runtime did not load', u: s && s.getAttribute('src') }, '*'); } catch (e) {} } })(document.currentScript);</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&amp;family=Nunito:wght@400;500;600;700;800&amp;display=swap" data-dc-tpl="1"><style data-dc-tpl="2">
+body{margin:0}
+</style><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,300&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,400&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,500&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@1,600&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..300&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,900..1000&amp;display=swap" data-font-variant=""><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@1,200..1000&amp;display=swap" data-font-variant=""><link rel="preconnect" href="https://fonts.googleapis.com" data-dc-tpl="1"><style data-dc-tpl="3">
+body{margin:0}
+</style><style data-dc-editor-style="">body:not([data-dc-editor-overlay-hidden]) [data-dc-editor-hover][data-dc-editor-hover-stroke]:not([data-dc-editor-selected]){filter:drop-shadow(0 0 calc(1*var(--dc-chrome-unit,1px)) color-mix(in srgb,#2a78d6 90%,transparent)) drop-shadow(0 0 calc(2*var(--dc-chrome-unit,1px)) color-mix(in srgb,#2a78d6 55%,transparent))!important;}body:not([data-dc-editor-overlay-hidden]):not([data-dc-editor-proxy="copy"]) [data-dc-editor-dragging],body:not([data-dc-editor-overlay-hidden]):not([data-dc-editor-proxy]) [data-dc-dragging],body[data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]{outline:calc(2*var(--dc-chrome-unit,1px)) solid #2a78d6!important;outline-offset:calc(-1*var(--dc-chrome-unit,1px))!important;opacity:0.55!important;}body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging],body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging],body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging]>*,body[data-dc-editor-proxy="move"]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging]>*{opacity:0!important;outline:none!important;}[data-dc-editor-drag-proxy],[data-dc-editor-drag-proxy] *{pointer-events:none!important;}body[data-dc-editor-on]:not([data-dc-editor-tool="interact"]) *{cursor:default!important;user-select:none!important;}body[data-dc-editor-on]:not([data-dc-editor-tool="interact"]) :not([data-dc-editor-overlay-root]):not([data-dc-editor-overlay-root] *){pointer-events:auto!important;transition:none!important;animation:none!important;}body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]),body[data-dc-editor-on][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-editor-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-dragging]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]),body[data-dc-editor-move][data-dc-editor-brk]:not([data-dc-editor-overlay-hidden]) [data-dc-drag-follower]:not([data-dc-editor-overlay-root]) :not([data-dc-editor-overlay-root]){pointer-events:none!important;}body[data-dc-editor-move] :not([data-dc-editor-overlay-root]):not([data-dc-editor-overlay-root] *){pointer-events:auto!important;transition:none!important;animation-duration:0s!important;animation-delay:0s!important;}body[data-dc-editor-on][data-dc-editor-tool="rect"] *,body[data-dc-editor-on][data-dc-editor-tool="frame"] *,body[data-dc-editor-on][data-dc-editor-tool="grid"] *,body[data-dc-editor-on][data-dc-editor-tool="oval"] *,body[data-dc-editor-on][data-dc-editor-tool="arrow"] *,body[data-dc-editor-on][data-dc-editor-tool="line"] *{cursor:crosshair!important;}body[data-dc-editor-on][data-dc-editor-tool="text"] *{cursor:text!important;}body[data-dc-editor-on][data-dc-editor-tool="draw"] *{cursor:url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2216%22%20height=%2216%22%20viewBox=%220%200%2016%2016%22%3E%3Cpath%20d=%22M2%2014l1-4%208-8a2.1%202.1%200%200%201%203%203l-8%208-4%201z%22%20fill=%22%23333%22%20stroke=%22%23fff%22%20stroke-width=%221%22/%3E%3C/svg%3E') 1 15, crosshair!important;}body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent],body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent] *{cursor:grab!important;}body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent]:active,body[data-dc-editor-on]:not([data-dc-editor-tool]) [data-drags-parent]:active *{cursor:grabbing!important;}body[data-dc-editor-on] [data-dc-editor-editing][contenteditable][contenteditable],body[data-dc-editor-on] [data-dc-editor-editing][contenteditable][contenteditable] *,body[data-dc-editor-on] [data-dc-editor-svg-editing]{cursor:text!important;}body[data-dc-editor-on] [data-dc-editor-editing="import"]{outline:none!important;}html:not([data-dc-canvas]):has(body[data-dc-editor-on]:not([data-dc-capturing]) .sc-host){background:var(--dc-editor-backdrop,#ededeb);}html:not([data-dc-canvas]) body[data-dc-editor-on]:not([data-dc-capturing]):has(.sc-host){background:var(--dc-editor-backdrop,#ededeb);}html:not([data-dc-canvas]) body[data-dc-editor-on] .sc-host:not(.sc-host .sc-host){min-height:calc(100vh - var(--dc-editor-host-vpad,0px));}html:not([data-dc-canvas]) body[data-dc-editor-on]:not([data-dc-capturing]) .sc-host:not(.sc-host .sc-host){background:var(--dc-editor-host-bg,#fff);}html[data-dc-frameless],html[data-dc-frameless] body[data-dc-editor-on],html[data-dc-frameless] body[data-dc-editor-on] .sc-host:not(.sc-host .sc-host){background:transparent!important;min-height:0!important;}html:has(body[data-dc-capturing]),body[data-dc-capturing]{transition:none!important;}html[data-dc-canvas]{overflow:hidden;}html[data-dc-canvas] body[data-dc-editor-on] .sc-host:not(.sc-host .sc-host)::before{content:"";position:absolute;left:-100000px;top:-100000px;width:200000px;height:200000px;pointer-events:none;background:repeating-linear-gradient(45deg,var(--dc-editor-hatch-ink,rgba(0,0,0,.05)) 0 8px,transparent 8px 16px);clip-path:polygon(0 0,100% 0,100% 50%,50% 50%,50% 100%,0 100%);}</style></head>
+<body>
+<div id="dc-root"><div class="sc-host" data-sc-name="Light"><div data-dc-tpl="3" style="min-height: 1000px;">
+  <div class="sc-host" data-sc-name="Main" data-dc-tpl="4"><div data-dc-tpl="4" style="position: relative; min-height: 1000px; overflow: clip; background: rgb(243, 241, 236); color: rgb(22, 24, 27); font-family: Nunito, system-ui, sans-serif;">
+  <img data-dc-tpl="5" src="/_blob/48e6c594519a6134b76bfe111036c44e" alt="" aria-hidden="true" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; opacity: 1; filter: saturate(0.85); mask-image: none;">
+  <div data-dc-tpl="6" aria-hidden="true" style="position: absolute; inset: 0px; background: rgba(243, 241, 236, 0.2);"></div>
+
+  <div data-dc-tpl="7" style="position: relative; box-sizing: border-box; max-width: 1360px; min-height: 1000px; margin: 0px auto; padding: 0px clamp(16px, 4vw, 40px); display: flex; flex-direction: column;">
+
+    <div data-dc-tpl="8" style="display: block; position: sticky; top: 0px; z-index: 20; margin: 0px calc(-1 * clamp(16px, 4vw, 40px)); padding: 0px clamp(16px, 4vw, 40px) 16px; background: transparent; backdrop-filter: none; box-shadow: none; transition: background 0.25s, box-shadow 0.25s;">
+    <header data-dc-tpl="9" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 0px; border-bottom: 1px solid rgba(22, 24, 27, 0.1); transition: padding 0.3s;">
+      <div data-dc-tpl="10" style="display: flex; align-items: center; gap: 14px; min-width: 0px; padding: 6px 16px 6px 6px; border-radius: 18px; background: linear-gradient(rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.42) 100%); border: 1px solid rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px) saturate(180%); box-shadow: rgba(255, 255, 255, 0.95) 0px 1px 0px inset, rgba(255, 255, 255, 0.35) 0px -1px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 18px inset, rgba(30, 36, 50, 0.14) 0px 10px 32px;">
+        <img data-dc-tpl="11" src="/_blob/8a55ed262ec6c88c3a15abb6881db6f0" alt="Mando" style="width: 40px; height: 40px; border-radius: 10px; object-fit: cover;">
+        <div data-dc-tpl="12" style="min-width: 0px;">
+          <h1 data-dc-tpl="13" style="margin: 0px; font-size: 18px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em;">My dashboard</h1>
+          <p data-dc-tpl="14" style="margin: 2px 0px 0px; font-size: 13px; color: rgb(71, 76, 84);">Simply and lovelly</p>
+        </div>
+      </div>
+      <div data-dc-tpl="15" style="display: flex; align-items: center; gap: 8px;">
+        <a data-dc-tpl="16" href="Configurator.dc.html" aria-label="Open configurator" style="width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.75); background: linear-gradient(rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.42) 100%); backdrop-filter: blur(24px) saturate(180%); box-shadow: rgba(255, 255, 255, 0.95) 0px 1px 0px inset, rgba(255, 255, 255, 0.35) 0px -1px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 18px inset, rgba(30, 36, 50, 0.14) 0px 10px 32px; color: rgb(22, 24, 27);">
+          <svg data-dc-tpl="17" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path data-dc-tpl="18" d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle data-dc-tpl="19" cx="16" cy="7" r="2"></circle><circle data-dc-tpl="20" cx="10" cy="17" r="2"></circle></svg>
+        </a>
+        <button data-dc-tpl="21" type="button" aria-label="Toggle theme" style="width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.75); background: linear-gradient(rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.42) 100%); backdrop-filter: blur(24px) saturate(180%); box-shadow: rgba(255, 255, 255, 0.95) 0px 1px 0px inset, rgba(255, 255, 255, 0.35) 0px -1px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 18px inset, rgba(30, 36, 50, 0.14) 0px 10px 32px; color: rgb(22, 24, 27); cursor: pointer; padding: 0px;">
+          
+          
+            <svg data-dc-tpl="27" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path data-dc-tpl="28" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg>
+          
+        </button>
+      </div>
+    </header>
+
+    <section data-dc-tpl="29" aria-label="Clock" style="padding: clamp(32px, 6vw, 64px) 0px clamp(20px, 3vw, 32px); display: flex; flex-direction: column; align-items: center; transition: padding 0.3s;">
+      <div data-dc-tpl="30" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px; padding: clamp(20px, 2.5vw, 28px) clamp(28px, 4vw, 48px) clamp(18px, 2.2vw, 24px); transition: padding 0.3s, gap 0.3s; border-radius: 26px; background: linear-gradient(rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.42) 100%); border: 1px solid rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px) saturate(180%); box-shadow: rgba(255, 255, 255, 0.95) 0px 1px 0px inset, rgba(255, 255, 255, 0.35) 0px -1px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 18px inset, rgba(30, 36, 50, 0.14) 0px 10px 32px;">
+      
+      
+        <p data-dc-tpl="35" aria-label="18:43" style="margin: 0px; display: flex; align-items: baseline; font-family: Nunito, system-ui, sans-serif; font-weight: 800; font-size: clamp(88px, 11vw, 150px); line-height: 0.9; letter-spacing: -0.03em; transition: font-size 0.3s;">
+          <span data-dc-tpl="36" aria-hidden="true" style="color: rgb(56, 62, 68);"><span class="sc-interp">18</span></span><span data-dc-tpl="37" aria-hidden="true" style="color: rgb(154, 91, 0); opacity: 0.3; transition: opacity 0.4s; padding: 0px 0.06em;">:</span><span data-dc-tpl="38" aria-hidden="true" style="color: rgba(154, 91, 0, 0.32); -webkit-text-stroke: 2px rgb(154, 91, 0); paint-order: stroke;"><span class="sc-interp">43</span></span>
+        </p>
+        <p data-dc-tpl="39" aria-label="Tuesday · 13 October 2026" style="margin: 0px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; font: 600 12px &quot;IBM Plex Mono&quot;, ui-monospace, monospace; letter-spacing: 0.16em; text-transform: uppercase;">
+          <span data-dc-tpl="40" aria-hidden="true" style="padding: 5px 11px; border-radius: 999px; background: rgb(154, 91, 0); color: rgb(255, 255, 255);"><span class="sc-interp">Tuesday</span></span>
+          <span data-dc-tpl="41" aria-hidden="true" style="padding: 5px 11px; border-radius: 999px; border: 1px solid rgba(22, 24, 27, 0.4); color: rgb(22, 24, 27); background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(10px);"><span class="sc-interp">13 October</span></span>
+        </p>
+      
+      </div>
+    </section>
+
+    <div data-dc-tpl="42" style="position: static; top: 0px; z-index: 20; margin: 0px; padding: 0px; background: transparent; backdrop-filter: none; box-shadow: none; transition: background 0.25s, box-shadow 0.25s;">
+    <form data-dc-tpl="43" role="search" style="position: relative; width: 100%; max-width: 1360px; margin: 0px auto; transition: max-width 0.35s;">
+      <div data-dc-tpl="44" style="display: flex; align-items: center; height: 60px; transition: height 0.3s; box-sizing: border-box; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; padding: 0px 8px 0px 6px; gap: 4px;">
+        <button data-dc-tpl="45" type="button" aria-label="Select search engine" aria-haspopup="listbox" aria-expanded="false" style="flex: 0 0 auto; height: 44px; transition: height 0.3s; display: flex; align-items: center; gap: 8px; padding: 0px 12px; border: 0px; border-radius: 10px; background: rgba(22, 24, 27, 0.06); color: rgb(22, 24, 27); font: 500 14px Nunito, system-ui, sans-serif; cursor: pointer;">
+          <svg data-dc-tpl="46" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle data-dc-tpl="47" cx="11" cy="11" r="6.5"></circle><path data-dc-tpl="48" d="M16 16l4.5 4.5"></path></svg>
+          <span data-dc-tpl="49"><span class="sc-interp">Apps</span></span>
+          <svg data-dc-tpl="50" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-dc-tpl="51" d="M6 9l6 6 6-6"></path></svg>
+        </button>
+        <label data-dc-tpl="52" for="mando-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0px, 0px, 0px, 0px);">Search applications</label>
+        <input data-dc-tpl="53" id="mando-search" type="text" enterkeyhint="search" placeholder="Search your applications…" autocomplete="off" value="" style="flex: 1 1 0%; min-width: 0px; height: 44px; border: 0px; outline: none; background: transparent; color: rgb(22, 24, 27); font: 400 18px Nunito, system-ui, sans-serif; transition: font-size 0.3s; padding: 0px 12px;">
+        
+      </div>
+      
+    </form>
+
+    <nav data-dc-tpl="70" aria-label="Categories" style="margin-top: 28px; padding: 0px 18px; border-radius: 12px; background: linear-gradient(rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.42) 100%); border: 1px solid rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px) saturate(180%); box-shadow: rgba(255, 255, 255, 0.95) 0px 1px 0px inset, rgba(255, 255, 255, 0.35) 0px -1px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 18px inset, rgba(30, 36, 50, 0.14) 0px 10px 32px; overflow-x: auto; opacity: 1;">
+      <div data-dc-tpl="71" style="display: flex; gap: 28px; min-width: max-content;">
+        
+          <button data-dc-tpl="73" type="button" aria-pressed="true" style="min-height: 44px; padding: 0px 2px; margin-bottom: -1px; border-width: 0px 0px 2px; border-style: none none solid; border-color: currentcolor currentcolor rgb(154, 91, 0); border-image: none; background: transparent; color: rgb(22, 24, 27); font: 500 15px Nunito, system-ui, sans-serif; white-space: nowrap; cursor: pointer;"><span class="sc-interp">Apps</span></button>
+        
+          <button data-dc-tpl="73" type="button" aria-pressed="false" style="min-height: 44px; padding: 0px 2px; margin-bottom: -1px; border-width: 0px 0px 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: transparent; color: rgb(71, 76, 84); font: 500 15px Nunito, system-ui, sans-serif; white-space: nowrap; cursor: pointer;"><span class="sc-interp">Bookmarks</span></button>
+        
+          <button data-dc-tpl="73" type="button" aria-pressed="false" style="min-height: 44px; padding: 0px 2px; margin-bottom: -1px; border-width: 0px 0px 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: transparent; color: rgb(71, 76, 84); font: 500 15px Nunito, system-ui, sans-serif; white-space: nowrap; cursor: pointer;"><span class="sc-interp">Home Automation</span></button>
+        
+          <button data-dc-tpl="73" type="button" aria-pressed="false" style="min-height: 44px; padding: 0px 2px; margin-bottom: -1px; border-width: 0px 0px 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: transparent; color: rgb(71, 76, 84); font: 500 15px Nunito, system-ui, sans-serif; white-space: nowrap; cursor: pointer;"><span class="sc-interp">Media</span></button>
+        
+          <button data-dc-tpl="73" type="button" aria-pressed="false" style="min-height: 44px; padding: 0px 2px; margin-bottom: -1px; border-width: 0px 0px 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: transparent; color: rgb(71, 76, 84); font: 500 15px Nunito, system-ui, sans-serif; white-space: nowrap; cursor: pointer;"><span class="sc-interp">Networking</span></button>
+        
+          <button data-dc-tpl="73" type="button" aria-pressed="false" style="min-height: 44px; padding: 0px 2px; margin-bottom: -1px; border-width: 0px 0px 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: transparent; color: rgb(71, 76, 84); font: 500 15px Nunito, system-ui, sans-serif; white-space: nowrap; cursor: pointer;"><span class="sc-interp">Productivity</span></button>
+        
+      </div>
+    </nav>
+    </div>
+    </div>
+
+    <section data-dc-tpl="74" aria-label="Applications" style="padding: 24px 0px 40px; flex: 1 1 0%;">
+      
+        <ul data-dc-tpl="76" style="list-style: none; margin: 0px; padding: 0px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 14px;">
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://plex.example.com" aria-label="Plex, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                    <span data-dc-tpl="82" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: linear-gradient(rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: rgb(255, 255, 255) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 2px 6px;">
+                      <img data-dc-tpl="83" src="/_blob/30ac41f3ec0dfdc86ede887841050a1c" alt="" style="width: 30px; height: 30px; object-fit: contain;">
+                    </span>
+                  
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Plex</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Media server for movies, TV shows, and music</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">media</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">streaming</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://jellyfin.example.com" aria-label="Jellyfin, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                  
+                    <span data-dc-tpl="85" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: rgb(110, 82, 201); color: rgb(255, 255, 255); font: 600 15px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: -0.02em;"><span class="sc-interp">Jf</span></span>
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Jellyfin</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Free software media system</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">media</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">open-source</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://ombi.example.com" aria-label="Ombi" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                  
+                    <span data-dc-tpl="85" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: rgb(240, 138, 43); color: rgb(30, 15, 2); font: 600 15px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: -0.02em;"><span class="sc-interp">Om</span></span>
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Ombi</span></p>
+                  </div>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Request media for your Plex/Jellyfin server</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">requests</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">media</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://nextcloud.example.com" aria-label="Nextcloud, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                    <span data-dc-tpl="82" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: linear-gradient(rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: rgb(255, 255, 255) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 2px 6px;">
+                      <img data-dc-tpl="83" src="/_blob/c607a0f337e553527a0549d60443cabf" alt="" style="width: 30px; height: 30px; object-fit: contain;">
+                    </span>
+                  
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Nextcloud</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Productivity platform for file storage and collaboration</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">cloud</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">files</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://paperless.example.com" aria-label="Paperless-ngx" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                  
+                    <span data-dc-tpl="85" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: rgb(23, 84, 31); color: rgb(255, 255, 255); font: 600 15px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: -0.02em;"><span class="sc-interp">Pa</span></span>
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Paperless-ngx</span></p>
+                  </div>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Document management system</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">documents</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">scanning</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://ha.example.com" aria-label="Home Assistant, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                    <span data-dc-tpl="82" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: linear-gradient(rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: rgb(255, 255, 255) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 2px 6px;">
+                      <img data-dc-tpl="83" src="/_blob/a8bbd0bb012a3cf96dc5a9d295b1d2b1" alt="" style="width: 30px; height: 30px; object-fit: contain;">
+                    </span>
+                  
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Home Assistant</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Open source home automation platform</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">smart-home</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">automation</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://mosquitto.example.com" aria-label="Mosquitto, offline" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                  
+                    <span data-dc-tpl="85" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: rgb(60, 82, 128); color: rgb(255, 255, 255); font: 600 15px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: -0.02em;"><span class="sc-interp">Mq</span></span>
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Mosquitto</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(184, 52, 31, 0.1); color: rgb(184, 52, 31); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(184, 52, 31);"></span><span class="sc-interp">DOWN</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">MQTT message broker</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">iot</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">mqtt</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://portainer.example.com" aria-label="Portainer, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                    <span data-dc-tpl="82" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: linear-gradient(rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: rgb(255, 255, 255) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 2px 6px;">
+                      <img data-dc-tpl="83" src="/_blob/f1caf634426bc16dc86fa3c3f2584d3c" alt="" style="width: 30px; height: 30px; object-fit: contain;">
+                    </span>
+                  
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Portainer</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Docker management UI</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">docker</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">containers</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://pihole.example.com" aria-label="Pi-hole, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                  
+                    <span data-dc-tpl="85" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: rgb(150, 6, 12); color: rgb(255, 255, 255); font: 600 15px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: -0.02em;"><span class="sc-interp">Ph</span></span>
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Pi-hole</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Network-wide ad blocking</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">dns</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">adblock</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+            <li data-dc-tpl="78" style="display: flex;">
+              <a data-dc-tpl="79" href="https://kuma.example.com" aria-label="Uptime Kuma, online" style="flex: 1 1 0%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; min-height: 156px; padding: 18px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(16px) saturate(160%); box-shadow: rgba(255, 255, 255, 0.9) 0px 1px 0px inset, rgba(30, 36, 50, 0.08) 0px 4px 18px; transform: translateY(0px); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.25s, border-color 0.25s, box-shadow 0.25s; outline: none; color: rgb(22, 24, 27); text-decoration: none;">
+                <div data-dc-tpl="80" style="display: flex; align-items: flex-start; gap: 12px;">
+                  
+                  
+                    <span data-dc-tpl="85" aria-hidden="true" style="flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); background: rgb(92, 221, 139); color: rgb(5, 35, 19); font: 600 15px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: -0.02em;"><span class="sc-interp">UK</span></span>
+                  
+                  <div data-dc-tpl="86" style="flex: 1 1 0%; min-width: 0px; padding-top: 2px;">
+                    <p data-dc-tpl="87" style="margin: 0px; font-size: 16px; font-weight: 600; line-height: 1.25;"><span class="sc-interp">Uptime Kuma</span></p>
+                  </div>
+                  
+                    <span data-dc-tpl="89" aria-hidden="true" style="flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0px 8px; border-radius: 6px; background: rgba(17, 114, 74, 0.1); color: rgb(17, 114, 74); font: 500 11px &quot;IBM Plex Mono&quot;, monospace; letter-spacing: 0.08em;">
+                      <span data-dc-tpl="90" style="width: 6px; height: 6px; border-radius: 50%; background: rgb(17, 114, 74);"></span><span class="sc-interp">UP</span>
+                    </span>
+                  
+                </div>
+                
+                  <p data-dc-tpl="92" style="margin: 0px; font-size: 14px; line-height: 1.45; color: rgb(71, 76, 84); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><span class="sc-interp">Self-hosted monitoring tool</span></p>
+                
+                
+                  <div data-dc-tpl="94" style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px;">
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">monitoring</span></span>
+                    
+                      <span data-dc-tpl="96" style="height: 22px; display: inline-flex; align-items: center; padding: 0px 8px; border-radius: 6px; border: 1px solid rgba(22, 24, 27, 0.1); font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);"><span class="sc-interp">uptime</span></span>
+                    
+                  </div>
+                
+              </a>
+            </li>
+          
+        </ul>
+      
+      
+    </section>
+
+    <footer data-dc-tpl="104" style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding: 14px 18px; margin-bottom: 16px; border-radius: 12px; background: linear-gradient(rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.42) 100%); border: 1px solid rgba(255, 255, 255, 0.75); backdrop-filter: blur(24px) saturate(180%); box-shadow: rgba(255, 255, 255, 0.95) 0px 1px 0px inset, rgba(255, 255, 255, 0.35) 0px -1px 0px inset, rgba(255, 255, 255, 0.25) 0px 0px 18px inset, rgba(30, 36, 50, 0.14) 0px 10px 32px; font: 400 12px &quot;IBM Plex Mono&quot;, monospace; color: rgb(71, 76, 84);">
+      <p data-dc-tpl="105" style="margin: 0px;">Powered by <a data-dc-tpl="106" href="https://getmando.rackandhost.com" style="color: rgb(22, 24, 27);">Mando</a> v2.1.0</p>
+      <p data-dc-tpl="107" style="margin: 0px; display: flex; align-items: center; gap: 6px;">Created with
+        <svg data-dc-tpl="108" role="img" aria-label="love" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A5B00" stroke-width="2" stroke-linejoin="round"><path data-dc-tpl="109" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+        by <a data-dc-tpl="110" href="https://rackandhost.com" style="color: rgb(22, 24, 27);">Rack&amp;Host</a> 2026</p>
+    </footer>
+  </div></div></div></div></div></div>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+
+
+</body></html>
