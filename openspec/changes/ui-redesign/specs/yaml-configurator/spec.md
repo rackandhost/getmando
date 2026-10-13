@@ -2,15 +2,18 @@
 
 Presentation changes only. The behaviour requirements of `openspec/specs/yaml-configurator/spec.md`
 (lazy route, source choice, import/edit, semantic validation, export, non-persistence) remain in force.
+Visual reference: `mockup/states/config-*.png` (dark theme only in the mockup; the light theme is
+derived from the same tokens as the dashboard — see `design.md` § 7).
 
 ## ADDED Requirements
 
 ### Requirement: Configurator page layout
 
-The configurator MUST render a sticky header (same as the dashboard header, with `Back to dashboard`),
-a page heading block (eyebrow `DASHBOARD SETUP`, `h1` `Configuration editor`, one-line description) in a
-glass panel, and below it a two-column layout: a 240 px side navigation and a content column of
-numbered section cards. At 1440 px the content column is 1008 px wide with 28 px card padding.
+The configurator MUST render a sticky header (same chip and theme button as the dashboard, with a
+`Back to dashboard` button instead of the configurator link), a page heading block (eyebrow
+`DASHBOARD SETUP`, `h1` `Configuration editor`, one-line description) in a glass panel, and below it
+a two-column layout: a 240 px side navigation and a content column of numbered section cards. At
+1440 px the content column is 1008 px wide with 28 px card padding. The page (window) scrolls.
 
 #### Scenario: Desktop layout
 
@@ -18,12 +21,28 @@ numbered section cards. At 1440 px the content column is 1008 px wide with 28 px
 - WHEN `/configure` renders
 - THEN the side navigation is 240 px wide, sticky at `top: 104px`, beside the content column
 
-### Requirement: Numbered sections and side navigation
+### Requirement: Sticky header band
+
+The header MUST be sticky at `top: 0`. In the top state it is transparent with 24 px vertical
+padding; once the scroll state is _scrolled_ (`scrollY > 40`, back to top at `scrollY ≤ 4`) it MUST
+gain the band background, blur and shadow of `design.md` § 3.1 and reduce its padding to 14 px.
+
+#### Scenario: Header band appears
+
+- GIVEN the configurator at scroll position 0
+- WHEN the page scrolls to 41 px
+- THEN the header shows the band and its padding is 14 px
+- AND content scrolls beneath it
+
+### Requirement: Numbered sections and scroll-spy navigation
 
 The content MUST be divided into sections numbered `01`–`07`: Starting point, Metadata, Settings,
 Categories, Applications, Bookmarks, Export. The side navigation MUST list them in order with their
-numbers, mark the section currently in view, and move focus/scroll to a section when its item is
-activated. Each section MUST be a labelled region (`aria-labelledby` its heading).
+numbers, mark the active section with `aria-current="true"`, a 2 px accent left line and a tinted
+background, and scroll to a section when its item is activated. The active section MUST be the last
+section whose top edge is at or above 140 px from the viewport top (200 px at ≤ 900 px wide), and the
+last section when the page is scrolled to the bottom. Each section MUST be a labelled region
+(`aria-labelledby` its heading).
 
 #### Scenario: Navigate to a section
 
@@ -34,15 +53,22 @@ activated. Each section MUST be a labelled region (`aria-labelledby` its heading
 
 #### Scenario: Current section indicated
 
-- GIVEN the user scrolls to the Settings section
-- WHEN it is the section nearest the top
-- THEN `03 Settings` is highlighted in the side navigation with `aria-current="true"`
+- GIVEN the user scrolls until the Settings section's top passes 140 px
+- WHEN the scroll settles
+- THEN `03 Settings` is the active item
+
+#### Scenario: Bottom of the page
+
+- GIVEN the page is scrolled to the bottom
+- WHEN the active item is evaluated
+- THEN `07 Export` is active even if the Export section's top is below 140 px
 
 ### Requirement: Starting point cards
 
 The Starting-point section MUST present three option cards — Start empty, Load mounted YAML (only when
-a mounted YAML is valid and not a runtime fallback), Import local YAML — with the selected option
-visibly highlighted (accent border) and exposed with `aria-pressed` or equivalent radio semantics.
+a mounted YAML is valid and not a runtime fallback; its caption is the mounted path), Import local
+YAML (dashed border) — with the selected option visibly highlighted (accent border, tinted background)
+and exposed with `aria-pressed` or equivalent radio semantics.
 
 #### Scenario: Mounted option hidden
 
@@ -59,29 +85,38 @@ visibly highlighted (accent border) and exposed with `aria-pressed` or equivalen
 
 ### Requirement: Validation summary panel
 
-Validation errors MUST be listed in a panel headed `Fix the following errors`, using `--down` text and
-tint, one item per error with its field path, announced to assistive technology (`role="alert"` or
-equivalent) when it appears. Each error MUST remain programmatically associated with its field.
+Validation errors MUST be listed in a panel headed `Fix the following errors`, using `--down` text,
+border and tint, one item per error with its field path in IBM Plex Mono, announced to assistive
+technology (`role="alert"` or equivalent) when it appears. Each error MUST remain programmatically
+associated with its field.
 
 #### Scenario: Errors displayed
 
-- GIVEN a draft with `applications[0].category` referencing a missing category
+- GIVEN a draft with `applications[6].category` referencing a missing category
 - WHEN validation runs
-- THEN the panel lists `applications[0].category — Category 'iot' does not exist.`
+- THEN the panel lists `applications[6].category — Category 'iot' does not exist.`
 - AND the offending field is described by that message
 
-### Requirement: Switch controls
+### Requirement: Switch and segmented controls
 
 Boolean settings and flags (show seconds, show date, allow bookmarks, show "Apps" category, show
-descriptions, show labels, each search engine, per-app open-in-new-tab, favorite, health check) MUST be
-presented as switches: 44 × 26 px track, `role="switch"`, `aria-checked`, visible text label, on state
-`--accent`. Toggling MUST change the same draft fields as the former checkboxes.
+descriptions, show labels, each search engine, per-app open-in-new-tab, favorite, health check) MUST
+be presented as switches inside labelled tiles: 44 × 26 px track, `role="switch"`, `aria-checked`,
+visible text label, on state `--accent`. **Theme** (`Light | Dark | Auto`) and **Date position**
+(`Top | Bottom`) MUST be segmented controls with radio-group semantics and a group label. Toggling or
+choosing MUST change the same draft fields as the former controls.
 
 #### Scenario: Toggle with keyboard
 
 - GIVEN focus on `Show seconds`
 - WHEN the user presses Space
 - THEN the setting toggles and `aria-checked` reflects the new value
+
+#### Scenario: Segmented control with arrows
+
+- GIVEN focus on the Theme control with `Dark` selected
+- WHEN the user presses the right arrow
+- THEN `Auto` is selected and the draft's theme is `auto`
 
 #### Scenario: Same data
 
@@ -92,8 +127,8 @@ presented as switches: 44 × 26 px track, `role="switch"`, `aria-checked`, visib
 ### Requirement: Field styling
 
 Text inputs, selects and textareas MUST be 44 px high (textarea min 44), radius 10, field background
-token, 1 px `--line`, with a visible 2 px accent focus ring and a persistent `label` above (13/500).
-Monospace is used for path/URL/YAML-like values (IBM Plex Mono).
+token, 1 px `--line`, with the two-tone focus ring and a persistent `label` above (13/500).
+Monospace is used for paths, URLs, format strings and YAML-like values (IBM Plex Mono).
 
 #### Scenario: Labelled field
 
@@ -103,12 +138,13 @@ Monospace is used for path/URL/YAML-like values (IBM Plex Mono).
 
 ### Requirement: Collection rows and inline editor
 
-Categories, Applications and Bookmarks MUST render as ordered rows showing index, icon (applications),
-name, secondary text (id or URL), and a category tag; each row MUST offer move up, move down, edit
-and delete as icon buttons with accessible names containing the item name, 44 px hit area on
-touch viewports. Edit MUST expand an inline editor panel directly beneath the row (accent-tinted
-border) containing that item's fields; only the behaviour of the existing `collection-editor` is
-retained (add, remove, reorder, focus management).
+Categories, Applications and Bookmarks MUST render as ordered rows showing index, icon (applications
+and bookmarks), name, secondary text (id or URL, monospace), a category tag, a flags summary
+(`health · new tab`, `new tab`), and move up, move down, edit and delete icon buttons with accessible
+names containing the item name (44 px hit area on touch viewports). Edit MUST expand an inline editor
+panel directly beneath the row (accent-tinted background and ring) containing that item's fields;
+the behaviour of the existing `collection-editor` (add, remove, reorder, focus management) is
+retained.
 
 #### Scenario: Edit in place
 
@@ -123,11 +159,17 @@ retained (add, remove, reorder, focus management).
 - WHEN the user activates `Move up`
 - THEN the row moves above its predecessor and focus stays on the same button
 
+#### Scenario: Flags summary
+
+- GIVEN an app with `openNewTab: true` and `healthCheck: true`
+- WHEN its row renders
+- THEN the flags text reads `health · new tab`
+
 ### Requirement: Export panel
 
 The Export section MUST present `Copy YAML`, `Download YAML` and `Save` actions. When saving needs a
 write token, an inline panel MUST appear with a password-type `Write token` field, help text naming
-`CONFIG_WRITE_TOKEN`, and `Save token & save` / `Cancel`. The primary action uses `--accent` background
+`CONFIG_WRITE_TOKEN`, and `Save token & save` / `Cancel`. Primary actions use `--accent` background
 with `--accent-ink` text.
 
 #### Scenario: Token needed
@@ -139,9 +181,12 @@ with `--accent-ink` text.
 
 ### Requirement: Responsive configurator
 
-At ≤ 900 px the layout MUST become one column: the side navigation becomes a horizontally scrolling
-chip bar, sticky at `top: 96px`, full width; at ≤ 600 px the `Back to dashboard` label MUST become
-visually hidden (still exposed to assistive technology).
+At ≤ 900 px the layout MUST become one column and the side navigation MUST become a horizontal chip
+bar, full width and sticky at `top: 96px`: items in a single row without wrapping, native horizontal
+scroll without a visible scrollbar, vertical wheel input mapped to horizontal scroll, edge fades
+shown only on the side that overflows, and the active item smooth-scrolled to the centre. At ≤ 600 px
+the `Back to dashboard` label MUST be visually hidden (the icon stays and the accessible name is
+preserved).
 
 #### Scenario: Tablet
 
@@ -149,11 +194,28 @@ visually hidden (still exposed to assistive technology).
 - WHEN `/configure` renders
 - THEN the side navigation is a single horizontal row above the content and scrolls sideways
 
+#### Scenario: Active chip follows the scroll
+
+- GIVEN the chip bar overflows horizontally
+- WHEN the active section changes to `06 Bookmarks`
+- THEN that chip is scrolled to the centre of the bar
+
 #### Scenario: Phone
 
 - GIVEN a 390 px viewport
 - WHEN the header renders
 - THEN the back button shows only its icon and its accessible name remains `Back to dashboard`
+
+### Requirement: Light theme
+
+The configurator MUST render in both light and dark themes using the tokens of `design-system`; the
+header theme button MUST toggle the theme as on the dashboard.
+
+#### Scenario: Theme toggle on the configurator
+
+- GIVEN the configurator in dark theme
+- WHEN the user activates `Toggle theme`
+- THEN the whole configurator switches to the light tokens and all contrast requirements still hold
 
 ## MODIFIED Requirements
 

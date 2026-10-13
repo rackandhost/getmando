@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Define the layout, components and scroll behaviour of the dashboard (`/`) in the "Consola" design.
-Behaviour of data, search, categories and status polling is defined elsewhere and unchanged; this
-spec covers presentation and presentation-driven behaviour. Metrics and tokens: `design.md` § 3–4.
+Define the layout, components and scroll behaviour of the dashboard (`/`) in the "Consola" design, as
+shown in the live prototype (`mockup/states/`). Behaviour of data, search, categories and status
+polling is defined elsewhere and unchanged; this spec covers presentation and presentation-driven
+behaviour. Metrics and tokens: `design.md` § 3–4.
 
 ## Requirements
 
@@ -12,11 +13,11 @@ spec covers presentation and presentation-driven behaviour. Metrics and tokens: 
 
 The dashboard MUST render, top to bottom: header, clock section, search bar, category tab bar, app
 grid, footer, inside a centred container of at most 1360 px including inline padding
-`clamp(16px, 4vw, 40px)`. The page, not an inner container, MUST scroll.
+`clamp(16px, 4vw, 40px)`. The page (window), not an inner container, MUST scroll.
 
 #### Scenario: Desktop structure
 
-- GIVEN a 1440 × 1000 viewport and 10 apps
+- GIVEN a 1440 × 900 viewport and 10 apps
 - WHEN the dashboard renders
 - THEN the content column is 1280 px wide, centred
 - AND the order of regions is header, clock, search, tabs, grid, footer
@@ -47,18 +48,22 @@ Both buttons MUST keep their accessible names and routes.
 - THEN they expose `Open configurator` and `Toggle theme`
 - AND the icons are `aria-hidden`
 
-### Requirement: Sticky header band (desktop)
+### Requirement: Sticky dock (desktop)
 
-On viewports wider than the mobile breakpoint, the header MUST be sticky at `top: 0`. When the scroll
-state becomes _scrolled_ (`scrollY > 40`; returns to _top_ when `scrollY ≤ 4`) the header MUST gain
-the band background, `blur(22px) saturate(160%)` and edge shadow of `design.md` § 3.1, and reduce its
-vertical padding from 24 px to 12 px.
+On viewports wider than 600 px and at least 720 px high, the header, clock section, search bar and
+tab bar MUST be wrapped in one sticky container (the dock) at `top: 0`. In the _top_ state it is
+transparent. When the scroll state becomes _scrolled_ (`scrollY > 40`; back to _top_ when
+`scrollY ≤ 4`) the dock MUST gain the band background, `blur(22px) saturate(160%)` and edge shadow of
+`design.md` § 3.1, the header padding MUST drop from 24 px to 12 px, and the tab gap from 28 px to
+12 px. The app grid scrolls beneath the dock. On viewports shorter than 720 px the dock MUST NOT be
+sticky.
 
 #### Scenario: Entering the scrolled state
 
-- GIVEN the dashboard at scroll position 0
+- GIVEN the dashboard at scroll position 0 on a 1440 × 900 viewport
 - WHEN the page scrolls to 41 px
-- THEN the header shows the band and its padding is 12 px
+- THEN the dock shows the band and its height drops from about 584 px to about 278 px
+- AND the cards continue to scroll beneath it
 
 #### Scenario: Hysteresis
 
@@ -67,14 +72,26 @@ vertical padding from 24 px to 12 px.
 - THEN the state remains scrolled
 - AND at 4 px it returns to the top state
 
+#### Scenario: No oscillation at the threshold
+
+- GIVEN the page is scrolled to exactly 41 px
+- WHEN the dock changes height and the document height changes accordingly
+- THEN the scrolled state does not flip back and forth
+
+#### Scenario: Short viewport
+
+- GIVEN a 1280 × 600 viewport
+- WHEN the page is scrolled
+- THEN the dock scrolls away with the page and does not cover the cards
+
 ### Requirement: Clock widget
 
 The clock MUST render `HH:mm` (24-hour, existing timer cadence) as a glass widget with the hours in
-`--clock-ink`, a `--accent` colon, and minutes drawn with `--minute-fill` and a 2 px `--accent`
-text stroke, in Nunito 800 at `clamp(88px, 11vw, 150px)`. A weekday pill (accent background, uppercase
-weekday) and a date pill (outlined) MUST follow `showDate` and `datePosition`. When `showSeconds` is
-true a seconds readout MUST be displayed next to the minutes. The widget MUST NOT be an `aria-live`
-region.
+`--clock-ink`, a static `--accent` colon, and minutes drawn with the amended `--minute-fill` and a
+2 px `--accent` text stroke, in Nunito 800 at `clamp(88px, 11vw, 150px)`. A weekday pill (accent
+background, uppercase weekday) and a date pill (outlined) MUST follow `showDate` and `datePosition`.
+When `showSeconds` is true a seconds readout MUST be displayed next to the minutes. The widget MUST
+NOT be an `aria-live` region and MUST NOT blink.
 
 #### Scenario: Default rendering
 
@@ -102,12 +119,11 @@ region.
 - THEN a two-digit seconds value updates every second beside the minutes
 - AND assistive technology is not notified on each update
 
-#### Scenario: Colon pulse respects motion preference
+#### Scenario: Colon never pulses
 
-- GIVEN `prefers-reduced-motion: no-preference`
-- WHEN each second elapses
-- THEN the colon alternates between opacity 1 and 0.3 (unless Q5 resolves to static)
-- AND under `prefers-reduced-motion: reduce` it stays at opacity 1
+- GIVEN any motion preference
+- WHEN several seconds elapse
+- THEN the colon's opacity stays at 1
 
 ### Requirement: Compact clock when scrolled (desktop)
 
@@ -125,12 +141,12 @@ padding `10px 22px`. Returning to the top state MUST restore the large layout.
 ### Requirement: Search bar
 
 The search bar MUST be a single glass control containing the engine selector button, the search input
-and, when a query exists, clear and submit buttons. The input MUST keep the accessible name
-`Search applications`, the existing key behaviour (Enter submits to the selected engine, input filters
-apps), and the placeholder `Search your applications…` for the Apps scope or `Search on <engine>…`
-for an engine. Height MUST be 60 px at the top state. In the scrolled desktop state it MUST shrink to
-44 px with max-width 440 px, and MUST expand to 52 px / full width while the input is focused, the
-query is non-empty, or the engine menu is open.
+and, when a query exists, a clear button and an accent submit button. The input MUST keep the
+accessible name `Search applications`, the existing key behaviour (Enter submits to the selected
+engine, input filters apps), and the placeholder `Search your applications…` for the Apps scope or
+`Search on <engine>…` for an engine. Height MUST be 60 px at the top state. In the scrolled desktop
+state it MUST shrink to 44 px with max-width 440 px, and MUST expand to 52 px / full width while the
+input is focused, the query is non-empty, or the engine menu is open.
 
 #### Scenario: Expands on focus when scrolled
 
@@ -144,11 +160,37 @@ query is non-empty, or the engine menu is open.
 - WHEN the input loses focus
 - THEN the bar remains expanded
 
+#### Scenario: Submit and clear appear with a query
+
+- GIVEN an empty search
+- WHEN the user types `media`
+- THEN a clear button and an accent submit button appear
+- AND activating clear empties the query and removes both buttons
+
+### Requirement: Engine menu
+
+The engine selector button MUST expose `aria-expanded` and open a `listbox` popover whose first option
+is `Your apps` followed by the enabled search engines; the selected option MUST show a check mark and
+the `--surface-2` background. Selecting an option closes the menu, sets the engine and updates the
+placeholder; Escape or an outside click closes it without changing the engine.
+
 #### Scenario: Engine selection
 
 - GIVEN the engine menu is open
-- WHEN the user selects an engine
-- THEN the menu closes, the button shows the engine name, and the placeholder reads `Search on <engine>…`
+- WHEN the user selects `Startpage`
+- THEN the menu closes, the button shows `Startpage`, and the placeholder reads `Search on Startpage…`
+
+#### Scenario: Keyboard
+
+- GIVEN the engine button has focus
+- WHEN the user opens the menu with Enter or Space, moves with the arrow keys and presses Enter
+- THEN the highlighted engine is selected and focus returns to the button
+
+#### Scenario: Escape
+
+- GIVEN the menu is open
+- WHEN the user presses Escape
+- THEN the menu closes and the previous engine stays selected
 
 ### Requirement: Category tabs
 
@@ -177,11 +219,11 @@ scroll horizontally without wrapping.
 
 ### Requirement: App card
 
-Each app MUST render as a single `button` activator with the existing accessible name pattern and
-open behaviour (`openNewTab` → new tab else same tab). The card MUST show a 44 × 44 icon tile
-(radius 12), the app name (16/600), optional status pill, the description when `showDescriptions` is
-true, and the tag chips when `showLabels` is true and tags exist. Cards in a row MUST stretch to equal
-height. Hover and keyboard focus MUST apply the lift, border and shadow of `design.md` § 4.4.
+Each app MUST render as a single activator with the existing accessible name pattern and open
+behaviour (`openNewTab` → new tab else same tab). The card MUST show a 44 × 44 icon tile (radius 12),
+the app name (16/600), optional status pill, the description when `showDescriptions` is true, and the
+tag chips when `showLabels` is true and tags exist. Cards in a row MUST stretch to equal height.
+Hover and keyboard focus MUST apply the lift, border and shadow of `design.md` § 4.4.
 
 #### Scenario: Full card
 
@@ -213,11 +255,12 @@ height. Hover and keyboard focus MUST apply the lift, border and shadow of `desi
 - WHEN the card renders
 - THEN the generated initials image fills the icon tile and the image has an `alt`
 
-### Requirement: App grid
+### Requirement: App grid and empty state
 
 The grid MUST use a 14 px gap and the existing responsive ladder: 1 column by default, 2 from `md`,
-3 from `lg`, and `itemsPerRow` from `xl`. The empty state MUST render a glass card with the existing
-copy and no decorative emoji; the loading state MUST keep its current behaviour.
+3 from `lg`, and `itemsPerRow` from `xl`. The empty state MUST render a card with a dashed border, a
+magnifier-minus icon, the title `No applications found` and the existing helper copy; no emoji. The
+loading state MUST keep its current behaviour.
 
 #### Scenario: Desktop columns
 
@@ -235,25 +278,34 @@ copy and no decorative emoji; the loading state MUST keep its current behaviour.
 
 - GIVEN a query that matches no app
 - WHEN the grid area renders
-- THEN the empty-state card is shown with the existing copy
+- THEN the empty-state card is shown with the existing copy and the tabs are dimmed
 
-### Requirement: Mobile compact layout
+### Requirement: Mobile sticky dock
 
-At and below the mobile breakpoint (≤ 600 px) the header MUST NOT be sticky, the clock MUST NOT
-collapse on scroll, and the **search bar** MUST be sticky with the band treatment, bleeding to the
-container edges with padding `12px clamp(16px, 4vw, 40px) 0`. Tab gap MUST be 12 px.
+At and below 600 px the header and clock MUST scroll away normally and MUST NOT collapse. The search
+bar and the tab bar MUST be wrapped in a sticky dock at `top: 0` (113 px: padding-top 12, search 44,
+gap 12, tabs 45), bleeding to the container edges and gaining the band, blur and shadow once the
+scrolled state is active. Tab gap is 12 px. On viewports shorter than 500 px the dock MUST NOT be
+sticky.
 
-#### Scenario: Sticky search on mobile
+#### Scenario: Sticky search and tabs on mobile
 
 - GIVEN a 390 × 844 viewport scrolled past 40 px
 - WHEN the page is observed
-- THEN the header has scrolled away and the search bar is pinned at the top with the band background
+- THEN the header and clock have scrolled away
+- AND the search bar and tab bar are pinned at the top with the band background
 
 #### Scenario: Clock size on mobile
 
 - GIVEN a 390 px viewport
 - WHEN the clock renders
-- THEN the digits are `clamp(88px, 11vw, 150px)` = 88 px and the widget does not collapse
+- THEN the digits are 88 px (`clamp(88px, 11vw, 150px)`) and the widget does not collapse
+
+#### Scenario: Landscape phone
+
+- GIVEN a 740 × 390 viewport
+- WHEN the page is scrolled
+- THEN the dock scrolls with the page
 
 ### Requirement: Footer
 
@@ -271,8 +323,9 @@ heart glyph MUST have an accessible name (`love`).
 ### Requirement: Accessibility of the dashboard
 
 The dashboard MUST pass axe with no violations in light and dark themes at desktop and mobile
-viewports, expose `header`, `main`, `nav` (`Categories`) and `footer` landmarks, keep a visible
-keyboard path through every control, and not rely on colour alone for any state.
+viewports, with the dock in both states, expose `header`, `main`, `nav` (`Categories`) and `footer`
+landmarks, keep a visible keyboard path through every control, and not rely on colour alone for any
+state.
 
 #### Scenario: Axe
 
@@ -285,3 +338,9 @@ keyboard path through every control, and not rely on colour alone for any state.
 - GIVEN focus at the start of the page
 - WHEN the user presses Tab repeatedly
 - THEN focus visits header buttons, engine selector, input, tabs, cards, footer links in visual order
+
+#### Scenario: Focus under the dock
+
+- GIVEN the scrolled state
+- WHEN keyboard focus reaches a card whose top edge is behind the dock
+- THEN the page scrolls so the card is fully visible below the dock

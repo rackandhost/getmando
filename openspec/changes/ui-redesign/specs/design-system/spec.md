@@ -3,9 +3,9 @@
 ## Purpose
 
 Provide the shared visual foundation of the "Consola" redesign — theme tokens, typography, glass
-surfaces, background scrim, focus and motion rules, and contrast guarantees — so that every screen
-renders consistently in light and dark themes. Values are defined in `design.md` § 3; this spec states
-what MUST hold.
+surfaces with legibility floors, background scrim, focus and motion rules, and contrast guarantees —
+so that every screen renders consistently and accessibly in light and dark themes over any user
+background image. Values are defined in `design.md` § 3; this spec states what MUST hold.
 
 ## Requirements
 
@@ -14,19 +14,19 @@ what MUST hold.
 The application MUST define its colour, glass, radius and shadow values as CSS custom properties,
 with a light set on `:root` and a dark set applied under the existing `.dark` class. Components MUST
 consume the tokens and MUST NOT hard-code theme colours. The values MUST equal those in
-`design.md` § 3.1–3.2.
+`design.md` § 3.1–3.2, including the accessibility amendments.
 
 #### Scenario: Dark theme
 
 - GIVEN the `dark` class is present on the root element
 - WHEN any token is resolved
-- THEN `--bg` is `#0D0F11`, `--text` is `#EDEBE6`, and `--accent` is `#F0B04A`
+- THEN `--bg` is `#0D0F11`, `--text` is `#EDEBE6`, `--accent` is `#F0B04A`, and `--minute-fill` is `rgba(240,176,74,0.65)`
 
 #### Scenario: Light theme
 
 - GIVEN the `dark` class is absent
 - WHEN any token is resolved
-- THEN `--bg` is `#F3F1EC`, `--text` is `#16181B`, and `--accent` is `#9A5B00`
+- THEN `--bg` is `#F3F1EC`, `--text` is `#16181B`, `--accent` is `#9A5B00`, and `--minute-fill` is `rgba(154,91,0,0.75)`
 
 #### Scenario: Theme switch is immediate
 
@@ -35,12 +35,13 @@ consume the tokens and MUST NOT hard-code theme colours. The values MUST equal t
 - THEN all surfaces, text and accents change in the same frame without a page reload
 - AND the stored theme preference semantics (`light | dark | auto`) are unchanged
 
-### Requirement: Typography
+### Requirement: Typography and self-hosted fonts
 
 The application MUST render UI text in Nunito and data text (dates, tags, status, footer, step
-indices, eyebrow labels) in IBM Plex Mono, using the sizes and weights in `design.md` § 3.3. Fonts
-MUST be served from the application's own origin (decision D3). While a font is loading, text MUST
-remain visible using the system fallback (`font-display: swap`).
+indices, eyebrow labels, paths and URLs in the configurator) in IBM Plex Mono, using the sizes and
+weights in `design.md` § 3.3. The font files MUST be bundled with the application (Latin and
+Latin-Extended subsets, `woff2`) and served from its own origin; no request to a third-party font host MAY be made. While a
+font is loading, text MUST remain visible using the system fallback (`font-display: swap`).
 
 #### Scenario: Fonts are self-hosted
 
@@ -55,24 +56,32 @@ remain visible using the system fallback (`font-display: swap`).
 - WHEN the page renders
 - THEN text is visible in the fallback stack and swaps when the fonts arrive
 
-### Requirement: Glass surfaces
+### Requirement: Glass surfaces with a legibility floor
 
 Header chip, buttons, clock widget, search bar, tab bar, cards, footer and configurator panels MUST
-use the surface recipes of `design.md` § 3.2 (gradient/colour, 1 px line, inset highlights, blur).
-Where `backdrop-filter` is not supported, surfaces MUST fall back to an opaque colour from the same
-token family so text remains legible.
+use the surface recipes of `design.md` § 3.2 (gradient/colour, 1 px line, inset highlights, blur)
+**on top of an opaque floor layer** coloured `--surface` whose opacity is `--floor-bar`,
+`--floor-card` or `--floor-clock` (dark 0.15 / 0.35 / 0.15, light 0.55 / 0.80 / 0.90). Where
+`backdrop-filter` is not supported, surfaces MUST fall back to an opaque colour from the same token
+family so text remains legible.
 
 #### Scenario: Blur supported
 
 - GIVEN a browser that supports `backdrop-filter`
 - WHEN a card is rendered over a background image
-- THEN the card applies `blur(16px) saturate(150%)` (dark) / `saturate(160%)` (light)
+- THEN the card applies `blur(16px) saturate(150%)` (dark) / `saturate(160%)` (light) over its floor layer
 
 #### Scenario: Blur unsupported
 
 - GIVEN a browser without `backdrop-filter`
 - WHEN a card is rendered
 - THEN it uses an opaque background token and no content loses contrast
+
+#### Scenario: Dark photo under the light theme
+
+- GIVEN the light theme and a configured light-theme background image that is nearly black
+- WHEN the clock widget and a card render
+- THEN their text still meets the contrast thresholds of this specification
 
 ### Requirement: Background and scrim
 
@@ -95,52 +104,72 @@ background MUST be `--bg`. The scrim opacities MUST NOT be user-configurable in 
 
 ### Requirement: Contrast guarantees
 
-Every text/background pair listed in `design.md` § 5 MUST meet its stated ratio (4.5:1 for body and
-small text, 3:1 for large text and UI boundaries) in both themes. The 2 px accent stroke of the clock
-minutes MUST meet 3:1 against the clock widget in both themes; its width MUST NOT be below 1 px at any
-size.
+Every text/background and UI-boundary pair listed in `design.md` § 5 MUST meet its required ratio
+(4.5 : 1 for text, 3 : 1 for large text and UI boundaries) in both themes against the **worst-case
+backdrop**: the pair is evaluated over pure black and pure white under the scrim, through the real
+surface stack (floor layer and glass gradient at its top and bottom stops), and the lower ratio is
+used. The clock minute digits MUST meet 3 : 1 by their fill alone (amended `--minute-fill`), in
+addition to carrying the 2 px accent stroke; the stroke width MUST NOT be below 1 px at any size.
 
 #### Scenario: Token pairs verified
 
 - GIVEN the token stylesheet
-- WHEN the token-contrast test composites each listed pair over its backdrop
+- WHEN the token-contrast test composites each listed pair over black and over white backdrops
 - THEN every pair meets or exceeds its required ratio in light and dark
+
+#### Scenario: Minute digits legible without the stroke
+
+- GIVEN the clock widget in either theme
+- WHEN the contrast of the minute fill against the widget is computed at the worst-case backdrop
+- THEN it is at least 3 : 1
 
 #### Scenario: Muted text is readable
 
 - GIVEN a card description rendered with `--muted`
-- WHEN its contrast against the card is measured
-- THEN it is at least 4.5:1 in both themes
+- WHEN its contrast against the card is measured at the worst-case backdrop
+- THEN it is at least 4.5 : 1 in both themes
+
+#### Scenario: A token regression is caught
+
+- GIVEN a change that lowers `--floor-card` in the light theme below the AA threshold
+- WHEN the token-contrast test runs
+- THEN it fails and names the pair and theme
 
 ### Requirement: Focus indicator
 
-Every interactive element MUST show a visible focus ring of at least 2 px using `--accent`, offset
-2 px, in both themes. The ring MUST NOT be clipped by its container and MUST NOT be hidden under a
-sticky bar.
+Every interactive element MUST show a two-tone focus ring in both themes: `outline: 2px solid
+var(--focus)`, offset 2 px, plus a 2 px `--focus-halo` ring. The ring MUST NOT be clipped by its
+container and MUST NOT be hidden under a sticky bar.
 
 #### Scenario: Keyboard focus
 
 - GIVEN a user tabs through the page
 - WHEN any control receives focus
-- THEN a 2 px accent ring is visible against the adjacent surface (≥ 3:1)
+- THEN the ring is visible against the adjacent surface at ≥ 3 : 1 in both themes
 
 #### Scenario: Focus under a sticky bar
 
-- GIVEN the page is scrolled and a sticky header or search band is shown
+- GIVEN the page is scrolled and a sticky dock or header band is shown
 - WHEN a control scrolled just beneath the band receives focus
 - THEN the page scrolls so the control is fully visible below the band (scroll padding equals the band's live height)
 
-### Requirement: Reduced motion
+### Requirement: Motion
 
-When `prefers-reduced-motion: reduce` is set, the application MUST disable the colon pulse and all
-transform, size and opacity transitions defined by this redesign; state changes MUST apply instantly.
+The clock colon MUST NOT blink or pulse. When `prefers-reduced-motion: reduce` is set, the
+application MUST disable all transform, size, opacity and padding transitions defined by this
+redesign; state changes MUST apply instantly.
+
+#### Scenario: Static colon
+
+- GIVEN the dashboard is displayed for ten seconds
+- WHEN the clock colon is observed
+- THEN its opacity is constant at 1
 
 #### Scenario: Reduced motion on
 
 - GIVEN the operating system requests reduced motion
 - WHEN the page is scrolled past the compact threshold or a card is hovered
 - THEN the layout changes without animated transitions
-- AND the clock colon does not pulse
 
 ### Requirement: No behavioural change
 
