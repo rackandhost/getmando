@@ -9,7 +9,7 @@ Presentation change only: polling, endpoint, retry and server requirements are u
 The status badge MUST NOT convey up/down by colour alone (WCAG 1.4.1) and MUST expose the state to
 assistive technology. The badge is a pill in the card's header row containing a status dot and a text
 label — `UP` or `DOWN` — in IBM Plex Mono 11 px; the **text label is the non-colour cue**. The badge
-element itself is decorative (`aria-hidden`); the state is carried in the app card's accessible name.
+element itself is decorative (`aria-hidden`); the state is carried in the app card's accessible name (`<name>, online` / `<name>, offline`).
 Colours MUST come from the `--up`/`--up-bg` and `--down`/`--down-bg` tokens and meet 4.5:1 in both
 themes at the worst-case backdrop defined by `design-system` (card surface with its legibility floor). Apps without `healthCheck`, or with no result yet, MUST NOT render a badge.
 
@@ -19,7 +19,7 @@ themes at the worst-case backdrop defined by `design-system` (card surface with 
 
 - GIVEN a monitored app whose last check was `up`
 - WHEN a screen reader reads the app card's activator
-- THEN the state (`up`/`down`) is part of its accessible name
+- THEN its accessible name is `<name>, online` (or `<name>, offline` when the last check was `down`)
 
 #### Scenario: Non-colour visual cue
 

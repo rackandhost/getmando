@@ -213,9 +213,12 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
   - Files: `app-categories.component.{html,ts}`, spec. Scope S.
 - [ ] 2.8 **App card + status pill.** Spec: `dashboard-ui` § App card; `app-status-check` delta.
   - RED `app-card.component.spec.ts`: icon tile with `alt`; description/tags follow `showDescriptions` /
-    `showLabels`; status pill text `UP` / `DOWN` only when `healthCheck` and a result exists; the
-    activator's `aria-label` keeps `, currently up|down`; new-tab behaviour unchanged.
+    `showLabels`; status pill text `UP` / `DOWN` only when `healthCheck` and a result exists and is
+    `aria-hidden`; the activator is an `a` named `<name>` / `<name>, online` / `<name>, offline` (owner decision D-k, follows
+    the mockup; the old `Open <name>, currently up|down` is removed); new-tab behaviour unchanged.
   - GREEN horizontal card layout, mono tags, status pill (remove the circular glyph badge and its icons).
+  - Verify (extra): Lighthouse accessibility on the built page; record whether `label-content-name-mismatch` still lists the
+    cards. Per D-k the mockup's name is kept either way; the result is logged in `verify-report.md`.
   - Files: `app-card.component.{html,ts}`, spec. Scope M.
 - [ ] 2.9 **Grid, empty and loading states.** Spec: `dashboard-ui` § App grid and empty state.
   - RED `dashboard.component.spec.ts`: empty state shows the dashed card with `No applications found`
@@ -223,7 +226,19 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
       (existing `xl:grid-cols-N` mapping preserved).
   - GREEN grid gap 14, empty-state markup, loading kept.
   - Files: `dashboard.component.{html,ts}`, spec, `app-loading.component.ts`. Scope S.
-- [ ] 2.10 **Desktop dock + compact states.** Spec: `dashboard-ui` § Sticky dock (desktop), § Compact clock;
+- [ ] 2.10 **Toast.** Spec: `design-system` § Notification toasts (owner decision D-l; fixes the baseline `aria-prohibited-attr`).
+  - RED `app-toast.component.spec.ts`: the stack container is `role="group"` named `Notifications`; axe (with
+    `aria-prohibited-attr`) reports 0 violations for a full stack; errors stay `role="alert"`, other levels
+    `role="status"`; level text label rendered; dismiss focus management and the 5-notification stack limit unchanged
+    (the existing tests stay green); toast surface uses the card recipe so `token-audit` covers its text pair
+    (`text/card`, `muted/card`).
+  - GREEN restyle `app-toast.component.{html,css}` with tokens and the `glass-card` recipe (drop the per-theme
+    hard-coded colours and `:host-context(.dark)` rules); keep position (top-right; full width at ≤ 640 px), `z-index: 1000`.
+  - Verify: `ng test --include='src/app/shared/components/app-toast/**/*.spec.ts' --watch=false --coverage=false`;
+    browser — trigger each level in both themes over the dark and the light photo; Lighthouse accessibility no longer
+    lists `aria-prohibited-attr`.
+  - Files: `app-toast.component.{html,css,ts}`, spec. Scope S.
+- [ ] 2.11 **Desktop dock + compact states.** Spec: `dashboard-ui` § Sticky dock (desktop), § Compact clock;
       `design-system` § Scroll-state stability. Depends 2.2, 2.4, 2.5, 2.7, 1.8.
   - RED `dashboard.component.spec.ts` (stubbed `ScrollStateService`): header, clock, search and tabs sit
     inside one `[data-dock]` container; `data-dock` follows the handle mode; in `scrolled` the clock
@@ -232,12 +247,12 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
     `compactDelta` = measured top height − `--dock-compact-height` token.
   - GREEN dock wrapper with `appStickyDock`, band/blur/shadow tokens, compact styles for clock/search/tabs gap.
   - Files: `dashboard.component.{html,ts}`, `app-clock.component.html`, `app-finder.component.html`, spec. Scope M.
-- [ ] 2.11 **Mobile dock + guards.** Spec: `dashboard-ui` § Mobile sticky dock. Depends 2.10.
+- [ ] 2.12 **Mobile dock + guards.** Spec: `dashboard-ui` § Mobile sticky dock. Depends 2.11.
   - RED: at the mobile layout the dock wraps only search + tabs (stubbed `matchMedia`), registers Δ = 16,
     clock does not collapse, `static` when the guard fails (viewport < 500 px high).
   - GREEN responsive wrapper (single template, CSS decides which block is the dock).
   - Files: `dashboard.component.{html,ts}`, spec. Scope S–M.
-- [ ] 2.12 **Dashboard a11y and regression net.** Spec: `dashboard-ui` § Accessibility of the dashboard.
+- [ ] 2.13 **Dashboard a11y and regression net.** Spec: `dashboard-ui` § Accessibility of the dashboard.
   - RED: axe matrix on the dashboard in light + dark and with the dock in `top`/`scrolled`/`static` has 0
     violations (`expectNoAxeViolations`); keyboard order header → engine selector → input → tabs → cards → footer;
     **no existing spec deleted or weakened** (diff review).
@@ -250,6 +265,8 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
 - [ ] Browser: dark, light and mobile match `mockup/states/dark-*`, `light-*`, `mobile-*` (owner review of the declared amendments).
 - [ ] **Loop smoke:** 1, 2, 3, 4 and 10 rows at 900 px and at 390 × 844 — dock changes state ≤ 1× per scroll
       direction, `document.getAnimations()` empty after 1 s at rest (numbers recorded in `verify-report.md`).
+- [ ] Lighthouse accessibility ≥ 96 on both profiles; `aria-prohibited-attr` gone (task 2.10); `label-content-name-mismatch`
+      result recorded (D-k).
 - [ ] Review with owner.
 
 ## Phase 3: Configurator (PR 3) — depends on Checkpoint 1 and tasks 2.1–2.2
@@ -357,6 +374,7 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
 | 1.3     | Angular build may not resolve `@fontsource*` `url()` for the two subsets | Spike first; fallback copy to `public/fonts/`                                                             |
 | 1.6–1.7 | Any residual loop on short pages                                         | Fixed-point test, dead band, dwell, breaker, browser loop smoke at Checkpoint 2 and 4.2                   |
 | 2.1     | Moving `app-header` out of the shell touches both views                  | Land it alone with its own spec; configurator only renders the header, no restyle                         |
-| 2.10    | Dock wraps components owned by different slices                          | Dock registers via the contract of 1.7/1.8; compact variants are driven by the `data-dock` attribute only |
+| 2.11    | Dock wraps components owned by different slices                          | Dock registers via the contract of 1.7/1.8; compact variants are driven by the `data-dock` attribute only |
 | 3.6     | Swapping checkboxes for switches could change exported data              | Data-parity test through the YAML export                                                                  |
 | 4.3     | `backdrop-filter` cost on low-end GPUs                                   | Blur radii are tokens; opaque fallback exists (1.5)                                                       |
+| 2.10    | Toast restyle changes its look and could regress dismiss focus handling  | Existing toast specs kept green; surface goes through the audited card recipe                             |

@@ -65,8 +65,9 @@ elements, so each must be either fixed there or explicitly accepted at checkpoin
 | `aria-prohibited-attr`        | `app-toast .toast-stack` (`div[aria-label="Notifications"]`) | `aria-label` on a `div` with no role                                                                                                   |
 | `label-content-name-mismatch` | every app card `button` (10)                                 | Accessible name `Open <name>[, currently up\|down]` does not contain the visible text (description and tags), WCAG 2.5.3 Label in Name |
 
-The second one interacts with the spec: `dashboard-ui` § App card says the existing accessible-name
-pattern is kept. Decision needed before task 2.8 (not taken here).
+**Decisions (owner, 2026-10-13):** the redesign wins. The card's accessible name becomes the mockup's
+(`<name>` / `<name>, online` / `<name>, offline`, D-k, task 2.8) and the toast is fixed in its own task
+(D-l, task 2.10). The 2.5.3 result after the redesign is recorded at checkpoint 2.
 
 ### Reference screenshots (`baseline/`)
 

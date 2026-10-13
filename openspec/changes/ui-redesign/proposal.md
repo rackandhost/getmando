@@ -25,6 +25,8 @@ It is the single source of visual truth; this change turns it into testable requ
 | D-h | **Q3:** `showSeconds` renders a small mono seconds readout beside the minutes (`design.md` § 4.2).                                                                                                                                                                                         |
 | D-i | **Q10:** the configurator has a light theme and its theme button works exactly like the dashboard's (the prototype's button is not wired).                                                                                                                                                 |
 | D-j | Dock viewport guards accepted, **plus a loop-free scroll model:** when there are few apps and the page cannot keep scrolling after the dock compacts, the dock stays static; compaction is gated by remaining scroll capacity, with a dead band and a circuit breaker (`design.md` § 4.1). |
+| D-k | **Follow the redesign over the current app.** The app card's accessible name becomes the mockup's (`<name>` / `<name>, online` / `<name>, offline`), and the status pill stays `aria-hidden`.                                                                                              |
+| D-l | The `app-toast` is brought into the redesign as its own task (2.10): card surface with legibility floor and token accents, and the baseline `aria-prohibited-attr` finding is fixed (`role="group"`).                                                                                      |
 | D-e | The sticky/scroll behaviour, theme switching and states are taken from the **live prototype** (not guessed): sticky dock on desktop, sticky search + tabs on mobile, compact clock, sticky configurator header + scroll-spy side nav.                                                      |
 
 ## Scope
@@ -100,7 +102,7 @@ Numbers and method: `design.md` § 5.
 
 `src/styles.css`, `src/index.html`, `package.json` (fonts), every component under
 `src/app/shared/components/*`, `src/app/views/dashboard/*`, `src/app/features/configurator/*`,
-`ThemeService` (scrim/tokens only), plus one new `ScrollStateService`. No change to `IconService`
+`app-toast`, `ThemeService` (scrim/tokens only), plus one new `ScrollStateService`. No change to `IconService`
 (design decision D6), `core/models`, `config.service`, `yaml-*`, `config-write.service`, `server/`.
 
 ## Risks

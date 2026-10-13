@@ -28,18 +28,19 @@ calculations made for this document; **[amend]** are accessibility amendments to
 
 ### Component map
 
-| Today                                          | After                                                                                             |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `app-shell` fixed header/footer + inner scroll | Page scroll; dock wrapper (sticky); footer in flow                                                |
-| `app-header`                                   | Chip (logo + title + description) + two 44 px icon buttons (configurator link, theme)             |
-| `app-clock` (`text-5xl` + date line)           | Split clock widget + weekday & date pills; compact row when scrolled                              |
-| `app-finder` + `app-search-engine-selector`    | One glass search bar; engine selector button on the left, listbox popover; clear + submit buttons |
-| `app-categories` (fit-width pill nav)          | Full-width glass tab bar, underline selection                                                     |
-| `app-card` (vertical, centred, scale 1.05)     | Horizontal head (icon tile · name · status pill), description, mono tag chips; lift 4 px on hover |
-| `app-footer` (fixed text)                      | Glass footer bar in flow: `Powered by Mando vX` · `Created with ♡ by Rack&Host YEAR`              |
-| `configurator-page` single column              | Sticky header band + heading panel + sticky scroll-spy side nav + numbered section cards          |
-| `collection-editor` rows                       | Compact rows (index, icon, name/URL, category tag, flags, reorder/edit/delete), inline editor     |
-| checkboxes (settings, flags)                   | `role="switch"` toggles (44 × 26 track); Theme and Date position as segmented controls            |
+| Today                                             | After                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `app-shell` fixed header/footer + inner scroll    | Page scroll; dock wrapper (sticky); footer in flow                                                |
+| `app-header`                                      | Chip (logo + title + description) + two 44 px icon buttons (configurator link, theme)             |
+| `app-clock` (`text-5xl` + date line)              | Split clock widget + weekday & date pills; compact row when scrolled                              |
+| `app-finder` + `app-search-engine-selector`       | One glass search bar; engine selector button on the left, listbox popover; clear + submit buttons |
+| `app-categories` (fit-width pill nav)             | Full-width glass tab bar, underline selection                                                     |
+| `app-card` (vertical, centred, scale 1.05)        | Horizontal head (icon tile · name · status pill), description, mono tag chips; lift 4 px on hover |
+| `app-footer` (fixed text)                         | Glass footer bar in flow: `Powered by Mando vX` · `Created with ♡ by Rack&Host YEAR`              |
+| `app-toast` (own light/dark colours, translucent) | Card recipe with floor, token accents, valid container role                                       |
+| `configurator-page` single column                 | Sticky header band + heading panel + sticky scroll-spy side nav + numbered section cards          |
+| `collection-editor` rows                          | Compact rows (index, icon, name/URL, category tag, flags, reorder/edit/delete), inline editor     |
+| checkboxes (settings, flags)                      | `role="switch"` toggles (44 × 26 track); Theme and Date position as segmented controls            |
 
 ## 2. Decisions
 
@@ -309,7 +310,7 @@ reduce`.
 
 - Tabs: `nav` + `button[aria-pressed]`; selected = `--text` + 2 px `--accent` underline, others
   `--muted`. Horizontal overflow scrolls (no wrapping); last item clipped at the edge on mobile.
-- Card is the single activator (`a`/`button`) with today's `aria-label` (`Open <name>[, currently up|down]`).
+- Card is the single activator (`a`) with the mockup's accessible name: `<name>` or `<name>, online` / `<name>, offline` when monitored (owner decision: follow the redesign; replaces `Open <name>, currently up|down`).
 - Status pill only for apps with `healthCheck` and a result: `● UP` (`--up` on `--up-bg`) / `● DOWN`
   (`--down` on `--down-bg`). Text label is the non-colour cue (`app-status-check` delta).
 - Hover **[src]**: `translateY(-4px)`, icon `scale(1.08)`, `--card-hover` background, hover border and
@@ -321,7 +322,8 @@ reduce`.
 - Empty state (from the capture; exact paddings to be confirmed against the DOM): container with **dashed** 1 px `--line-strong` border, radius 16,
   padding 32, `--surface` background, magnifier-minus line icon (24 px), title `No applications found`
   (20/600) and the existing helper copy (14 muted). No emoji.
-- Loading, error and toast surfaces are not drawn: they adopt the card recipe and existing copy.
+- Loading and error surfaces are not drawn: they adopt the card recipe and existing copy.
+- **Toast** (not drawn; defined here, spec `design-system` § Notification toasts): card recipe with floor, radius 16, 6 px accent strip on the left (decorative; the level text label carries the meaning), level label in Plex Mono 11 px uppercase, message 14 px, dismiss button 32 px. Accents: error `--down`, success `--up`, warning `--accent`, info `--text`. Container `role="group"` labelled `Notifications` (fixes the baseline `aria-prohibited-attr`). Behaviour unchanged.
 
 ### 4.6 Configurator controls (from the captures; exact paddings/radii to be confirmed against the DOM at implementation)
 
@@ -402,7 +404,7 @@ Disabled tabs during search (opacity 0.45) are an inactive component, exempt fro
 | Configurator has **only the dark theme** (its theme button is not wired in the prototype) | Light configurator derived from the dashboard's light tokens; the theme button works as on the dashboard (owner decision) |
 | Tablet breakpoints of the dashboard                                                       | Keep today's ladder: 1 col, `md` 2, `lg` 3, `xl` `itemsPerRow`                                                            |
 | `compact` is a prop of the prototype, not a breakpoint                                    | Mobile layout applies at ≤ 600 px (the only mobile breakpoint the mockup defines)                                         |
-| Loading, error, toast and light-theme engine/empty states beyond the screenshots          | Same recipes; owner reviews after implementation                                                                          |
+| Loading, error and light-theme engine/empty states beyond the screenshots                 | Same recipes; owner reviews after implementation                                                                          |
 | Header logo asset                                                                         | Keep `img/mando.png`                                                                                                      |
 | Sample data uses `itemsPerRow: 5`; schema default is 4                                    | Layout driven by the setting, not hard-coded                                                                              |
 | Date pill omits the year; seconds not drawn                                               | Resolved: date pill follows `dateFormat`; seconds readout defined in § 4.2                                                |

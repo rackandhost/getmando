@@ -246,8 +246,10 @@ scroll horizontally without wrapping.
 
 ### Requirement: App card
 
-Each app MUST render as a single activator with the existing accessible name pattern and open
-behaviour (`openNewTab` → new tab else same tab). The card MUST show a 44 × 44 icon tile (radius 12),
+Each app MUST render as a single activator (`a`) whose accessible name follows the redesign: the app
+name for an unmonitored app, and `<name>, online` / `<name>, offline` for a monitored app with a result
+(the `UP`/`DOWN` pill is `aria-hidden`). The previous `Open <name>, currently up|down` pattern is
+replaced. Open behaviour is unchanged (`openNewTab` → new tab else same tab). The card MUST show a 44 × 44 icon tile (radius 12),
 the app name (16/600), optional status pill, the description when `showDescriptions` is true, and the
 tag chips when `showLabels` is true and tags exist. Cards in a row MUST stretch to equal height.
 Hover and keyboard focus MUST apply the lift, border and shadow of `design.md` § 4.4.
@@ -263,6 +265,13 @@ Hover and keyboard focus MUST apply the lift, border and shadow of `design.md` �
 - GIVEN `showDescriptions: false`
 - WHEN the card renders
 - THEN no description is shown and the card height follows its content
+
+#### Scenario: Accessible name
+
+- GIVEN Plex with `healthCheck` and last result up, and Ombi without `healthCheck`
+- WHEN a screen reader reads the two activators
+- THEN they are named `Plex, online` and `Ombi`
+- AND Mosquitto with a down result is named `Mosquitto, offline`
 
 #### Scenario: Open in new tab
 

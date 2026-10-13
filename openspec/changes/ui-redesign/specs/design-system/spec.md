@@ -254,6 +254,35 @@ and segmented controls MUST meet 3 : 1 against the adjacent colours (WCAG 1.4.11
 - WHEN it is rendered in either theme
 - THEN the selected segment has an outline and fill distinct from the others and `aria-checked="true"`
 
+### Requirement: Notification toasts
+
+Toasts MUST use the card surface recipe (including its legibility floor), so their text meets the
+contrast thresholds over any backdrop, and MUST keep their behaviour: fixed at the top-right (full
+width minus margins at ≤ 640 px), above the sticky chrome, ordered as the service orders them,
+errors announced assertively (`role="alert"`) and the other levels politely (`role="status"`), a
+dismiss button per toast with an accessible name, focus management on dismissal, and the existing
+duration and stack limit. The level MUST be conveyed by its text label; the level accent (error
+`--down`, success `--up`, warning `--accent`, info `--text`) is decorative. The stack container MUST NOT
+carry an `aria-label` without a valid role: it is `role="group"` labelled `Notifications`.
+
+#### Scenario: Container is valid ARIA
+
+- GIVEN any state of the toast stack
+- WHEN axe (including the `aria-prohibited-attr` rule) runs
+- THEN there are no violations and the container is a `group` named `Notifications`
+
+#### Scenario: Contrast over any backdrop
+
+- GIVEN a toast in either theme
+- WHEN its text contrast is evaluated at the worst-case backdrop through the card surface stack
+- THEN it meets the same thresholds as card text (≥ 4.5 : 1)
+
+#### Scenario: Behaviour preserved
+
+- GIVEN an error and an info notification
+- WHEN they are displayed and the user dismisses the last one with the keyboard
+- THEN the error is announced assertively, the info politely, and focus moves to the previous dismiss button as before
+
 ### Requirement: No behavioural change
 
 The redesign MUST NOT alter the configuration schema, settings semantics, routes, services' public
