@@ -75,11 +75,13 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
 - [x] 0.1 Create `feature/ui-redesign` from `develop`.
 - [x] 0.2 Capture the live mockup (`mockup/`), write proposal, design and delta specs.
 - [x] 0.3 Install `@fontsource-variable/nunito` and `@fontsource/ibm-plex-mono` (commit `b0ba596`).
-- [ ] 0.4 **Gate:** owner approves this task list.
-- [ ] 0.5 Baseline from `develop` **before any UI change**: Lighthouse desktop + mobile on the sample
+- [x] 0.4 **Gate:** owner approves this task list (approved 2026-10-13).
+- [x] 0.5 Baseline from `develop` **before any UI change**: Lighthouse desktop + mobile on the sample
       config, `ng build` output sizes, and 5 reference screenshots. Record in `verify-report.md`
       (stub). Verify: numbers present for performance, bundle size and dist asset list.
-      Files: `openspec/changes/ui-redesign/verify-report.md`.
+      Files: `openspec/changes/ui-redesign/verify-report.md`, `baseline/*`.
+      → Done: desktop 84 / mobile 62 performance, initial bundle 745.32 kB (already over the
+      500 kB warning budget), 5 screenshots, 2 pre-existing a11y findings recorded (see report § 1).
 
 ## Phase 1: Foundation — design system and scroll state (PR 1)
 
