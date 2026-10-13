@@ -271,7 +271,7 @@ bottom (`innerHeight + scrollY ≥ scrollHeight − 4`) the last section is acti
 is one column and the side nav becomes a horizontal chip bar (sticky `top: 96`, padding 6, radius 16):
 items in a row without wrapping, native horizontal scroll with hidden scrollbar, vertical wheel maps to
 horizontal scroll, edge fades via mask (20 px left / 28 px right, only on an overflowing side), and the
-active item is smooth-scrolled to the centre. At ≤ 600 px the `Back to dashboard` label is visually
+active item is auto-centred on each active-section change (smooth; instant under reduced motion; only the bar scrolls, never the page; suspended while the user drags/wheels the bar and for 1 s after; never triggered by the bar's own scroll events). The scroll-spy threshold must be ≥ the live sticky-stack height + 24 px and sections use the same `scroll-margin-top`, so clicking a chip makes that chip active. At ≤ 600 px the `Back to dashboard` label is visually
 hidden (icon only). The theme button toggles the theme exactly as on the dashboard (the prototype's
 button is not wired; the behaviour is the dashboard's).
 

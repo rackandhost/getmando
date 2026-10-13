@@ -190,9 +190,22 @@ with `--accent-ink` text.
 At ≤ 900 px the layout MUST become one column and the side navigation MUST become a horizontal chip
 bar, full width and sticky at `top: 96px`: items in a single row without wrapping, native horizontal
 scroll without a visible scrollbar, vertical wheel input mapped to horizontal scroll, edge fades
-shown only on the side that overflows, and the active item smooth-scrolled to the centre. At ≤ 600 px
-the `Back to dashboard` label MUST be visually hidden (the icon stays and the accessible name is
-preserved).
+shown only on the side that overflows, and the active item automatically scrolled to the centre of
+the bar whenever the active section changes. The auto-scroll:
+
+- MUST move only the bar's own scroll position (never the page, so it cannot feed back into the
+  window scroll that drives the scroll-spy);
+- MUST be smooth, and instant under `prefers-reduced-motion: reduce`;
+- MUST NOT fight the user: while the user is dragging, touching or wheel-scrolling the bar (and for
+  1 s afterwards) automatic centring is suspended and resumes on the next section change;
+- MUST NOT re-trigger itself: it runs once per active-section change and never as a reaction to the
+  bar's own scroll events.
+
+The active-section threshold (140 px, 200 px at ≤ 900 px) MUST be at least the live height of the
+sticky stack (header + bar) plus 24 px, and sections MUST use a `scroll-margin-top` equal to that stack
+height, so that activating a chip scrolls its section to a position where that same chip becomes
+active. At ≤ 600 px the `Back to dashboard` label MUST be visually hidden (the icon stays and the
+accessible name is preserved).
 
 #### Scenario: Tablet
 
@@ -204,7 +217,34 @@ preserved).
 
 - GIVEN the chip bar overflows horizontally
 - WHEN the active section changes to `06 Bookmarks`
-- THEN that chip is scrolled to the centre of the bar
+- THEN that chip is smoothly scrolled to the centre of the bar
+- AND the page's own scroll position is unchanged by that movement
+
+#### Scenario: Reduced motion
+
+- GIVEN `prefers-reduced-motion: reduce`
+- WHEN the active section changes
+- THEN the chip is centred instantly without a smooth scroll
+
+#### Scenario: The user is dragging the bar
+
+- GIVEN the user is dragging or wheel-scrolling the chip bar sideways
+- WHEN the page scroll makes another section active during the gesture or within 1 s after it
+- THEN the bar is not auto-scrolled and does not jump under the user's finger
+- AND on the next section change centring resumes
+
+#### Scenario: No self-triggered loop
+
+- GIVEN auto-centring has just scrolled the bar
+- WHEN the bar emits its own scroll events
+- THEN no further centring or active-section change is triggered by them
+
+#### Scenario: Activating a chip activates it
+
+- GIVEN a 390 px viewport
+- WHEN the user activates the chip `05 Applications`
+- THEN the Applications section lands just below the sticky stack
+- AND `05 Applications` (not the previous section) is the active chip
 
 #### Scenario: Phone
 
