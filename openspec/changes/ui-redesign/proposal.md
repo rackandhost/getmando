@@ -137,4 +137,4 @@ revert the merge commit(s); no data, schema, config, API, or image-contract chan
 
 ## Open Questions
 
-None pending. Next step: owner review of this change; then `tasks.md` and the implementation plan.
+None pending. `tasks.md` is written; next step is owner approval of it (task 0.4), then implementation starting at Phase 1.
