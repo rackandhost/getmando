@@ -11,15 +11,26 @@ derived from the same tokens as the dashboard — see `design.md` § 7).
 
 The configurator MUST render a sticky header (same chip and theme button as the dashboard, with a
 `Back to dashboard` button instead of the configurator link), a page heading block (eyebrow
-`DASHBOARD SETUP`, `h1` `Configuration editor`, one-line description) in a glass panel, and below it
-a two-column layout: a 240 px side navigation and a content column of numbered section cards. At
-1440 px the content column is 1008 px wide with 28 px card padding. The page (window) scrolls.
+`DASHBOARD SETUP`, `h1` `Configuration editor`, one-line description) in a glass panel of at most
+760 px width, and below it a two-column layout: a 240 px side navigation and a content column of
+numbered section cards, followed by the same footer bar as the dashboard. At 1440 px the content
+column is 1008 px wide with 28 px card padding. The page (window) scrolls. Field groups inside the
+cards MUST reflow without breakpoints (auto-fitting grids, `design.md` § 4.6): at 1440 px the
+starting-point cards sit in 3 columns and the Display-options tiles in 4; at 390 px the
+starting-point cards and the Settings fields are a single column.
 
 #### Scenario: Desktop layout
 
 - GIVEN a 1440 px viewport
 - WHEN `/configure` renders
 - THEN the side navigation is 240 px wide, sticky at `top: 104px`, beside the content column
+- AND the heading panel is at most 760 px wide and the footer bar follows the last section
+
+#### Scenario: Content reflow
+
+- GIVEN a 390 px viewport
+- WHEN the Starting point and Settings sections render
+- THEN the three option cards are stacked in one column and each Settings field spans the card width
 
 ### Requirement: Sticky header band
 
@@ -94,7 +105,7 @@ and exposed with `aria-pressed` or equivalent radio semantics.
 Validation errors MUST be listed in a panel headed `Fix the following errors`, using `--down` text,
 border and tint, one item per error with its field path in IBM Plex Mono, announced to assistive
 technology (`role="alert"` or equivalent) when it appears. Each error MUST remain programmatically
-associated with its field.
+associated with its field. The panel is placed inside the Starting-point section card, below the option cards.
 
 #### Scenario: Errors displayed
 

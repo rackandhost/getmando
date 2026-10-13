@@ -15,8 +15,10 @@ only differences from `develop` are `openspec/**` and two unused dependencies in
 
 - `ng build` (production) → `/tmp/mando-baseline`, served statically on `127.0.0.1:4300` with an SPA
   fallback. **No write sidecar**, so `GET /api/status` returns 404 and no status badges are rendered
-  (the sample config has `healthCheck: true`); icons load from `cdn.jsdelivr.net`.
-- Config: `public/config/dashboard.yaml` (10 apps, 4 categories), the sample used in the mockup.
+  (2 of the 10 apps have `healthCheck: true`); icons load from `cdn.jsdelivr.net`.
+- Config: `public/config/dashboard.yaml` (10 apps, 4 categories, `showDate: false`, `theme: light`). This is the shipped
+  sample, **not** the mockup's data (date pills, 8 monitored apps, dark): later visual comparisons use `mockup/fixture/dashboard.yaml`
+  and the status stub of `design.md` § 6.
 - Lighthouse 12.8.2 with `/usr/bin/chromium` headless, 3 runs per profile, desktop preset and default
   mobile profile; categories performance, accessibility, best-practices. Raw medians in
   `baseline/lighthouse-summary.json`.

@@ -325,13 +325,16 @@ reduce`.
 - Loading and error surfaces are not drawn: they adopt the card recipe and existing copy.
 - **Toast** (not drawn; defined here, spec `design-system` § Notification toasts): card recipe with floor, radius 16, 6 px accent strip on the left (decorative; the level text label carries the meaning), level label in Plex Mono 11 px uppercase, message 14 px, dismiss button 32 px. Accents: error `--down`, success `--up`, warning `--accent`, info `--text`. Container `role="group"` labelled `Notifications` (fixes the baseline `aria-prohibited-attr`). Behaviour unchanged.
 
-### 4.6 Configurator controls (from the captures; exact paddings/radii to be confirmed against the DOM at implementation)
+### 4.6 Configurator controls (from the captures and `mockup/html/configurator.html`; remaining paddings to be confirmed at implementation)
 
-- Heading panel: glass chrome, radius 26, padding 28; eyebrow, `h1`, one-line description.
+- Heading panel **[src]**: glass chrome, radius 24, padding `28px 32px`, `max-width: 760px` (left-aligned; it
+  fills the width once the content is narrower, i.e. at 800 and 390), margin `40px 0 28px`; eyebrow, `h1`,
+  one-line description. Side navigation panel **[src]**: glass chrome, radius 18, padding `12px 10px`.
 - Starting-point cards: three options (icon · title · caption); selected = accent border + tinted
   background; `Import local YAML` has a dashed border; mounted card caption is the mounted path in mono.
 - Validation panel: `--down-bg` tint, 1 px `--down` border, title `Fix the following errors`
   (14/600 `--down`), list items in Plex Mono with the field path.
+  The panel is rendered inside the Starting-point section card, below the option cards (`config-1-top`).
 - Segmented controls for **Theme** (`Light | Dark | Auto`) and **Date position** (`Top | Bottom`):
   radio-group semantics, selected segment `--surface-2` background.
 - Switch tiles: label left, switch right, tile with 1 px `--line`; grouped under `Display options`
@@ -341,6 +344,13 @@ reduce`.
   (delete in `--down`).
 - Export: `Copy YAML`, `Download YAML` (secondary), `Save` (accent); token panel with `Write token`
   password field, help text naming `CONFIG_WRITE_TOKEN`, `Save token & save` (accent) / `Cancel`.
+- Content reflow **[src]**: no breakpoint inside the cards; each group is a `grid` with
+  `repeat(auto-fit, minmax(<min>, 1fr))` — starting-point cards 200 px, Metadata and Settings fields
+  (Theme, Date format, Date position, Items per row, background images) 240 px, `Display options` tiles
+  220 px, `Search engines` tiles 160 px, inline-editor fields 220 px. Result in the captures: starting-point
+  cards 3 columns at 1440 and 800, 1 at 390; Settings fields 3 / 2 / 1; `Display options` tiles 4 / 2.
+- The footer bar of the dashboard (§ 3.4) is also rendered after the configurator content (`config-5-export`).
+- Export description paragraph: `max-width: 640px`.
 
 ## 5. Accessibility
 
@@ -393,9 +403,22 @@ Disabled tabs during search (opacity 0.45) are an inactive component, exempt fro
 | Component   | Existing component specs updated for new markup: status pill text, card aria-label unchanged, tab `aria-pressed`, switch `role`/`aria-checked`, listbox/option semantics, side-nav `aria-current`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | a11y        | axe on `/` and `/configure`, dark + light, 1440 and 390 px, with the dock in both states; keyboard walk header → search → tabs → cards → footer; focus under the dock                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Smoke       | Browser run with 1, 2, 3, 4 and 10 rows of apps at 900 px and at 390 × 844: scroll in steps, count class/attribute changes of the dock with a `MutationObserver` (≤ 1 per user scroll direction), no animation running at rest (`document.getAnimations()` empty after 1 s)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Visual      | Render the states of `mockup/states/*` with the same sample data; compare; owner sign-off on declared amendments                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Visual      | Render the states of `mockup/states/*` with `mockup/fixture/dashboard.yaml` and the status stub below (not the shipped sample); the desktop scrolled states (`dark-2`, `dark-3`, `light-2`) need ≥ 4 rows because 2 rows never compact (D14); compare; owner sign-off on declared amendments |
 | Performance | Lighthouse desktop before/after; scroll jank with 20 cards and blur on a low-end device                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Build       | `ng build`, `ng lint`, `ng test`, `npm run format:check`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+### Verification fixture
+
+The captures use data that `public/config/dashboard.yaml` does not have (`mockup/README.md`). For every
+visual or smoke run:
+
+- Config: `mockup/fixture/dashboard.yaml` (10 apps, `showDate: true`, `theme: dark`, `healthCheck` on the 8
+  apps that show a pill). For the desktop scrolled states and the loop smoke, duplicate the applications with
+  new ids to reach the required number of rows.
+- Status: stub `GET /api/status` (browser request interception or a throwaway static responder; there is no
+  sidecar in `ng serve`) returning `{ "intervalMs": 30000, "apps": { … } }` with `status: "up"` for `plex`,
+  `jellyfin`, `nextcloud`, `home-assistant`, `portainer`, `pihole`, `uptime-kuma` and `status: "down"` for
+  `mosquitto` (shape per `openspec/specs/app-status-check`, `checkedAt` an ISO timestamp).
 
 ## 7. Gaps in the mockup (assumptions taken)
 
@@ -408,3 +431,5 @@ Disabled tabs during search (opacity 0.45) are an inactive component, exempt fro
 | Header logo asset                                                                         | Keep `img/mando.png`                                                                                                      |
 | Sample data uses `itemsPerRow: 5`; schema default is 4                                    | Layout driven by the setting, not hard-coded                                                                              |
 | Date pill omits the year; seconds not drawn                                               | Resolved: date pill follows `dateFormat`; seconds readout defined in § 4.2                                                |
+| Engine button with an engine selected (no capture) | The button keeps the magnifier icon and the chevron and shows the engine name instead of `Apps` (spec scenario "Engine selection") |
+| Light-theme mobile Top (the prototype capture was blank) | Same recipes as dark; `mobile-4-light-scrolled` is the only light mobile reference |

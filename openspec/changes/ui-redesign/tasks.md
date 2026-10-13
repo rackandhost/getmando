@@ -82,13 +82,15 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
       Files: `openspec/changes/ui-redesign/verify-report.md`, `baseline/*`.
       → Done: desktop 84 / mobile 62 performance, initial bundle 745.32 kB (already over the
       500 kB warning budget), 5 screenshots, 2 pre-existing a11y findings recorded (see report § 1).
+- [x] 0.6 Verification data and missing captures: `mockup/fixture/dashboard.yaml` (the mockup's sample data,
+      which `public/config/dashboard.yaml` lacks) and the status stub of `design.md` § 6; `mobile-0-top.png`
+      added, mislabelled/blank mobile captures fixed (`mockup/README.md`).
 
 ## Phase 1: Foundation — design system and scroll state (PR 1)
 
 - [ ] 1.1 **Contrast library.** Spec: `design-system` § Contrast guarantees.
   - RED `contrast.spec.ts`: `contrastRatio('#000','#fff') = 21`; alpha compositing
-    (`rgba(240,176,74,.42)` over `#171A1E`); relative luminance; known mockup pairs reproduce
-    2.63 / 1.56 (the numbers in `design.md` § 5 "before").
+    (`rgba(240,176,74,.42)` over `#171A1E`); relative luminance.
   - GREEN `contrast.ts`: `parseColor`, `compositeOver`, `luminance`, `contrastRatio`.
   - Verify: `ng test --include='src/testing/**/*.spec.ts' --watch=false --coverage=false`. Files: `src/testing/contrast.ts`, `contrast.spec.ts`. Scope S.
 - [ ] 1.2 **Tokens + token audit.** Spec: `design-system` § Theme tokens, § Contrast guarantees,
@@ -98,6 +100,8 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
     of `design.md` § 5 (worst case: black/white backdrops, floor + glass top/bottom stops), including
     minute fill ≥ 3, field border ≥ 3, focus ring ≥ 3; (c) a doctored copy of the CSS with
     `--floor-card` (light) lowered makes `auditTokens` fail and **names the pair and theme**.
+    (d) auditing the **mockup's own** tokens (fill 0.42 / 0.32, no floors) reproduces the "before" figures of
+    `design.md` § 5 (2.02 dark / 1.16 light minute fill-only, 1.51 light accent on widget, ±0.02).
   - GREEN `tokens.css` (+ `@theme inline` registration for utilities), `token-audit.ts`, import in `styles.css`.
   - Verify: `ng test --include='src/styles/**/*.spec.ts' --include='src/testing/**/*.spec.ts'`; `ng build` still green.
   - Files: `src/styles/tokens.css`, `src/styles.css`, `src/testing/token-audit.ts`,
@@ -204,7 +208,7 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
   - RED `app-search-engine-selector.component.spec.ts`: button `aria-expanded`; `listbox`/`option`
     roles; first option `Your apps`; selected option has a check; Enter/Space opens, arrows move, Enter
     selects and returns focus to the button; Escape/outside click closes without changing the engine.
-  - GREEN markup + keyboard handling.
+  - GREEN markup + keyboard handling; button shows magnifier icon, scope label and chevron.
   - Files: `app-search-engine-selector.component.{html,ts}`, spec. Scope M.
 - [ ] 2.7 **Category tabs.** Spec: `dashboard-ui` § Category tabs.
   - RED `app-categories.component.spec.ts`: `aria-pressed` on the selected tab; with a query all tabs
@@ -266,7 +270,7 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
 ### Checkpoint 2 — Dashboard (end of PR 2)
 
 - [ ] Gates of Phase 1 green; all dashboard specs green.
-- [ ] Browser: dark, light and mobile match `mockup/states/dark-*`, `light-*`, `mobile-*` (owner review of the declared amendments).
+- [ ] Browser, with `mockup/fixture/dashboard.yaml` + status stub: dark, light and mobile match `mockup/states/dark-*`, `light-*`, `mobile-*` (owner review of the declared amendments). The desktop scrolled states (`dark-2`, `dark-3`, `light-2`) are rendered with ≥ 4 rows (2 rows never compact, D14).
 - [ ] **Loop smoke:** 1, 2, 3, 4 and 10 rows at 900 px and at 390 × 844 — dock changes state ≤ 1× per scroll
       direction, `document.getAnimations()` empty after 1 s at rest (numbers recorded in `verify-report.md`).
 - [ ] Lighthouse accessibility ≥ 96 on both profiles with **both baseline findings gone**: `aria-prohibited-attr`
@@ -280,7 +284,7 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
   - RED `configurator-page.component.spec.ts`: eyebrow `DASHBOARD SETUP`, `h1` `Configuration editor`; sections
     numbered `01`–`07` in order, each `aria-labelledby` its heading; header registers with Δ ≈ 10 and follows the
     mode (`static` for a short draft — no flip-flop with stubbed metrics).
-  - GREEN layout (side-nav column + 1008 px content), header dock directive.
+  - GREEN layout (side-nav column + 1008 px content, heading panel `max-width: 760px`, footer bar after the sections, auto-fit field grids per `design.md` § 4.6), header dock directive.
   - Files: `configurator-page.component.{html,ts}`, spec. Scope M.
 - [ ] 3.2 **Scroll-spy and side navigation.** Spec: § Numbered sections and scroll-spy navigation.
   - RED `active-section.spec.ts` (pure): last section with top ≤ threshold; threshold ≥ live stack height + 24
@@ -306,7 +310,7 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
   - RED spec: mounted card hidden without a valid mounted YAML; selected card exposes `aria-pressed`; validation
     panel `role="alert"` lists `applications[6].category — Category 'iot' does not exist.` and the field is
     `aria-describedby` that message.
-  - GREEN markup (dashed import card, tinted selected card, `--down` panel).
+  - GREEN markup (dashed import card, tinted selected card, `--down` panel inside the Starting-point section card).
   - Files: `configurator-page.component.{html,ts}`, spec. Scope S–M.
 - [ ] 3.6 **Switch and segmented controls.** Spec: § Switch and segmented controls; `design-system` § UI component boundaries.
   - RED `switch.component.spec.ts`: `role="switch"`, `aria-checked`, Space toggles, label is the name;
@@ -349,11 +353,11 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
 
 - [ ] 4.1 **Full regression.** `ng test --watch=false` (coverage threshold on), `npm run lint`, `ng build` (budgets: initial ≤ 500 kB warning), `npm run format:check`,
       `npm run check:focused-tests`. Verify no pre-existing spec was deleted/weakened (git diff of `*.spec.ts` reviewed).
-- [ ] 4.2 **Browser smoke matrix** (throwaway scripts, not committed): states of `mockup/states/*` (dark/light/mobile/config),
+- [ ] 4.2 **Browser smoke matrix** (throwaway scripts, not committed; data of `mockup/fixture/dashboard.yaml` + status stub): states of `mockup/states/*` (dark/light/mobile/config),
       scroll states, engine menu, hover, empty state; the **loop smoke** of Checkpoint 2 repeated on the final build and at 125 %/200 % zoom.
 - [ ] 4.3 **Performance.** Lighthouse desktop + mobile vs the 0.5 baseline (≤ 5 points worse); scroll jank with 20 cards and blur on a
       low-end profile (CPU 4× throttle); decide on tuning blur radii if needed.
-- [ ] 4.4 **Visual sign-off.** Side-by-side of every `mockup/states/*` vs the build, listing each deviation (must be only the declared
+- [ ] 4.4 **Visual sign-off.** Side-by-side of every `mockup/states/*` vs the build (fixture data; scrolled desktop states with ≥ 4 rows; ignore the rendering artefacts listed in `mockup/README.md`), listing each deviation (must be only the declared
       amendments). Owner approves. Files: `verify-report.md`.
 - [ ] 4.5 **Docs.** Regenerate `screenshots/dashboard.png`, `dashboard_light.png`, `configurator.png`; update README (screenshots, theming/background note),
       `ARCHITECTURE.md` (design tokens, `ScrollStateService`, shell/header ownership, new shared components). CHANGELOG entry is written in the

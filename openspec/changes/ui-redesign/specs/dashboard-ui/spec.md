@@ -196,7 +196,7 @@ input is focused, the query is non-empty, or the engine menu is open.
 
 ### Requirement: Engine menu
 
-The engine selector button MUST expose `aria-expanded` and open a `listbox` popover whose first option
+The engine selector button MUST show a magnifier icon, the selected scope label (`Apps` or the engine name) and a chevron, MUST expose `aria-expanded` and open a `listbox` popover whose first option
 is `Your apps` followed by the enabled search engines; the selected option MUST show a check mark and
 the `--surface-2` background. Selecting an option closes the menu, sets the engine and updates the
 placeholder; Escape or an outside click closes it without changing the engine.

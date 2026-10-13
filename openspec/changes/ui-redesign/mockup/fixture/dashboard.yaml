@@ -1,0 +1,182 @@
+# Verification fixture for the ui-redesign visual comparison (tasks 4.2, 4.4).
+# Reproduces the sample data of mockup/states/*: showDate true, theme dark, healthCheck on the
+# 8 apps that show a status pill (7 up, mosquitto down). Pair it with the status stub in design.md § 6.
+# Not shipped; public/config/dashboard.yaml is unchanged.
+metadata:
+  title: My dashboard
+  description: Simply and lovelly
+categories:
+  - id: home-automation
+    name: Home Automation
+  - id: media
+    name: Media
+  - id: networking
+    name: Networking
+  - id: productivity
+    name: Productivity
+applications:
+  - id: plex
+    name: Plex
+    description: Media server for movies, TV shows, and music
+    url: https://google.es
+    icon:
+      type: name
+      value: plex
+    category: media
+    openNewTab: true
+    tags:
+      - media
+      - streaming
+    favorite: false
+    healthCheck: true
+  - id: jellyfin
+    name: Jellyfin
+    description: Free software media system
+    url: https://jellyfin.example.com
+    icon:
+      type: name
+      value: jellyfin
+    category: media
+    openNewTab: true
+    tags:
+      - media
+      - open-source
+    favorite: false
+    healthCheck: true
+  - id: ombi
+    name: Ombi
+    description: Request media for your Plex/Jellyfin server
+    url: https://ombi.example.com
+    icon:
+      type: name
+      value: ombi
+    category: media
+    openNewTab: true
+    tags:
+      - requests
+      - media
+    favorite: false
+    healthCheck: false
+  - id: nextcloud
+    name: Nextcloud
+    description: Productivity platform for file storage and collaboration
+    url: https://nextcloud.example.com
+    icon:
+      type: name
+      value: nextcloud
+    category: productivity
+    openNewTab: true
+    tags:
+      - cloud
+      - files
+    favorite: false
+    healthCheck: true
+  - id: paperless-ngx
+    name: Paperless-ngx
+    description: Document management system
+    url: https://paperless.example.com
+    icon:
+      type: name
+      value: paperless-ngx
+    category: productivity
+    openNewTab: true
+    tags:
+      - documents
+      - scanning
+    favorite: false
+    healthCheck: false
+  - id: home-assistant
+    name: Home Assistant
+    description: Open source home automation platform
+    url: https://homeassistant.example.com
+    icon:
+      type: name
+      value: home-assistant
+    category: home-automation
+    openNewTab: true
+    tags:
+      - smart-home
+      - automation
+    favorite: false
+    healthCheck: true
+  - id: mosquitto
+    name: Mosquitto
+    description: MQTT message broker
+    url: https://mosquitto.example.com
+    icon:
+      type: name
+      value: mosquitto
+    category: home-automation
+    openNewTab: true
+    tags:
+      - iot
+      - mqtt
+    favorite: false
+    healthCheck: true
+  - id: portainer
+    name: Portainer
+    description: Docker management UI
+    url: https://portainer.example.com
+    icon:
+      type: name
+      value: portainer
+    category: networking
+    openNewTab: true
+    tags:
+      - docker
+      - containers
+    favorite: false
+    healthCheck: true
+  - id: pihole
+    name: Pi-hole
+    description: Network-wide ad blocking
+    url: https://pihole.example.com
+    icon:
+      type: name
+      value: pi-hole
+    category: networking
+    openNewTab: true
+    tags:
+      - dns
+      - adblock
+    favorite: false
+    healthCheck: true
+  - id: uptime-kuma
+    name: Uptime Kuma
+    description: Self-hosted monitoring tool
+    url: https://uptime.example.com
+    icon:
+      type: name
+      value: uptime-kuma
+    category: networking
+    openNewTab: true
+    tags:
+      - monitoring
+      - uptime
+    favorite: false
+    healthCheck: true
+bookmarks:
+  - id: google
+    name: Google
+    description: The google web
+    url: https://google.com
+    icon:
+      type: name
+      value: google
+    openNewTab: true
+    tags:
+      - web
+settings:
+  theme: dark
+  dateFormat: d MMMM yyyy
+  datePosition: bottom
+  showSeconds: false
+  showDate: true
+  itemsPerRow: 5
+  allowBookmarks: true
+  showAllCategory: true
+  showDescriptions: true
+  showLabels: true
+  searchEngines:
+    - youtube
+    - startpage
