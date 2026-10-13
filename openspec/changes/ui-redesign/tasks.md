@@ -211,14 +211,18 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
     are disabled and none pressed; overflow container does not wrap (class contract via role, not source text).
   - GREEN full-width glass bar, underline selection, dim at 0.45 while searching.
   - Files: `app-categories.component.{html,ts}`, spec. Scope S.
-- [ ] 2.8 **App card + status pill.** Spec: `dashboard-ui` § App card; `app-status-check` delta.
+- [ ] 2.8 **App card + status pill.** Spec: `dashboard-ui` § App card; `app-status-check` delta (D-k).
   - RED `app-card.component.spec.ts`: icon tile with `alt`; description/tags follow `showDescriptions` /
-    `showLabels`; status pill text `UP` / `DOWN` only when `healthCheck` and a result exists and is
-    `aria-hidden`; the activator is an `a` named `<name>` / `<name>, online` / `<name>, offline` (owner decision D-k, follows
-    the mockup; the old `Open <name>, currently up|down` is removed); new-tab behaviour unchanged.
-  - GREEN horizontal card layout, mono tags, status pill (remove the circular glyph badge and its icons).
-  - Verify (extra): Lighthouse accessibility on the built page; record whether `label-content-name-mismatch` still lists the
-    cards. Per D-k the mockup's name is kept either way; the result is logged in `verify-report.md`.
+    `showLabels`; status pill text `UP` / `DOWN` only when `healthCheck` and a result exists, and it is
+    `aria-hidden`; the link (`a[href]`) contains only the app name and is named `<name>` / `<name>, online` /
+    `<name>, offline`; **its accessible name contains its visible text**; `aria-describedby` points to the
+    description and tag list; `openNewTab` ⇒ `target="_blank"` + `rel="noopener noreferrer"`; `appClick` still
+    emitted; the old `Open <name>, currently up|down` is gone.
+  - GREEN stretched-link markup (`::after` over the card), horizontal card layout, mono tags, status pill
+    (remove the circular glyph badge and its icons); hover/focus visuals on the card via `:has()`.
+  - Verify: focused spec; **real-browser axe with the experimental `label-content-name-mismatch` rule enabled**
+    on the 10 cards = 0 violations (jsdom cannot evaluate that rule); click on description/tag/empty area
+    activates the link; Tab shows the ring around the whole card.
   - Files: `app-card.component.{html,ts}`, spec. Scope M.
 - [ ] 2.9 **Grid, empty and loading states.** Spec: `dashboard-ui` § App grid and empty state.
   - RED `dashboard.component.spec.ts`: empty state shows the dashed card with `No applications found`
@@ -265,8 +269,8 @@ Files introduced: `src/styles/{tokens,fonts,base,surfaces}.css`, `src/testing/{c
 - [ ] Browser: dark, light and mobile match `mockup/states/dark-*`, `light-*`, `mobile-*` (owner review of the declared amendments).
 - [ ] **Loop smoke:** 1, 2, 3, 4 and 10 rows at 900 px and at 390 × 844 — dock changes state ≤ 1× per scroll
       direction, `document.getAnimations()` empty after 1 s at rest (numbers recorded in `verify-report.md`).
-- [ ] Lighthouse accessibility ≥ 96 on both profiles; `aria-prohibited-attr` gone (task 2.10); `label-content-name-mismatch`
-      result recorded (D-k).
+- [ ] Lighthouse accessibility ≥ 96 on both profiles with **both baseline findings gone**: `aria-prohibited-attr`
+      (task 2.10) and `label-content-name-mismatch` (task 2.8); any new finding is fixed or listed with a reason.
 - [ ] Review with owner.
 
 ## Phase 3: Configurator (PR 3) — depends on Checkpoint 1 and tasks 2.1–2.2

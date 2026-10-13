@@ -246,13 +246,18 @@ scroll horizontally without wrapping.
 
 ### Requirement: App card
 
-Each app MUST render as a single activator (`a`) whose accessible name follows the redesign: the app
-name for an unmonitored app, and `<name>, online` / `<name>, offline` for a monitored app with a result
-(the `UP`/`DOWN` pill is `aria-hidden`). The previous `Open <name>, currently up|down` pattern is
-replaced. Open behaviour is unchanged (`openNewTab` → new tab else same tab). The card MUST show a 44 × 44 icon tile (radius 12),
-the app name (16/600), optional status pill, the description when `showDescriptions` is true, and the
-tag chips when `showLabels` is true and tags exist. Cards in a row MUST stretch to equal height.
-Hover and keyboard focus MUST apply the lift, border and shadow of `design.md` § 4.4.
+Each app MUST render as one card (`li` content) with a **stretched link**: the `a` element holds only
+the app name, and a pseudo-element stretches it over the whole card so the entire card is the click
+target (visual result identical to the mockup). The link's accessible name is `<name>` for an
+unmonitored app and `<name>, online` / `<name>, offline` for a monitored app with a result, and it MUST
+contain the link's visible text (WCAG 2.5.3 Label in Name). The description and tag list are exposed
+with `aria-describedby`; the `UP`/`DOWN` pill is `aria-hidden`. The previous
+`Open <name>, currently up|down` pattern is replaced. The link has a real `href`; `openNewTab` sets
+`target="_blank"` with `rel="noopener noreferrer"`, and the existing `appClick` output is still emitted.
+The card MUST show a 44 × 44 icon tile (radius 12), the app name (16/600), optional status pill, the
+description when `showDescriptions` is true, and the tag chips when `showLabels` is true and tags
+exist. Cards in a row MUST stretch to equal height. Hover and keyboard focus of the link MUST apply to
+the whole card (lift, border, shadow of `design.md` § 4.4 and the focus ring around the card).
 
 #### Scenario: Full card
 
@@ -269,9 +274,29 @@ Hover and keyboard focus MUST apply the lift, border and shadow of `design.md` �
 #### Scenario: Accessible name
 
 - GIVEN Plex with `healthCheck` and last result up, and Ombi without `healthCheck`
-- WHEN a screen reader reads the two activators
+- WHEN a screen reader reads the two links
 - THEN they are named `Plex, online` and `Ombi`
 - AND Mosquitto with a down result is named `Mosquitto, offline`
+
+#### Scenario: Label in Name
+
+- GIVEN any card
+- WHEN the link's visible text is compared with its accessible name
+- THEN the name contains the visible text
+- AND axe with the experimental `label-content-name-mismatch` rule enabled reports no violation on the cards
+
+#### Scenario: Description is announced
+
+- GIVEN a card with a description and tags
+- WHEN a screen reader reads the link
+- THEN the description and tags are read as its accessible description
+
+#### Scenario: Whole card is the target
+
+- GIVEN a card
+- WHEN the user clicks the description, a tag or the empty area of the card
+- THEN the link is activated
+- AND keyboard focus on the link shows the focus ring around the whole card
 
 #### Scenario: Open in new tab
 

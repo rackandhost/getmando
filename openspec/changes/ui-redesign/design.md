@@ -310,7 +310,7 @@ reduce`.
 
 - Tabs: `nav` + `button[aria-pressed]`; selected = `--text` + 2 px `--accent` underline, others
   `--muted`. Horizontal overflow scrolls (no wrapping); last item clipped at the edge on mobile.
-- Card is the single activator (`a`) with the mockup's accessible name: `<name>` or `<name>, online` / `<name>, offline` when monitored (owner decision: follow the redesign; replaces `Open <name>, currently up|down`).
+- Card = `li` content with a **stretched link**: `<a href>` holds only the name; `a::after { position: absolute; inset: 0 }` over the card (`position: relative`), so the whole card is the target. Name: `<name>` or `<name>, online` / `<name>, offline` (the mockup's wording); the description and tags are `aria-describedby`; the pill is `aria-hidden`. **Why not the mockup's markup:** measured in Chromium with axe 4.x, `<a aria-label="Plex, online">` wrapping the whole card text fails `label-content-name-mismatch` (as the current app does); the stretched-link markup passes with an identical look (owner decision D-k: improvements that do not alter the design are welcome). Card hover/focus visuals use `:has(a:hover)` / `:has(a:focus-visible)` on the card.
 - Status pill only for apps with `healthCheck` and a result: `● UP` (`--up` on `--up-bg`) / `● DOWN`
   (`--down` on `--down-bg`). Text label is the non-colour cue (`app-status-check` delta).
 - Hover **[src]**: `translateY(-4px)`, icon `scale(1.08)`, `--card-hover` background, hover border and
