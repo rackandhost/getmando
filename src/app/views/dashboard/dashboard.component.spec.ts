@@ -11,6 +11,7 @@ import { MetadataService } from '../../core/services/metadata.service';
 import { CategoryService } from '../../core/services/category.service';
 import { IconService } from '../../core/services/icon.service';
 import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
+import { AppShellComponent } from '../../shared/components/app-shell/app-shell.component';
 import type { ChromeMode } from '../../core/scroll/scroll-state';
 
 import {
@@ -61,12 +62,15 @@ describe('DashboardComponent', () => {
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
     isDarkMode = true,
     scrollState,
+    withShell = false,
   }: {
     filteredApps?: SelfhostedApp[] | null;
     searchQuery?: string;
     settings?: DashboardSettings;
     isDarkMode?: boolean;
     scrollState?: Pick<ScrollStateService, 'register'>;
+    /** Renders the page inside `app-shell`, which owns the footer. */
+    withShell?: boolean;
   } = {}) => {
     appServiceMock.setSearchQuery.mockReset();
     appServiceMock.setSelectedCategory.mockReset();
@@ -78,55 +82,60 @@ describe('DashboardComponent', () => {
     isDark.set(isDarkMode);
     appServiceMock.filteredApps = signal(filteredApps ?? undefined);
 
-    return render(DashboardComponent, {
-      providers: [
-        {
-          provide: AppService,
-          useValue: appServiceMock,
+    const providers = [
+      {
+        provide: AppService,
+        useValue: appServiceMock,
+      },
+      {
+        provide: SearchService,
+        useValue: {
+          searchQuery: signal(searchQuery),
+          searchEngines: signal([]),
+          haveSearch,
         },
-        {
-          provide: SearchService,
-          useValue: {
-            searchQuery: signal(searchQuery),
-            searchEngines: signal([]),
-            haveSearch,
-          },
+      },
+      {
+        provide: SettingsService,
+        useValue: {
+          settings: settingsState,
         },
-        {
-          provide: SettingsService,
-          useValue: {
-            settings: settingsState,
-          },
+      },
+      {
+        provide: ThemeService,
+        useValue: {
+          currentTheme,
+          isDark,
+          isDarkMode: () => currentTheme() === 'dark',
+          toggleTheme: vi.fn(),
         },
-        {
-          provide: ThemeService,
-          useValue: {
-            currentTheme,
-            isDark,
-            isDarkMode: () => currentTheme() === 'dark',
-            toggleTheme: vi.fn(),
-          },
+      },
+      {
+        provide: MetadataService,
+        useValue: {
+          metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
         },
-        {
-          provide: MetadataService,
-          useValue: {
-            metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
-          },
+      },
+      {
+        provide: CategoryService,
+        useValue: {
+          categories: signal([APP_CATEGORY]),
+          selectedCategory,
         },
-        {
-          provide: CategoryService,
-          useValue: {
-            categories: signal([APP_CATEGORY]),
-            selectedCategory,
-          },
-        },
-        {
-          provide: IconService,
-          useValue: iconServiceMock,
-        },
-        ...(scrollState ? [{ provide: ScrollStateService, useValue: scrollState }] : []),
-      ],
-    });
+      },
+      {
+        provide: IconService,
+        useValue: iconServiceMock,
+      },
+      ...(scrollState ? [{ provide: ScrollStateService, useValue: scrollState }] : []),
+    ];
+
+    return withShell
+      ? render('<app-shell><app-dashboard /></app-shell>', {
+          imports: [AppShellComponent, DashboardComponent],
+          providers,
+        })
+      : render(DashboardComponent, { providers });
   };
 
   it('should render the loading state while applications are still pending', async () => {
@@ -288,6 +297,33 @@ describe('DashboardComponent', () => {
     });
 
     await expectNoAxeViolations(document.body);
+  });
+
+  it('keeps the keyboard path in visual order from the header to the footer', async () => {
+    await setup({ filteredApps: [appFixture], withShell: true });
+
+    const path = [
+      screen.getByRole('link', { name: 'Open configurator' }),
+      screen.getByRole('button', { name: 'Toggle theme' }),
+      screen.getByRole('button', { name: /^Select search engine/ }),
+      screen.getByRole('searchbox', { name: 'Search applications' }),
+      screen.getByRole('button', { name: 'Apps' }),
+      screen.getByRole('link', { name: /Plex/ }),
+      screen.getByRole('link', { name: 'Mando' }),
+      screen.getByRole('link', { name: 'Rack&Host' }),
+    ];
+
+    path.forEach((control, index) => {
+      if (index > 0) {
+        expect(
+          path[index - 1].compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING,
+          `${control.textContent?.trim() || control.getAttribute('aria-label')} follows its predecessor`,
+        ).toBeTruthy();
+      }
+    });
+    expect(
+      document.querySelectorAll('[tabindex]:not([tabindex="0"]):not([tabindex="-1"])'),
+    ).toHaveLength(0);
   });
 
   it('should render the applications grid when apps are available', async () => {
@@ -624,6 +660,21 @@ describe('DashboardComponent', () => {
         inner.forEach((element) => expect(element).toHaveAttribute('data-compact', 'true'));
         expect(outer).toHaveLength(2);
         outer.forEach((element) => expect(element).toHaveAttribute('data-compact', 'false'));
+      });
+    });
+
+    describe('accessibility', () => {
+      it.each([
+        ['Static', 'dashboard-dock', 'static'],
+        ['Top', 'dashboard-dock', 'top'],
+        ['Scrolled (desktop dock)', 'dashboard-dock', 'scrolled'],
+        ['Scrolled (mobile dock)', 'dashboard-mobile-dock', 'scrolled'],
+      ] as const)('has no axe violations with the dock %s', async (_label, chrome, state) => {
+        const view = await renderDock({ ...DEFAULT_DASHBOARD_CONFIG.settings, showSeconds: true });
+        modes[chrome].set(state);
+        await view.fixture.whenStable();
+
+        await expectNoAxeViolations(document.body);
       });
     });
   });
