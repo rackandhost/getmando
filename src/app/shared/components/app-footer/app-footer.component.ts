@@ -11,6 +11,7 @@ import { AppService } from '../../../core/services/app.service';
 })
 export class AppFooterComponent {
   private appService = inject(AppService);
+  protected readonly year = new Date().getFullYear();
 
   get appVersion(): string {
     return this.appService.appVersion;
