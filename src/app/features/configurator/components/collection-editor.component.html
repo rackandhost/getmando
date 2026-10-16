@@ -40,11 +40,7 @@
               aria-hidden="true"
               class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-[image:var(--icon-tile)] shadow-[var(--icon-shadow)]"
             >
-              @if (iconImage(item); as src) {
-                <img alt="" class="size-6 object-contain" [src]="src" />
-              } @else {
-                <span class="font-mono text-xs font-semibold text-text">{{ iconGlyph(item) }}</span>
-              }
+              <img alt="" loading="lazy" [class]="iconImageClass(item)" [src]="iconUrl(item)" />
             </span>
           }
 
@@ -178,19 +174,16 @@
                   <legend class="sr-only">Icon for {{ itemLabel(item) }}</legend>
                   <label [class]="labelClass">
                     Icon type
-                    <select
-                      [attr.aria-describedby]="describedBy(index, 'iconType')"
-                      [attr.aria-invalid]="errorId(index, 'iconType') ? 'true' : null"
-                      [attr.aria-label]="'Icon type for ' + itemLabel(item)"
-                      [class]="fieldClass"
-                      [id]="fieldId(index, 'iconType')"
+                    <app-select
+                      [buttonClass]="selectButtonClass"
+                      [controlId]="fieldId(index, 'iconType')"
+                      [describedBy]="describedBy(index, 'iconType')"
+                      [invalid]="!!errorId(index, 'iconType')"
+                      [label]="'Icon type for ' + itemLabel(item)"
+                      [options]="iconTypeOptions"
                       [value]="iconType(index)"
-                      (change)="updateIconType(index, $event)"
-                    >
-                      <option value="url">URL</option>
-                      <option value="name">Name</option>
-                      <option value="initials">Initials</option>
-                    </select>
+                      (valueChange)="setIconType(index, $event)"
+                    />
                     @if (errorMessage(index, 'iconType'); as error) {
                       <p [class]="errorClass" [id]="errorId(index, 'iconType')">{{ error }}</p>
                     }
@@ -222,25 +215,18 @@
               @if (collection() === 'applications') {
                 <label [class]="labelClass">
                   Category
-                  <select
-                    [attr.aria-describedby]="describedBy(index, 'category')"
-                    [attr.aria-invalid]="errorId(index, 'category') ? 'true' : null"
-                    [attr.aria-label]="fieldLabel(item, 'category')"
-                    [class]="fieldClass"
+                  <app-select
+                    placeholder="No categories available"
+                    [buttonClass]="selectButtonClass"
+                    [controlId]="fieldId(index, 'category')"
+                    [describedBy]="describedBy(index, 'category')"
                     [disabled]="categoryOptions().length === 0"
-                    [id]="fieldId(index, 'category')"
-                    (change)="editText(index, 'category', $event)"
-                  >
-                    @if (categoryOptions().length === 0) {
-                      <option value="">No categories available</option>
-                    } @else {
-                      @for (category of categoryOptions(); track category.id) {
-                        <option [selected]="category.id === item.category" [value]="category.id">
-                          {{ category.name }}
-                        </option>
-                      }
-                    }
-                  </select>
+                    [invalid]="!!errorId(index, 'category')"
+                    [label]="fieldLabel(item, 'category')"
+                    [options]="categorySelectOptions()"
+                    [value]="item.category ?? ''"
+                    (valueChange)="setText(index, 'category', $event)"
+                  />
                   @if (errorMessage(index, 'category'); as error) {
                     <p [class]="errorClass" [id]="errorId(index, 'category')">{{ error }}</p>
                   }

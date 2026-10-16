@@ -1,0 +1,52 @@
+<button
+  #trigger
+  aria-haspopup="listbox"
+  type="button"
+  [attr.aria-describedby]="describedBy() ?? null"
+  [attr.aria-expanded]="isOpen()"
+  [attr.aria-invalid]="invalid() ? 'true' : null"
+  [attr.aria-label]="label()"
+  [attr.id]="controlId() ?? null"
+  [class]="
+    'flex w-full items-center justify-between gap-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ' +
+    buttonClass()
+  "
+  [disabled]="disabled()"
+  (click)="toggle()"
+  (keydown)="onTriggerKeydown($event)"
+>
+  <span class="truncate">{{ selectedLabel() }}</span>
+  <!-- The arrow keeps its distance from the edge (it sits 16 px in, not hard against the border). -->
+  <ng-icon
+    aria-hidden="true"
+    class="mr-1 shrink-0 text-base transition-transform [--ng-icon__color:var(--muted)]"
+    name="heroChevronDown"
+    [class.rotate-180]="isOpen()"
+  />
+</button>
+
+@if (isOpen()) {
+  <ul
+    class="absolute top-full right-0 left-0 z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-line bg-menu p-1 text-text shadow-[var(--card-shadow)] backdrop-blur-xl"
+    role="listbox"
+    [attr.aria-label]="label()"
+    (keydown)="onListboxKeydown($event)"
+  >
+    @for (option of options(); track option.value; let index = $index) {
+      <li
+        #option
+        class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-surface-2 aria-selected:bg-surface-2"
+        role="option"
+        [attr.aria-selected]="option.value === value()"
+        [tabindex]="activeIndex() === index ? 0 : -1"
+        (click)="select(option)"
+        (keydown)="onOptionKeydown($event, option)"
+      >
+        <span class="min-w-0 truncate">{{ option.label }}</span>
+        @if (option.value === value()) {
+          <ng-icon aria-hidden="true" class="ml-auto shrink-0" name="heroCheck" />
+        }
+      </li>
+    }
+  </ul>
+}

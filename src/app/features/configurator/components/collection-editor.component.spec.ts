@@ -1,6 +1,8 @@
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
+import { IconService } from '../../../core/services/icon.service';
+
 import { CollectionEditEvent, CollectionEditorComponent } from './collection-editor.component';
 
 describe('CollectionEditorComponent', () => {
@@ -82,7 +84,8 @@ describe('CollectionEditorComponent', () => {
       'application-icon-name-help-0',
     );
 
-    await user.selectOptions(type, 'url');
+    await user.click(type);
+    await user.click(screen.getByRole('option', { name: 'URL' }));
     view.fixture.componentRef.setInput('items', [
       { id: 'media', name: 'Media', icon: { type: 'url', value: 'folder' } },
     ]);
@@ -117,10 +120,11 @@ describe('CollectionEditorComponent', () => {
         on: { editItem: edited },
       });
 
+      await user.click(screen.getByRole('button', { name: /^Edit / }));
       const field = screen.getByLabelText(fieldLabel);
       await user.click(field);
       if (collection === 'applications') {
-        await user.selectOptions(field, 'tools');
+        await user.click(screen.getByRole('option', { name: 'Tools' }));
       } else {
         await user.keyboard('{Control>}a{/Control}Updated');
       }
@@ -192,11 +196,12 @@ describe('CollectionEditorComponent', () => {
 
     await user.click(screen.getByRole('button', { name: 'Edit Plex' }));
     const category = screen.getByLabelText('Application category for Plex');
-    expect(category).toHaveValue('media');
-    expect(screen.getByRole('option', { name: 'Media' })).toHaveValue('media');
+    expect(category).toHaveTextContent('Media');
     expect(screen.queryByRole('textbox', { name: 'Application category for Plex' })).toBeNull();
 
-    await user.selectOptions(category, 'tools');
+    await user.click(category);
+    expect(screen.getByRole('option', { name: 'Media' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('option', { name: 'Tools' }));
     expect(edited).toHaveBeenLastCalledWith({ index: 0, field: 'category', value: 'tools' });
   });
 
@@ -212,8 +217,8 @@ describe('CollectionEditorComponent', () => {
       },
     });
 
-    expect(screen.getByLabelText('Application category for Plex')).toHaveValue('media');
-    expect(screen.getByLabelText('Application category for Grafana')).toHaveValue('tools');
+    expect(screen.getByLabelText('Application category for Plex')).toHaveTextContent('Media');
+    expect(screen.getByLabelText('Application category for Grafana')).toHaveTextContent('Tools');
   });
 
   it('edits schema-backed application fields through accessible controls', async () => {
@@ -330,9 +335,11 @@ describe('CollectionEditorComponent', () => {
       on: { editItem: edited },
     });
 
+    await user.click(screen.getByRole('button', { name: 'Edit Docs' }));
     await user.type(screen.getByLabelText('Bookmark description for Docs'), 'Handbook');
     await user.type(screen.getByLabelText('Bookmark tags for Docs'), 'docs, team');
-    await user.selectOptions(screen.getByLabelText('Icon type for Docs'), 'name');
+    await user.click(screen.getByLabelText('Icon type for Docs'));
+    await user.click(screen.getByRole('option', { name: 'Name' }));
     await user.clear(screen.getByLabelText('Icon initials for Docs'));
     await user.type(screen.getByLabelText('Icon initials for Docs'), 'book');
     await user.click(screen.getByLabelText('Open in new tab for Docs'));
@@ -363,8 +370,9 @@ describe('CollectionEditorComponent', () => {
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Edit Plex' }));
     expect(screen.getByLabelText('Application category for Plex')).toBeDisabled();
-    expect(screen.getByLabelText('Application category for Plex')).toHaveValue('');
-    expect(screen.getByRole('option', { name: 'No categories available' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Application category for Plex')).toHaveTextContent(
+      'No categories available',
+    );
   });
 
   it('renders move controls as icon-only buttons with accessible names and visible tooltips', async () => {
@@ -444,6 +452,49 @@ describe('CollectionEditorComponent', () => {
       expect(within(summaryOf('Grafana')).queryByText(/new tab|health/)).not.toBeInTheDocument();
       expect(within(summaryOf('Docs')).getByText('new tab')).toBeInTheDocument();
       expect(within(summaryOf('Docs')).getByText('03')).toBeInTheDocument();
+    });
+
+    describe('icons', () => {
+      const getIconUrlFromConfig = vi.fn(
+        (icon: { type: string; value: string }, name: string) =>
+          `icon://${icon.type}/${icon.value}/${name}`,
+      );
+      const renderIcons = (items: readonly (typeof apps)[number][]) =>
+        render(CollectionEditorComponent, {
+          inputs: { collection: 'applications' as const, items, categoryOptions: categories },
+          providers: [{ provide: IconService, useValue: { getIconUrlFromConfig } }],
+        });
+      const iconOf = (item: string) => summaryOf(item).querySelector('img');
+
+      it('shows each application icon the way the dashboard resolves it, never just letters', async () => {
+        await renderIcons(apps);
+
+        expect(iconOf('Plex')).toHaveAttribute('src', 'icon://initials/PL/Plex');
+        expect(iconOf('Grafana')).toHaveAttribute(
+          'src',
+          'icon://url/https://grafana.local/logo.svg/Grafana',
+        );
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/docs/Docs');
+        expect(summaryOf('Docs')).not.toHaveTextContent(/\bDO\b/);
+      });
+
+      it('falls back to generated initials while an icon name or URL is still empty', async () => {
+        await renderIcons([{ ...apps[2], icon: { type: 'name', value: '  ' } }]);
+
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://initials//Docs');
+      });
+
+      it('follows the icon the user is editing', async () => {
+        const view = await renderIcons([apps[2]]);
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/docs/Docs');
+
+        view.fixture.componentRef.setInput('items', [
+          { ...apps[2], icon: { type: 'name', value: 'wiki' } },
+        ]);
+        view.fixture.detectChanges();
+
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/wiki/Docs');
+      });
     });
 
     it('shows a category as its id with no tag and no flags', async () => {
@@ -640,7 +691,7 @@ describe('CollectionEditorComponent', () => {
       const controls = within(editor as HTMLElement)
         .getAllByRole('textbox')
         .concat(
-          within(editor as HTMLElement).getAllByRole('combobox'),
+          within(editor as HTMLElement).getAllByRole('button'),
           within(editor as HTMLElement).getAllByRole('switch'),
         )
         .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))

@@ -2,6 +2,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -23,6 +24,11 @@ import {
 
 import { IconConfig } from '../../../core/models/dashboard.models';
 
+import { IconService } from '../../../core/services/icon.service';
+import {
+  AppSelectComponent,
+  type SelectOption,
+} from '../../../shared/components/app-select/app-select.component';
 import { AppSwitchComponent } from '../../../shared/components/app-switch/app-switch.component';
 
 import { ConfigSectionComponent } from './config-section.component';
@@ -63,7 +69,7 @@ export type CollectionEditEvent =
 
 @Component({
   selector: 'app-collection-editor',
-  imports: [NgIcon, AppSwitchComponent, ConfigSectionComponent],
+  imports: [NgIcon, AppSelectComponent, AppSwitchComponent, ConfigSectionComponent],
   templateUrl: 'collection-editor.component.html',
   viewProviders: [
     provideIcons({ heroArrowDown, heroArrowUp, heroPencilSquare, heroPlus, heroTrash }),
@@ -90,6 +96,7 @@ export class CollectionEditorComponent {
   private readonly moveUpButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveUpButton');
   private readonly moveDownButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveDownButton');
   private readonly injector = inject(Injector);
+  private readonly iconService = inject(IconService);
   /** Rows whose editor is open: opened by Edit, by Add, and by validation errors. */
   private readonly openRows = signal<ReadonlySet<number>>(new Set());
 
@@ -103,6 +110,16 @@ export class CollectionEditorComponent {
   protected readonly actionClass =
     'inline-flex size-9 items-center justify-center rounded-[10px] border border-line-strong text-text transition-colors hover:bg-line disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:size-11';
   protected readonly dangerActionClass = this.actionClass.replace('text-text', 'text-down');
+  protected readonly selectButtonClass =
+    'glass-field h-11 rounded-[10px] pl-3.5 pr-4 text-sm font-normal text-text';
+  protected readonly iconTypeOptions: readonly SelectOption[] = [
+    { value: 'url', label: 'URL' },
+    { value: 'name', label: 'Name' },
+    { value: 'initials', label: 'Initials' },
+  ];
+  protected readonly categorySelectOptions = computed(() =>
+    this.categoryOptions().map(({ id, name }) => ({ value: id, label: name })),
+  );
 
   constructor() {
     // A row with a validation error opens, so the error and its field can be seen and reached.
@@ -173,11 +190,11 @@ export class CollectionEditorComponent {
   }
 
   protected editText(index: number, field: TextField, event: Event): void {
-    this.editItem.emit({
-      index,
-      field,
-      value: (event.target as HTMLInputElement | HTMLSelectElement).value,
-    });
+    this.setText(index, field, (event.target as HTMLInputElement).value);
+  }
+
+  protected setText(index: number, field: TextField, value: string): void {
+    this.editItem.emit({ index, field, value });
   }
 
   protected setBoolean(index: number, field: BooleanField, value: boolean): void {
@@ -217,8 +234,7 @@ export class CollectionEditorComponent {
     }
   }
 
-  protected updateIconType(index: number, event: Event): void {
-    const type = (event.target as HTMLSelectElement).value;
+  protected setIconType(index: number, type: string): void {
     if (!this.isIconType(type)) return;
 
     this.editItem.emit({
@@ -333,15 +349,20 @@ export class CollectionEditorComponent {
       .join(' · ');
   }
 
-  /** The icon's own image when it is a URL; other kinds show their first letters instead. */
-  protected iconImage(item: EditableItem): string {
+  /** The icon as the dashboard shows it: the CDN icon of a name, the URL, or the generated initials. */
+  protected iconUrl(item: EditableItem): string {
     const icon = this.itemIcon(item);
-    return icon.type === 'url' ? icon.value : '';
+    const usable = icon.type === 'initials' || icon.value.trim() !== '';
+    return this.iconService.getIconUrlFromConfig(
+      usable ? icon : { type: 'initials', value: '' },
+      this.itemLabel(item),
+    );
   }
 
-  protected iconGlyph(item: EditableItem): string {
-    const value = this.itemIcon(item).value || this.itemLabel(item);
-    return value.slice(0, 2).toUpperCase();
+  /** Generated initials fill the tile; real icons sit inside it, as on the dashboard cards. */
+  protected iconImageClass(item: EditableItem): string {
+    const generated = this.itemIcon(item).type === 'initials' || this.itemIcon(item).value === '';
+    return generated ? 'size-full object-cover' : 'size-7 object-contain';
   }
 
   protected collectionLabel(): string {
