@@ -32,22 +32,76 @@ export function parseTokens(css: string): Record<Theme, TokenSet> {
   return sets;
 }
 
-/** A glass surface: an opaque `--surface` floor at `floor` opacity, then the `layer` colour or gradient. */
-interface Surface {
+/**
+ * The stack a surface recipe in surfaces.css declares, as token names: the opaque `--surface` floor at
+ * the opacity of `floor`, then `layer` (colour or gradient). `fallback` is painted alone, opaque,
+ * where backdrop-filter is unsupported.
+ */
+interface Recipe {
   floor: string;
   layer: string;
+  fallback: string;
 }
 
-const SURFACES = {
-  card: { floor: '--floor-card', layer: '--card' },
-  cardHover: { floor: '--floor-card', layer: '--card-hover' },
-  bar: { floor: '--floor-bar', layer: '--chrome' },
-  widget: { floor: '--floor-clock', layer: '--chrome' },
-} satisfies Record<string, Surface>;
+const RECIPES = ['glass-card', 'glass-chrome', 'glass-clock'] as const;
+type RecipeName = (typeof RECIPES)[number];
+type Recipes = Record<RecipeName, Recipe>;
+
+/** The text of the `{ … }` block that opens at `open`, nested blocks included. */
+function blockAt(css: string, open: number): string {
+  let depth = 0;
+  for (let i = open; i < css.length; i++) {
+    depth += css[i] === '{' ? 1 : css[i] === '}' ? -1 : 0;
+    if (depth === 0) {
+      return css.slice(open + 1, i);
+    }
+  }
+  throw new Error('Unbalanced braces in the surface stylesheet');
+}
+
+function readRecipes(css: string): Recipes {
+  const source = css.replace(COMMENT, '');
+
+  const read = (name: RecipeName): Recipe => {
+    const opening = new RegExp(`@utility\\s+${name}\\s*\\{`).exec(source);
+    if (!opening) {
+      throw new Error(`Recipe ${name} is not defined in the surface stylesheet`);
+    }
+    const body = blockAt(source, opening.index + opening[0].length - 1);
+    const declared = (property: string): string | undefined =>
+      new RegExp(`${property}\\s*:\\s*var\\(\\s*(--[\\w-]+)\\s*\\)`).exec(body)?.[1];
+
+    const floor = declared('--glass-floor');
+    const layer = declared('--glass-layer');
+    const fallback = declared('--glass-fallback');
+    if (!floor) {
+      throw new Error(`Recipe ${name} declares no legibility floor (--glass-floor)`);
+    }
+    if (!layer || !fallback) {
+      throw new Error(`Recipe ${name} declares no ${layer ? '--glass-fallback' : '--glass-layer'}`);
+    }
+    // The floor is declared, turned into a colour (--glass-floor-color) and that colour is painted.
+    if (!body.includes('var(--glass-floor)') || !body.includes('var(--glass-floor-color)')) {
+      throw new Error(`Recipe ${name} declares the floor ${floor} but never paints it`);
+    }
+    return { floor, layer, fallback };
+  };
+
+  return Object.fromEntries(RECIPES.map((name) => [name, read(name)])) as Recipes;
+}
+
+/** Which recipe each audited surface is, and the layer to audit instead of the recipe's (hover). */
+type SurfaceName = 'card' | 'cardHover' | 'bar' | 'widget';
+const SURFACES: Record<SurfaceName, { recipe: RecipeName; layer?: string }> = {
+  card: { recipe: 'glass-card' },
+  cardHover: { recipe: 'glass-card', layer: '--card-hover' },
+  bar: { recipe: 'glass-chrome' },
+  widget: { recipe: 'glass-clock' },
+};
 
 interface Pair {
   name: string;
-  surface: keyof typeof SURFACES;
+  surface: SurfaceName;
   required: number;
   /** Tokens painted over the surface, in order, to form the backdrop of the ink. */
   on?: string[];
@@ -96,7 +150,7 @@ const PAIRS: Pair[] = [
 
 const BACKDROPS = [parseColor('#000000'), parseColor('#FFFFFF')];
 
-function measureTheme(theme: Theme, tokens: TokenSet): Measurement[] {
+function measureTheme(theme: Theme, tokens: TokenSet, recipes: Recipes): Measurement[] {
   const token = (name: string): string => {
     const value = tokens[name];
     if (value === undefined) {
@@ -116,13 +170,16 @@ function measureTheme(theme: Theme, tokens: TokenSet): Measurement[] {
   const scrim = solid('--scrim');
   const paint = (layers: string[], backdrop: Rgba) =>
     layers.reduce((under, name) => compositeOver(solid(name), under), backdrop);
+  const contrastOn = (pair: Pair, background: Rgba) =>
+    contrastRatio(paint(pair.ink, background), background);
 
-  return PAIRS.map((pair) => {
-    const surface = SURFACES[pair.surface];
-    const floorOpacity = Number(token(surface.floor));
+  const withBlur = PAIRS.map((pair) => {
+    const { recipe, layer: layerOverride } = SURFACES[pair.surface];
+    const { floor: floorToken, layer: recipeLayer } = recipes[recipe];
+    const floorOpacity = Number(token(floorToken));
     if (!Number.isFinite(floorOpacity)) {
       throw new Error(
-        `Token ${surface.floor} (${theme} theme) must be a number: ${token(surface.floor)}`,
+        `Token ${floorToken} (${theme} theme) must be a number: ${token(floorToken)}`,
       );
     }
     const floor = { ...solid('--surface'), a: floorOpacity };
@@ -130,23 +187,45 @@ function measureTheme(theme: Theme, tokens: TokenSet): Measurement[] {
     let ratio = Infinity;
     for (const backdrop of BACKDROPS) {
       const floored = compositeOver(floor, compositeOver(scrim, backdrop));
-      for (const stop of colors(surface.layer)) {
+      for (const stop of colors(layerOverride ?? recipeLayer)) {
         const background = paint(pair.on ?? [], compositeOver(stop, floored));
-        ratio = Math.min(ratio, contrastRatio(paint(pair.ink, background), background));
+        ratio = Math.min(ratio, contrastOn(pair, background));
       }
     }
     return { pair: pair.name, theme, ratio, required: pair.required };
   });
+
+  // Without backdrop-filter a recipe paints its opaque fallback colour alone, whatever is behind it.
+  const withoutBlur = PAIRS.filter((pair) => pair.surface !== 'cardHover').map((pair) => {
+    const { recipe } = SURFACES[pair.surface];
+    const fallback = solid(recipes[recipe].fallback);
+    if (fallback.a !== 1) {
+      throw new Error(
+        `Fallback ${recipes[recipe].fallback} of ${recipe} (${theme} theme) must be opaque`,
+      );
+    }
+    const ratio = contrastOn(pair, paint(pair.on ?? [], fallback));
+    return { pair: `${pair.name} (no blur)`, theme, ratio, required: pair.required };
+  });
+
+  return [...withBlur, ...withoutBlur];
 }
 
-/** Contrast of every pair of design.md § 5 in both themes, each at its worst case. */
-export function measureTokens(css: string): Measurement[] {
-  const { light, dark } = parseTokens(css);
+/**
+ * Contrast of every pair of design.md § 5 in both themes, each at its worst case, through the
+ * surface stack the recipes in `surfacesCss` declare, with and without backdrop-filter.
+ */
+export function measureTokens(tokensCss: string, surfacesCss: string): Measurement[] {
+  const { light, dark } = parseTokens(tokensCss);
+  const recipes = readRecipes(surfacesCss);
 
-  return [...measureTheme('light', light), ...measureTheme('dark', { ...light, ...dark })];
+  return [
+    ...measureTheme('light', light, recipes),
+    ...measureTheme('dark', { ...light, ...dark }, recipes),
+  ];
 }
 
 /** The measurements that fall below their required ratio. */
-export function auditTokens(css: string): Measurement[] {
-  return measureTokens(css).filter((m) => m.ratio < m.required);
+export function auditTokens(tokensCss: string, surfacesCss: string): Measurement[] {
+  return measureTokens(tokensCss, surfacesCss).filter((m) => m.ratio < m.required);
 }
