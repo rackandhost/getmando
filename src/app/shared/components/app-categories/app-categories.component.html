@@ -6,7 +6,7 @@
 >
   @for (category of categories(); track category.id) {
     <button
-      class="-mx-1.5 shrink-0 rounded-lg border-b-2 border-transparent px-1.5 text-[15px] font-medium whitespace-nowrap text-muted transition-colors hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:border-accent aria-pressed:text-text"
+      class="relative -mx-1.5 shrink-0 rounded-lg px-1.5 text-[15px] font-medium whitespace-nowrap text-muted transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:text-text aria-pressed:after:bg-accent"
       type="button"
       [attr.aria-pressed]="!haveSearch() && selectedCategory() === category.id"
       [disabled]="haveSearch()"
