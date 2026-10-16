@@ -1,21 +1,31 @@
-<!-- The dock sticks the header, clock, search and tabs while the scroll state allows it. The header
-     stays a top-level banner; the rest sits in a labelled region so no content is outside a landmark. -->
+<!-- Above 600 px the outer dock is the sticky one and holds the header, clock, search and tabs. At or below it
+     the outer dock and the region are `display: contents` and the inner dock (search + tabs) is the sticky
+     one, so header and clock scroll away. The header stays a top-level banner; the rest sits in a labelled
+     region so no content is outside a landmark. -->
 <div
   #dockEl
   #dock="appStickyDock"
-  class="sticky top-0 z-20 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] pb-4 transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative"
+  class="sticky top-0 z-20 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] pb-4 transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative max-[601px]:contents"
   [appStickyDock]="probe"
 >
   @let compact = dock.mode() === 'scrolled';
 
   <app-header [compact]="compact" />
 
-  <section aria-label="Dashboard controls">
+  <section aria-label="Dashboard controls" class="max-[601px]:contents">
     <app-clock [compact]="compact" />
 
-    <app-finder [compact]="compact" />
+    <div
+      #mobileDock="appStickyDock"
+      class="max-[601px]:sticky max-[601px]:top-0 max-[601px]:z-20 max-[601px]:-mx-[clamp(16px,4vw,40px)] max-[601px]:px-[clamp(16px,4vw,40px)] max-[601px]:pt-3 max-[601px]:transition-[background-color,box-shadow,backdrop-filter] max-[601px]:duration-300 max-[601px]:data-[dock=scrolled]:bg-[var(--band)] max-[601px]:data-[dock=scrolled]:shadow-[var(--band-shadow)] max-[601px]:data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] max-[601px]:data-[dock=static]:relative"
+      [appStickyDock]="mobileProbe"
+    >
+      @let barsCompact = compact || mobileDock.mode() === 'scrolled';
 
-    <app-categories class="block" [compact]="compact" />
+      <app-finder [compact]="barsCompact" />
+
+      <app-categories class="block" [compact]="barsCompact" />
+    </div>
   </section>
 </div>
 

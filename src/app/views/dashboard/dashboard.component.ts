@@ -26,6 +26,9 @@ import type { ChromeProbe } from '../../core/scroll/scroll-state.service';
 
 const DESKTOP_DOCK_QUERY = '(min-width: 601px)';
 const DESKTOP_DOCK_MIN_VIEWPORT_HEIGHT = 720;
+const MOBILE_DOCK_MIN_VIEWPORT_HEIGHT = 500;
+/** The mobile dock only compacts the search bar, 60 → 44 px (design.md § 4.1). */
+const MOBILE_DOCK_COMPACT_DELTA = 16;
 /** Mirrors `--dock-compact-height` in tokens.css, for when the stylesheet is not there to read. */
 const DEFAULT_DOCK_COMPACT_HEIGHT = 288;
 
@@ -57,7 +60,7 @@ export class DashboardComponent {
   readonly filteredApps = this.appService.filteredApps;
   readonly searchQuery = this.searchService.searchQuery;
 
-  /** The desktop dock only applies above 600 px wide; narrower screens get the mobile dock (task 2.12). */
+  /** Above 600 px wide the desktop dock is the sticky one; at or below it the mobile dock (search + tabs) is. */
   private readonly desktop = signal(true);
   private readonly dockElement = viewChild<ElementRef<HTMLElement>>('dockEl');
   /** The dock's height in the Top layout, the last one measured before it compacted. */
@@ -66,6 +69,9 @@ export class DashboardComponent {
   /** How the desktop dock takes part in the shared scroll state (design.md § 4.1, D13, D14). */
   protected readonly probe: ChromeProbe;
 
+  /** The mobile dock: search bar and tabs only, header and clock scroll away (design.md § 4.1). */
+  protected readonly mobileProbe: ChromeProbe;
+
   constructor() {
     const desktop = this.desktop;
     this.probe = {
@@ -73,6 +79,13 @@ export class DashboardComponent {
       compactDelta: () => this.compactDelta(),
       get minViewportHeight() {
         return desktop() ? DESKTOP_DOCK_MIN_VIEWPORT_HEIGHT : Number.POSITIVE_INFINITY;
+      },
+    };
+    this.mobileProbe = {
+      id: 'dashboard-mobile-dock',
+      compactDelta: () => MOBILE_DOCK_COMPACT_DELTA,
+      get minViewportHeight() {
+        return desktop() ? Number.POSITIVE_INFINITY : MOBILE_DOCK_MIN_VIEWPORT_HEIGHT;
       },
     };
 
