@@ -1,5 +1,5 @@
 import { signal, type WritableSignal } from '@angular/core';
-import { render, screen, waitFor, within } from '@testing-library/angular';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { Observable, of } from 'rxjs';
 
@@ -799,6 +799,67 @@ describe('ConfiguratorPageComponent', () => {
       view.fixture.destroy();
 
       expect(scrollListeners.size).toBe(0);
+    });
+
+    describe('as a chip bar (up to 900 px wide)', () => {
+      const originalWidth = window.innerWidth;
+      const resizeTo = (width: number) =>
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+
+      afterEach(() => {
+        resizeTo(originalWidth);
+        document.documentElement.style.removeProperty('scroll-padding-top');
+      });
+
+      const list = () =>
+        within(screen.getByRole('navigation', { name: 'Configurator sections' })).getByRole('list');
+
+      it('scrolls the row sideways on the vertical wheel and fades only the side that overflows', async () => {
+        await renderSpied();
+        Object.defineProperty(list(), 'scrollWidth', { configurable: true, value: 614 });
+        Object.defineProperty(list(), 'clientWidth', { configurable: true, value: 350 });
+
+        fireEvent.scroll(list());
+        expect(list()).toHaveAttribute('data-fade', 'end');
+
+        fireEvent.wheel(list(), { deltaY: 100 });
+        expect(list().scrollLeft).toBe(100);
+        fireEvent.scroll(list());
+        expect(list()).toHaveAttribute('data-fade', 'both');
+      });
+
+      it('treats a section as reached 200 px from the top instead of 140 px', async () => {
+        await renderSpied();
+        flushFrames();
+        placeSections({ start: -900, metadata: 180, settings: 520 });
+
+        scrollTo(300);
+        await waitFor(() => expect(currentItems()).toEqual(['01 Starting point']));
+
+        resizeTo(800);
+        scrollTo(301);
+        await waitFor(() => expect(currentItems()).toEqual(['02 Metadata']));
+      });
+
+      it('leaves sections 20 px under the header on a wide page and clear of the bar on a narrow one', async () => {
+        await renderSpied();
+        const nav = screen.getByRole('navigation', { name: 'Configurator sections' });
+        nav.getBoundingClientRect = () => ({ top: 96, bottom: 150, height: 54 }) as DOMRect;
+        document.documentElement.style.scrollPaddingTop = '87px';
+        const margin = () =>
+          document
+            .getElementById('section-start')
+            ?.closest<HTMLElement>('[style*="section-margin"]')
+            ?.style.getPropertyValue('--section-margin');
+
+        flushFrames();
+        await waitFor(() => expect(margin()).toBe('20px'));
+
+        resizeTo(800);
+        scrollTo(10);
+        // Stuck bar bottom (96 + 54) + 16 of air, minus the 87 px the header's scroll padding already covers.
+        await waitFor(() => expect(margin()).toBe('79px'));
+      });
     });
   });
 });

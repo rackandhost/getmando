@@ -25,10 +25,17 @@
       <!-- Configurator navigation -->
       <a
         [attr.aria-label]="navLabel()"
-        class="glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95"
+        class="glass-chrome flex h-11 items-center justify-center gap-2 rounded-xl text-text transition-transform active:scale-95"
+        [class]="
+          isConfiguratorRoute() ? 'min-w-11 px-3.5 max-[601px]:w-11 max-[601px]:px-0' : 'w-11'
+        "
         [routerLink]="navTarget()"
       >
         <ng-icon aria-hidden="true" class="text-xl" [name]="navIcon()" />
+        @if (isConfiguratorRoute()) {
+          <!-- Visually hidden on phones; the link keeps its accessible name through aria-label. -->
+          <span class="text-sm font-medium max-[601px]:sr-only">{{ navLabel() }}</span>
+        }
       </a>
 
       <!-- Theme toggle button -->

@@ -203,5 +203,20 @@ describe('AppHeader', () => {
         expect(navLink).not.toHaveTextContent('⬅️');
       });
     });
+
+    it('shows the label beside the arrow on the configurator, keeping it as the accessible name', async () => {
+      await setup(undefined, undefined, '/configure');
+
+      await waitFor(() => {
+        const navLink = screen.getByRole('link', { name: 'Back to dashboard' });
+        expect(navLink).toHaveTextContent('Back to dashboard');
+      });
+    });
+
+    it('keeps the configurator link on the dashboard as an icon only', async () => {
+      await setup();
+
+      expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveTextContent('');
+    });
   });
 });

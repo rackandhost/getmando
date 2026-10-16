@@ -9,7 +9,7 @@
 
 <main class="min-w-0 flex-1">
   <div
-    class="glass-card mt-10 mb-7 flex max-w-[760px] flex-col gap-2.5 rounded-3xl px-8 py-7 max-[600px]:px-5"
+    class="glass-card mt-10 mb-7 flex max-w-[760px] flex-col gap-2.5 rounded-3xl px-8 py-7 max-[601px]:px-5"
   >
     <p class="font-mono text-xs font-medium tracking-[0.14em] text-accent">DASHBOARD SETUP</p>
     <h1
@@ -23,16 +23,21 @@
     </p>
   </div>
 
-  <div class="flex items-start gap-8 pb-16 max-[900px]:flex-col max-[900px]:gap-5">
+  <div class="flex items-start gap-8 pb-16 max-[901px]:flex-col max-[901px]:gap-5">
     <nav
+      #navEl
       aria-label="Configurator sections"
-      class="glass-chrome sticky top-[104px] z-[5] w-60 shrink-0 self-start rounded-[18px] px-2.5 py-3 max-[900px]:static max-[900px]:w-full"
+      class="glass-chrome sticky top-[104px] z-[5] w-60 shrink-0 self-start rounded-[18px] px-2.5 py-3 max-[901px]:top-24 max-[901px]:z-20 max-[901px]:w-full max-[901px]:rounded-2xl max-[901px]:p-1.5"
     >
-      <ol class="m-0 flex list-none flex-col gap-0.5 border-l border-line p-0">
+      <!-- Up to 900 px this list is the chip bar: one row, native sideways scroll without a scrollbar, edge fades on the overflowing side. -->
+      <ol
+        appHorizontalNav
+        class="m-0 flex list-none flex-col gap-0.5 border-l border-line p-0 [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[901px]:flex-row max-[901px]:gap-1 max-[901px]:overflow-x-auto max-[901px]:overscroll-x-contain max-[901px]:border-l-0 [&::-webkit-scrollbar]:hidden"
+      >
         @for (item of sections; track item.id) {
-          <li>
+          <li class="max-[901px]:shrink-0">
             <a
-              class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm text-muted transition-colors duration-200 hover:text-text aria-[current=true]:border-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-text"
+              class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm whitespace-nowrap text-muted transition-colors duration-200 hover:text-text aria-[current=true]:border-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-text max-[901px]:mx-0 max-[901px]:gap-2 max-[901px]:rounded-[10px] max-[901px]:border-l-0 max-[901px]:px-3"
               [attr.aria-current]="activeId() === item.id ? 'true' : null"
               [href]="'#' + item.elementId"
               (click)="goToSection(item.elementId, $event)"
@@ -45,7 +50,10 @@
       </ol>
     </nav>
 
-    <div class="flex min-w-0 flex-1 flex-col gap-5">
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-5"
+      [style.--section-margin]="sectionMargin() + 'px'"
+    >
       <app-config-section
         description="Start from an empty draft, reuse the mounted dashboard YAML when available, or import a local YAML file."
         number="01"

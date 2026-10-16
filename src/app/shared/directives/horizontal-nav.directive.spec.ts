@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/angular';
 
-import { HorizontalNavDirective, wheelScrollDelta } from './horizontal-nav.directive';
+import { edgeFade, HorizontalNavDirective, wheelScrollDelta } from './horizontal-nav.directive';
 
 describe('wheelScrollDelta', () => {
   const wheel = (deltaY: number, deltaX = 0, deltaMode = 0) => ({ deltaX, deltaY, deltaMode });
@@ -100,5 +100,61 @@ describe('HorizontalNavDirective', () => {
 
     expect(nav.scrollLeft).toBe(0);
     expect(notPrevented).toBe(true);
+  });
+});
+
+describe('edgeFade', () => {
+  it('fades only the end of a bar resting at its start', () => {
+    expect(edgeFade(0, 266)).toBe('end');
+  });
+
+  it('fades both sides in the middle, and only the start at the end', () => {
+    expect(edgeFade(120, 266)).toBe('both');
+    expect(edgeFade(266, 266)).toBe('start');
+  });
+
+  it('tolerates sub-pixel scroll positions at the ends', () => {
+    expect(edgeFade(0.4, 266)).toBe('end');
+    expect(edgeFade(265.6, 266)).toBe('start');
+  });
+
+  it('fades nothing when everything fits', () => {
+    expect(edgeFade(0, 0)).toBe('none');
+    expect(edgeFade(0, 0.5)).toBe('none');
+  });
+});
+
+describe('HorizontalNavDirective fade state', () => {
+  const setup = async ({ scrollWidth = 614, clientWidth = 348 } = {}) => {
+    await render('<nav appHorizontalNav aria-label="Tabs">tabs</nav>', {
+      imports: [HorizontalNavDirective],
+    });
+    const nav = screen.getByRole('navigation', { name: 'Tabs' });
+    Object.defineProperty(nav, 'scrollWidth', { configurable: true, value: scrollWidth });
+    Object.defineProperty(nav, 'clientWidth', { configurable: true, value: clientWidth });
+    return nav;
+  };
+
+  it('publishes only the overflowing side as the bar is scrolled', async () => {
+    const nav = await setup();
+
+    fireEvent.scroll(nav);
+    expect(nav).toHaveAttribute('data-fade', 'end');
+
+    nav.scrollLeft = 100;
+    fireEvent.scroll(nav);
+    expect(nav).toHaveAttribute('data-fade', 'both');
+
+    nav.scrollLeft = 266;
+    fireEvent.scroll(nav);
+    expect(nav).toHaveAttribute('data-fade', 'start');
+  });
+
+  it('publishes no fade when everything fits', async () => {
+    const nav = await setup({ scrollWidth: 300, clientWidth: 300 });
+
+    fireEvent.scroll(nav);
+
+    expect(nav).toHaveAttribute('data-fade', 'none');
   });
 });
