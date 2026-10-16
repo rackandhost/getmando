@@ -1,5 +1,14 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -10,6 +19,7 @@ import {
   DashboardSettings,
   SelfhostedApp,
 } from '../../core/models/dashboard.models';
+import { METRICS_SOURCE, type Cancel } from '../../core/scroll/metrics-source';
 import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
@@ -25,6 +35,7 @@ import {
   CollectionEditEvent,
   CollectionEditorComponent,
 } from './components/collection-editor.component';
+import { activeSection, activeThreshold } from './active-section';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 
@@ -88,6 +99,55 @@ export class ConfiguratorPageComponent {
     compactDelta: () => 2 * (HEADER_PADDING.full - HEADER_PADDING.compact),
     minViewportHeight: HEADER_MIN_VIEWPORT_HEIGHT,
   };
+
+  private readonly source = inject(METRICS_SOURCE);
+  private readonly dock = viewChild<ElementRef<HTMLElement>>('dockEl');
+  private cancelFrame: Cancel | null = null;
+
+  /** The section the side navigation marks as current (`id` of `sections`). */
+  protected readonly activeId = signal(SECTIONS[0].id);
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+
+    afterNextRender(() => {
+      const stops = [
+        this.source.onScroll(() => this.scheduleSpy()),
+        this.source.onLayoutChange(() => this.scheduleSpy()),
+      ];
+      this.scheduleSpy();
+
+      destroyRef.onDestroy(() => {
+        stops.forEach((stop) => stop());
+        this.cancelFrame?.();
+      });
+    });
+  }
+
+  /** Scroll and layout events only schedule a frame; the measurement happens in it. */
+  private scheduleSpy(): void {
+    if (this.cancelFrame) return;
+
+    this.cancelFrame = this.source.requestFrame(() => {
+      this.cancelFrame = null;
+      this.updateActiveSection();
+    });
+  }
+
+  private updateActiveSection(): void {
+    const positions = SECTIONS.flatMap(({ id, elementId }) => {
+      const element = this.document.getElementById(elementId);
+      return element ? [{ id, top: element.getBoundingClientRect().top }] : [];
+    });
+    // Whatever of the sticky stack still covers the top of the viewport (none once the header scrolled away).
+    const stack = Math.max(0, this.dock()?.nativeElement.getBoundingClientRect().bottom ?? 0);
+    const narrow = (this.document.defaultView?.innerWidth ?? Infinity) <= 900;
+    const atBottom =
+      this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
+
+    const active = activeSection(positions, activeThreshold(stack, narrow), atBottom);
+    if (active) this.activeId.set(active);
+  }
 
   protected readonly draft = this.store.draft;
   protected readonly validationErrors = this.store.validationErrors;

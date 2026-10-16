@@ -16,6 +16,7 @@ import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml
 import { expectNoAxeViolations } from '../../../testing/a11y';
 import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
 import type { ChromeMode } from '../../core/scroll/scroll-state';
+import { METRICS_SOURCE, type MetricsSource } from '../../core/scroll/metrics-source';
 import { ConfiguratorPageComponent } from './configurator-page.component';
 import { ConfiguratorStore } from './configurator.store';
 
@@ -36,6 +37,15 @@ const SECTION_HEADINGS = [
   'Applications',
   'Bookmarks',
   'Export configuration',
+];
+const SECTION_IDS = [
+  'start',
+  'metadata',
+  'settings',
+  'categories',
+  'applications',
+  'bookmarks',
+  'export',
 ];
 
 describe('ConfiguratorPageComponent', () => {
@@ -676,6 +686,119 @@ describe('ConfiguratorPageComponent', () => {
       mode.set('scrolled');
       await waitFor(() => expect(dock()).toHaveAttribute('data-dock', 'scrolled'));
       expect(padding()).toBe('14px');
+    });
+  });
+
+  describe('scroll-spy navigation', () => {
+    const frames: (() => void)[] = [];
+    const scrollListeners = new Set<() => void>();
+    const metrics = { scrollY: 0, docHeight: 3000, viewportHeight: 900 };
+    const source: MetricsSource = {
+      scrollY: () => metrics.scrollY,
+      docHeight: () => metrics.docHeight,
+      viewportHeight: () => metrics.viewportHeight,
+      prefersReducedMotion: () => false,
+      now: () => 0,
+      onScroll: (listener) => {
+        scrollListeners.add(listener);
+        return () => scrollListeners.delete(listener);
+      },
+      onLayoutChange: () => () => undefined,
+      observeSize: () => () => undefined,
+      requestFrame: (run) => {
+        frames.push(run);
+        return () => undefined;
+      },
+      after: () => () => undefined,
+    };
+    const flushFrames = () => frames.splice(0).forEach((run) => run());
+
+    beforeEach(() => {
+      frames.length = 0;
+      scrollListeners.clear();
+      Object.assign(metrics, { scrollY: 0, docHeight: 3000, viewportHeight: 900 });
+    });
+
+    const renderSpied = () =>
+      render(ConfiguratorPageComponent, {
+        providers: [
+          ...defaultProviders(),
+          { provide: METRICS_SOURCE, useValue: source },
+          {
+            provide: ScrollStateService,
+            useValue: { register: () => ({ mode: signal('static'), dispose: vi.fn() }) },
+          },
+        ],
+      });
+
+    /**
+     * jsdom has no layout: give each section the top edge it would have in the viewport. Sections left out
+     * are far below it.
+     */
+    const placeSections = (tops: Record<string, number>) => {
+      for (const id of SECTION_IDS) {
+        const element = document.getElementById(`section-${id}`);
+        const top = tops[id] ?? 5000;
+        if (element) element.getBoundingClientRect = () => ({ top }) as DOMRect;
+      }
+    };
+    const scrollTo = (scrollY: number) => {
+      metrics.scrollY = scrollY;
+      scrollListeners.forEach((listener) => listener());
+      flushFrames();
+    };
+    const currentItems = () =>
+      within(screen.getByRole('navigation', { name: 'Configurator sections' }))
+        .getAllByRole('link')
+        .filter((link) => link.getAttribute('aria-current') === 'true')
+        .map((link) => link.textContent?.replace(/\s+/g, ' ').trim());
+
+    it('marks the first section as current before anything is measured', async () => {
+      await renderSpied();
+
+      expect(currentItems()).toEqual(['01 Starting point']);
+    });
+
+    it('marks exactly the last section whose top has passed 140 px as current', async () => {
+      await renderSpied();
+      flushFrames();
+      placeSections({ start: -900, metadata: -500, settings: 100, categories: 520 });
+
+      scrollTo(600);
+
+      await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+    });
+
+    it('marks the last section as current at the bottom of the page even though its top is below 140 px', async () => {
+      await renderSpied();
+      flushFrames();
+      placeSections({ bookmarks: -300, export: 400 });
+
+      scrollTo(2100);
+
+      await waitFor(() => expect(currentItems()).toEqual(['07 Export']));
+    });
+
+    it('measures only in an animation frame, never inside the scroll event', async () => {
+      await renderSpied();
+      flushFrames();
+      placeSections({ start: -900, metadata: 100, settings: 520 });
+
+      metrics.scrollY = 600;
+      scrollListeners.forEach((listener) => listener());
+      expect(currentItems()).toEqual(['01 Starting point']);
+
+      flushFrames();
+      await waitFor(() => expect(currentItems()).toEqual(['02 Metadata']));
+    });
+
+    it('stops listening to the scroll when the page is destroyed', async () => {
+      const view = await renderSpied();
+      expect(scrollListeners.size).toBeGreaterThan(0);
+
+      view.fixture.destroy();
+
+      expect(scrollListeners.size).toBe(0);
     });
   });
 });
