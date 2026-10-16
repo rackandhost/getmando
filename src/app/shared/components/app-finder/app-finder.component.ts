@@ -42,9 +42,21 @@ export class AppFinderComponent {
     () => this.compact() && (this.inputFocused() || this.haveSearch() || this.menuOpen()),
   );
 
+  /** Which of the bar's three sizes is showing; the buttons inside scale with it (see the template). */
+  protected readonly size = computed<'full' | 'compact' | 'expanded'>(() => {
+    if (!this.compact()) return 'full';
+    return this.expanded() ? 'expanded' : 'compact';
+  });
+
   protected readonly barSize = computed(() => {
-    if (!this.compact()) return 'h-[60px]';
-    return this.expanded() ? 'h-[52px]' : 'mx-auto h-11 max-w-[440px]';
+    switch (this.size()) {
+      case 'full':
+        return 'h-[60px]';
+      case 'expanded':
+        return 'h-[52px]';
+      case 'compact':
+        return 'mx-auto h-11 max-w-[440px]';
+    }
   });
 
   protected onFocusIn(event: FocusEvent): void {

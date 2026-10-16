@@ -466,5 +466,24 @@ describe('AppFinderComponent', () => {
 
       expect(bar()).toHaveAttribute('data-expanded', 'false');
     });
+
+    it('exposes its size (full, compact, expanded) so the buttons inside can scale with it', async () => {
+      const user = userEvent.setup();
+      const view = await setup();
+
+      expect(bar()).toHaveAttribute('data-size', 'full');
+
+      view.fixture.componentRef.setInput('compact', true);
+      view.fixture.detectChanges();
+      expect(bar()).toHaveAttribute('data-size', 'compact');
+
+      await user.click(screen.getByRole('searchbox', { name: 'Search applications' }));
+      expect(bar()).toHaveAttribute('data-size', 'expanded');
+
+      await user.click(document.body);
+      view.fixture.componentRef.setInput('compact', false);
+      view.fixture.detectChanges();
+      expect(bar()).toHaveAttribute('data-size', 'full');
+    });
   });
 });
