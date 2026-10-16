@@ -1,13 +1,25 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  effect,
   ElementRef,
+  inject,
+  Injector,
   input,
   output,
+  signal,
+  untracked,
   viewChildren,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroArrowDown, heroArrowUp, heroPlus } from '@ng-icons/heroicons/outline';
+import {
+  heroArrowDown,
+  heroArrowUp,
+  heroPencilSquare,
+  heroPlus,
+  heroTrash,
+} from '@ng-icons/heroicons/outline';
 
 import { IconConfig } from '../../../core/models/dashboard.models';
 
@@ -51,7 +63,9 @@ export type CollectionEditEvent =
   selector: 'app-collection-editor',
   imports: [NgIcon, ConfigSectionComponent],
   templateUrl: 'collection-editor.component.html',
-  viewProviders: [provideIcons({ heroArrowDown, heroArrowUp, heroPlus })],
+  viewProviders: [
+    provideIcons({ heroArrowDown, heroArrowUp, heroPencilSquare, heroPlus, heroTrash }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
 })
@@ -70,6 +84,34 @@ export class CollectionEditorComponent {
 
   private readonly removeButtons = viewChildren<ElementRef<HTMLButtonElement>>('removeButton');
   private readonly nameInputs = viewChildren<ElementRef<HTMLInputElement>>('nameInput');
+  private readonly moveUpButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveUpButton');
+  private readonly moveDownButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveDownButton');
+  private readonly injector = inject(Injector);
+  /** Rows whose editor is open: opened by Edit, by Add, and by validation errors. */
+  private readonly openRows = signal<ReadonlySet<number>>(new Set());
+
+  protected readonly labelClass = 'flex flex-col gap-2 text-[13px] font-medium text-text';
+  protected readonly fieldClass =
+    'glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text';
+  protected readonly monoFieldClass = `${this.fieldClass} font-mono`;
+  protected readonly textareaClass =
+    'glass-field min-h-11 w-full rounded-[10px] px-3 py-2.5 text-sm font-normal text-text';
+  protected readonly errorClass = 'text-[13px] font-medium text-down';
+  protected readonly actionClass =
+    'inline-flex size-9 items-center justify-center rounded-[10px] border border-line-strong text-text transition-colors hover:bg-line disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:size-11';
+  protected readonly dangerActionClass = this.actionClass.replace('text-text', 'text-down');
+
+  constructor() {
+    // A row with a validation error opens, so the error and its field can be seen and reached.
+    effect(() => {
+      const rows = Object.keys(this.fieldErrors())
+        .map((key) => Number.parseInt(key, 10))
+        .filter(Number.isInteger);
+      if (rows.length === 0) return;
+
+      untracked(() => this.openRows.update((open) => new Set([...open, ...rows])));
+    });
+  }
 
   protected addLabel(): string {
     return `Add ${this.collectionLabel()}`;
@@ -195,23 +237,94 @@ export class CollectionEditorComponent {
   }
 
   protected add(): void {
+    const newIndex = this.items().length;
     this.addItem.emit();
-    queueMicrotask(() => {
-      const nameInputs = this.nameInputs();
-      nameInputs[nameInputs.length - 1]?.nativeElement.focus();
+    this.openRows.update((rows) => new Set(rows).add(newIndex));
+    afterNextRender(() => this.nameInputs()[newIndex]?.nativeElement.focus(), {
+      injector: this.injector,
     });
   }
 
   protected remove(index: number): void {
     this.removeItem.emit(index);
-    queueMicrotask(() => {
-      const survivor = this.removeButtons()[Math.min(index, this.removeButtons().length - 1)];
-      survivor?.nativeElement.focus();
+    this.remapOpenRows((row) => (row === index ? null : row > index ? row - 1 : row));
+    afterNextRender(
+      () => {
+        const buttons = this.removeButtons();
+        buttons[Math.min(index, buttons.length - 1)]?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** The moved item keeps its editor open and its focus: on the same-direction button, or the other at an end. */
+  protected move(from: number, to: number): void {
+    const buttons = to < from ? this.moveUpButtons : this.moveDownButtons;
+    const others = to < from ? this.moveDownButtons : this.moveUpButtons;
+
+    this.moveItem.emit({ from, to });
+    this.remapOpenRows((row) => (row === from ? to : row === to ? from : row));
+    afterNextRender(
+      () => {
+        const same = buttons()[to]?.nativeElement;
+        (same && !same.disabled ? same : others()[to]?.nativeElement)?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  protected isOpen(index: number): boolean {
+    return this.openRows().has(index);
+  }
+
+  protected toggle(index: number): void {
+    this.openRows.update((rows) => {
+      const next = new Set(rows);
+      if (!next.delete(index)) next.add(index);
+      return next;
     });
   }
 
-  protected move(from: number, to: number): void {
-    this.moveItem.emit({ from, to });
+  protected editorId(index: number): string {
+    return `${this.collection()}-editor-${index}`;
+  }
+
+  protected rowNumber(index: number): string {
+    return String(index + 1).padStart(2, '0');
+  }
+
+  /** Categories are identified by their id; applications and bookmarks by where they lead. */
+  protected secondaryText(item: EditableItem): string {
+    return this.collection() === 'categories' ? item.id : item.url || item.id;
+  }
+
+  protected categoryName(item: EditableItem): string {
+    if (this.collection() !== 'applications' || !item.category) return '';
+    return (
+      this.categoryOptions().find((option) => option.id === item.category)?.name ?? item.category
+    );
+  }
+
+  /** `health · new tab`, `new tab`, or nothing. */
+  protected flagsSummary(item: EditableItem): string {
+    if (this.collection() === 'categories') return '';
+    return [
+      this.collection() === 'applications' && item.healthCheck ? 'health' : '',
+      (item.openNewTab ?? true) ? 'new tab' : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
+  /** The icon's own image when it is a URL; other kinds show their first letters instead. */
+  protected iconImage(item: EditableItem): string {
+    const icon = this.itemIcon(item);
+    return icon.type === 'url' ? icon.value : '';
+  }
+
+  protected iconGlyph(item: EditableItem): string {
+    const value = this.itemIcon(item).value || this.itemLabel(item);
+    return value.slice(0, 2).toUpperCase();
   }
 
   protected collectionLabel(): string {
@@ -220,6 +333,19 @@ export class CollectionEditorComponent {
 
   protected supportsIcon(): boolean {
     return this.collection() === 'applications' || this.collection() === 'bookmarks';
+  }
+
+  /** Items are tracked by position, so the open rows follow their items through a move or a removal. */
+  private remapOpenRows(map: (row: number) => number | null): void {
+    this.openRows.update(
+      (rows) =>
+        new Set(
+          [...rows].flatMap((row) => {
+            const mapped = map(row);
+            return mapped === null ? [] : [mapped];
+          }),
+        ),
+    );
   }
 
   private errorKey(index: number, field: EditableField | IconField): string {

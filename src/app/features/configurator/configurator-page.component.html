@@ -23,7 +23,9 @@
     </p>
   </div>
 
-  <div class="flex items-start gap-8 pb-16 max-[901px]:flex-col max-[901px]:gap-5">
+  <div
+    class="flex items-start gap-8 pb-16 max-[901px]:flex-col max-[901px]:items-stretch max-[901px]:gap-5"
+  >
     <nav
       #navEl
       aria-label="Configurator sections"
@@ -150,40 +152,34 @@
         title="Metadata"
       >
         <div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-x-5 gap-y-4">
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Dashboard title
             <input
               id="field-metadata-title"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               [attr.aria-describedby]="describedBy(['metadata', 'title'])"
               [attr.aria-invalid]="errorFor(['metadata', 'title']) ? 'true' : null"
               [value]="draft().metadata.title"
               (input)="updateMetadata('title', $event)"
             />
             @if (errorFor(['metadata', 'title']); as error) {
-              <p
-                id="error-metadata-title"
-                class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
-              >
+              <p id="error-metadata-title" class="text-[13px] font-medium text-down">
                 {{ error }}
               </p>
             }
           </label>
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Dashboard description
             <input
               id="field-metadata-description"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               [attr.aria-describedby]="describedBy(['metadata', 'description'])"
               [attr.aria-invalid]="errorFor(['metadata', 'description']) ? 'true' : null"
               [value]="draft().metadata.description"
               (input)="updateMetadata('description', $event)"
             />
             @if (errorFor(['metadata', 'description']); as error) {
-              <p
-                id="error-metadata-description"
-                class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
-              >
+              <p id="error-metadata-description" class="text-[13px] font-medium text-down">
                 {{ error }}
               </p>
             }
@@ -205,11 +201,11 @@
             [value]="draft().settings.theme"
             (valueChange)="setSettingChoice('theme', $event)"
           />
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Date format
             <input
               id="field-settings-dateFormat"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               [value]="draft().settings.dateFormat"
               (input)="updateSettingText('dateFormat', $event)"
             />
@@ -221,11 +217,11 @@
             [value]="draft().settings.datePosition"
             (valueChange)="setSettingChoice('datePosition', $event)"
           />
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Items per row
             <input
               id="field-settings-itemsPerRow"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               type="number"
               min="1"
               max="10"
@@ -235,29 +231,26 @@
               (input)="updateSettingNumber('itemsPerRow', $event)"
             />
             @if (errorFor(['settings', 'itemsPerRow']); as error) {
-              <p
-                id="error-settings-itemsPerRow"
-                class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
-              >
+              <p id="error-settings-itemsPerRow" class="text-[13px] font-medium text-down">
                 {{ error }}
               </p>
             }
           </label>
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Light background image
             <input
               id="field-settings-lightBackgroundImage"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               placeholder="Leave blank to use the built-in default"
               [value]="draft().settings.lightBackgroundImage"
               (input)="updateSettingText('lightBackgroundImage', $event)"
             />
           </label>
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Dark background image
             <input
               id="field-settings-darkBackgroundImage"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               placeholder="Leave blank to use the built-in default"
               [value]="draft().settings.darkBackgroundImage"
               (input)="updateSettingText('darkBackgroundImage', $event)"
