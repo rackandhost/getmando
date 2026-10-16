@@ -1,5 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroMagnifyingGlassMinus } from '@ng-icons/heroicons/outline';
 
 import { AppService } from '../../core/services/app.service';
 import { SearchService } from '../../core/services/search.service';
@@ -17,6 +19,7 @@ import { AppHeaderComponent } from '../../shared/components/app-header/app-heade
   standalone: true,
   imports: [
     CommonModule,
+    NgIcon,
     AppHeaderComponent,
     AppFinderComponent,
     AppCategoriesComponent,
@@ -25,6 +28,7 @@ import { AppHeaderComponent } from '../../shared/components/app-header/app-heade
     AppLoadingComponent,
   ],
   templateUrl: 'dashboard.component.html',
+  viewProviders: [provideIcons({ heroMagnifyingGlassMinus })],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
 })

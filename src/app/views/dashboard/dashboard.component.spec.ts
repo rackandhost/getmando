@@ -341,4 +341,48 @@ describe('DashboardComponent', () => {
     expect(screen.queryByRole('list', { name: 'Applications' })).not.toBeInTheDocument();
     expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
   });
+
+  describe('empty state', () => {
+    const emoji = /\p{Extended_Pictographic}/u;
+
+    it('shows a titled card with a decorative magnifier-minus icon and no emoji', async () => {
+      await setup({ filteredApps: [], searchQuery: 'plex' });
+
+      const title = screen.getByRole('heading', { level: 2, name: 'No applications found' });
+      const card = title.closest('section');
+
+      expect(card).not.toBeNull();
+      expect(card?.querySelector('[name="heroMagnifyingGlassMinus"]')).toHaveAttribute(
+        'aria-hidden',
+        'true',
+      );
+      expect(card?.textContent).not.toMatch(emoji);
+    });
+
+    it('keeps the category tabs disabled while a search has no results', async () => {
+      const view = await setup({ filteredApps: [], searchQuery: 'plex' });
+      haveSearch.set(true);
+      await view.fixture.whenStable();
+
+      const tabs = within(screen.getByRole('navigation', { name: 'Categories' })).getAllByRole(
+        'button',
+      );
+
+      expect(tabs.length).toBeGreaterThan(0);
+      tabs.forEach((tab) => expect(tab).toBeDisabled());
+    });
+  });
+
+  describe('loading state', () => {
+    it('keeps its copy and hides the decorative hourglass from assistive technology', async () => {
+      await setup({ filteredApps: null });
+
+      const title = screen.getByRole('heading', { level: 2, name: 'Loading dashboard...' });
+
+      expect(screen.getByText('Please wait while we load your applications')).toBeInTheDocument();
+      expect(title.closest('section')?.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+        '⏳',
+      );
+    });
+  });
 });

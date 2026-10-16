@@ -9,11 +9,11 @@
     (click)="toggle($event)"
     (keydown)="onTriggerKeydown($event)"
   >
-    <ng-icon aria-hidden="true" class="text-xl text-muted" name="heroMagnifyingGlass" />
+    <ng-icon aria-hidden="true" class="text-xl" name="heroMagnifyingGlass" />
     <span>{{ scopeLabel() }}</span>
     <ng-icon
       aria-hidden="true"
-      class="text-base text-muted transition-transform"
+      class="text-base transition-transform"
       name="heroChevronDown"
       [class.rotate-180]="isOpen()"
     />
