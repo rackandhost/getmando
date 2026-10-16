@@ -51,9 +51,9 @@ export class AppFinderComponent {
   protected readonly barSize = computed(() => {
     switch (this.size()) {
       case 'full':
-        return 'h-[60px]';
+        return 'mx-auto h-[60px] max-w-full';
       case 'expanded':
-        return 'h-[52px]';
+        return 'mx-auto h-[52px] max-w-full';
       case 'compact':
         return 'mx-auto h-11 max-w-[440px]';
     }
