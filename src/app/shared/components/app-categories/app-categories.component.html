@@ -1,25 +1,18 @@
 <nav
   aria-label="Categories"
-  class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-2 mb-6 md:w-fit shadow-lg overflow-x-auto"
-  role="navigation"
-  [class.opacity-50]="haveSearch()"
+  class="glass-chrome mb-6 flex h-[45px] w-full items-stretch gap-7 overflow-x-auto rounded-[var(--bar-radius)] px-[18px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
   [class.cursor-not-allowed]="haveSearch()"
+  [style.opacity]="haveSearch() ? 0.45 : null"
 >
-  <div class="flex gap-2 md:gap-3 min-w-max">
-    @for (category of categories(); track category.id) {
-      <button
-        class="px-2 py-1 rounded-xl font-medium transition-all duration-300 hover:bg-white/10 border-b-2 border-transparent focus:outline-none focus:ring-2 focus:ring-white/20 whitespace-nowrap"
-        type="button"
-        [attr.aria-pressed]="selectedCategory() === category.id"
-        [class.bg-white/10]="selectedCategory() === category.id"
-        [class.border-white/50]="selectedCategory() === category.id"
-        [class.cursor-not-allowed]="haveSearch()"
-        [class.cursor-pointer]="!haveSearch()"
-        (click)="onCategoryChange(category.id)"
-        [disabled]="haveSearch()"
-      >
-        {{ category.name }}
-      </button>
-    }
-  </div>
+  @for (category of categories(); track category.id) {
+    <button
+      class="-mx-1.5 shrink-0 rounded-lg border-b-2 border-transparent px-1.5 text-[15px] font-medium whitespace-nowrap text-muted transition-colors hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:border-accent aria-pressed:text-text"
+      type="button"
+      [attr.aria-pressed]="!haveSearch() && selectedCategory() === category.id"
+      [disabled]="haveSearch()"
+      (click)="onCategoryChange(category.id)"
+    >
+      {{ category.name }}
+    </button>
+  }
 </nav>

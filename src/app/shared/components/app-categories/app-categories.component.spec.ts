@@ -99,42 +99,50 @@ describe('AppCategoriesComponent', () => {
   it('should react when search state changes after render', async () => {
     const view = await setup({ haveSearch: false });
 
-    const categoriesNav = screen.getByRole('navigation', { name: 'Categories' });
     const mediaButton = screen.getByRole('button', { name: 'Media' });
 
-    expect(categoriesNav).not.toHaveClass('opacity-50');
     expect(mediaButton).toBeEnabled();
+    expect(mediaButton).toHaveAttribute('aria-pressed', 'true');
 
     haveSearchState.set(true);
     await view.fixture.whenStable();
 
-    expect(categoriesNav).toHaveClass('opacity-50');
     expect(mediaButton).toBeDisabled();
+    expect(mediaButton).toHaveAttribute('aria-pressed', 'false');
 
     haveSearchState.set(false);
     await view.fixture.whenStable();
 
-    expect(categoriesNav).not.toHaveClass('opacity-50');
     expect(mediaButton).toBeEnabled();
+    expect(mediaButton).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('should update the selected category state and styling after render', async () => {
+  it('should leave no tab pressed while a search is active, whatever category was selected', async () => {
+    await setup({ selectedCategory: 'media', haveSearch: true });
+
+    const tabs = screen.getAllByRole('button');
+
+    expect(tabs).toHaveLength(categories.length);
+    tabs.forEach((tab) => {
+      expect(tab).toBeDisabled();
+      expect(tab).toHaveAttribute('aria-pressed', 'false');
+    });
+  });
+
+  it('should update the selected category state after render', async () => {
     const view = await setup({ selectedCategory: 'media' });
 
     const appsButton = screen.getByRole('button', { name: 'Apps' });
     const mediaButton = screen.getByRole('button', { name: 'Media' });
 
     expect(mediaButton).toHaveAttribute('aria-pressed', 'true');
-    expect(mediaButton).toHaveClass('bg-white/10', 'border-white/50');
     expect(appsButton).toHaveAttribute('aria-pressed', 'false');
 
     selectedCategoryState.set(APP_CATEGORY.id);
     await view.fixture.whenStable();
 
     expect(appsButton).toHaveAttribute('aria-pressed', 'true');
-    expect(appsButton).toHaveClass('bg-white/10', 'border-white/50');
     expect(mediaButton).toHaveAttribute('aria-pressed', 'false');
-    expect(mediaButton).not.toHaveClass('bg-white/10', 'border-white/50');
   });
 
   it('should render FAVORITES_CATEGORY when present and maintain accessibility', async () => {
