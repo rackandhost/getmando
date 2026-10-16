@@ -56,6 +56,16 @@
   }
 }
 
+/*
+ * The card's hover colour is swapped through this registered custom property so the browser can interpolate it
+ * (a plain var() inside a background cannot be transitioned). Cards set --glass-layer: var(--card-layer).
+ */
+@property --card-layer {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
 @utility glass-card {
   --glass-floor: var(--floor-card);
   --glass-layer: var(--card);
