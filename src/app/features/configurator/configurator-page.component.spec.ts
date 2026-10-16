@@ -18,7 +18,7 @@ import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-s
 import type { ChromeMode } from '../../core/scroll/scroll-state';
 import { METRICS_SOURCE, type MetricsSource } from '../../core/scroll/metrics-source';
 import { ConfiguratorPageComponent } from './configurator-page.component';
-import { ConfiguratorStore } from './configurator.store';
+import { ConfiguratorStore, type StartingPoint } from './configurator.store';
 
 const SECTION_NAV = [
   '01 Starting point',
@@ -84,11 +84,14 @@ describe('ConfiguratorPageComponent', () => {
   };
   const appService = { initializeConfig: vi.fn() };
   const yamlLoader = {
+    mountedPath: '/config/dashboard.yaml',
     refreshMountedConfig: vi.fn<() => Observable<MountedConfigResult>>(),
   };
+  const source = signal<StartingPoint | null>(null);
 
   const store = {
     draft,
+    source,
     validationErrors,
     updateMetadata: vi.fn(),
     updateSettings: vi.fn(),
@@ -141,6 +144,7 @@ describe('ConfiguratorPageComponent', () => {
     store.canLoadMountedConfig.mockReturnValue(false);
     configWrite.hasToken.mockReturnValue(false);
     yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'unavailable', message: 'n/a' }));
+    source.set(null);
   });
 
   function defaultProviders() {
@@ -860,6 +864,96 @@ describe('ConfiguratorPageComponent', () => {
         // Stuck bar bottom (96 + 54) + 16 of air, minus the 87 px the header's scroll padding already covers.
         await waitFor(() => expect(margin()).toBe('79px'));
       });
+    });
+  });
+
+  describe('starting point', () => {
+    const startSection = () => document.getElementById('section-start') as HTMLElement;
+    const renderPage = () => render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+    it('offers the mounted YAML with its path as the caption, only when it is valid', async () => {
+      store.canLoadMountedConfig.mockReturnValue(true);
+      await renderPage();
+
+      const card = screen.getByRole('button', { name: 'Load mounted YAML' });
+
+      expect(card).toHaveAccessibleDescription('/config/dashboard.yaml');
+    });
+
+    it('keeps Start empty and Import local YAML when there is no valid mounted YAML', async () => {
+      await renderPage();
+
+      expect(screen.queryByRole('button', { name: 'Load mounted YAML' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Start empty' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Import local YAML')).toBeInTheDocument();
+    });
+
+    it('exposes the chosen starting point with aria-pressed', async () => {
+      store.canLoadMountedConfig.mockReturnValue(true);
+      await renderPage();
+      const empty = screen.getByRole('button', { name: 'Start empty' });
+      const mounted = screen.getByRole('button', { name: 'Load mounted YAML' });
+
+      expect(empty).toHaveAttribute('aria-pressed', 'false');
+      expect(mounted).toHaveAttribute('aria-pressed', 'false');
+
+      source.set('mounted');
+      await waitFor(() => expect(mounted).toHaveAttribute('aria-pressed', 'true'));
+      expect(empty).toHaveAttribute('aria-pressed', 'false');
+
+      source.set('empty');
+      await waitFor(() => expect(empty).toHaveAttribute('aria-pressed', 'true'));
+      expect(mounted).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('says the import card is selected once a file was imported', async () => {
+      await renderPage();
+      const input = screen.getByLabelText('Import local YAML');
+      expect(input).toHaveAccessibleDescription('Choose a .yaml file');
+
+      source.set('import');
+
+      await waitFor(() => expect(input).toHaveAccessibleDescription(/Selected/));
+    });
+
+    it('lists the errors in an alert panel inside the section, below the option cards, with the field path in front of each', async () => {
+      validationErrors.set([
+        { path: ['applications', '6', 'category'], message: "Category 'iot' does not exist." },
+        { path: ['settings', 'itemsPerRow'], message: 'Items per row must be between 1 and 10.' },
+      ]);
+      await renderPage();
+
+      const panel = within(startSection()).getByRole('alert');
+      const cards = within(startSection()).getByRole('button', { name: 'Start empty' });
+
+      expect(
+        within(panel).getByRole('heading', { name: 'Fix the following errors' }),
+      ).toBeVisible();
+      expect(
+        within(panel)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent?.trim()),
+      ).toEqual([
+        "applications[6].category — Category 'iot' does not exist.",
+        'settings.itemsPerRow — Items per row must be between 1 and 10.',
+      ]);
+      expect(cards.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('shows an error without a field path as its message alone', async () => {
+      validationErrors.set([{ path: [], message: 'Invalid YAML.' }]);
+      await renderPage();
+
+      const [item] = within(within(startSection()).getByRole('alert')).getAllByRole('listitem');
+
+      expect(item.textContent?.trim()).toBe('Invalid YAML.');
+    });
+
+    it('shows no panel without errors', async () => {
+      validationErrors.set([]);
+      await renderPage();
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
   });
 });

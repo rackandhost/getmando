@@ -9,6 +9,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroArrowUpTray, heroDocument, heroServerStack } from '@ng-icons/heroicons/outline';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -81,6 +83,7 @@ const SECTIONS = [
 @Component({
   selector: 'app-configurator-page',
   imports: [
+    NgIcon,
     AppHeaderComponent,
     CollectionEditorComponent,
     ConfigSectionComponent,
@@ -88,6 +91,7 @@ const SECTIONS = [
     HorizontalNavDirective,
     StickyDockDirective,
   ],
+  viewProviders: [provideIcons({ heroArrowUpTray, heroDocument, heroServerStack })],
   templateUrl: 'configurator-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
@@ -188,6 +192,8 @@ export class ConfiguratorPageComponent {
 
   protected readonly draft = this.store.draft;
   protected readonly validationErrors = this.store.validationErrors;
+  protected readonly startingPoint = this.store.source;
+  protected readonly mountedPath = this.yamlLoader.mountedPath;
   protected readonly isSavingToServer = signal(false);
   protected readonly showTokenPrompt = signal(false);
   protected readonly pendingToken = signal('');
@@ -215,6 +221,19 @@ export class ConfiguratorPageComponent {
 
   protected canLoadMountedConfig(): boolean {
     return this.store.canLoadMountedConfig();
+  }
+
+  /** `applications[6].category` for `['applications', '6', 'category']`; empty when the error has no field. */
+  protected formatPath(path: readonly string[]): string {
+    return path.reduce(
+      (formatted, segment) =>
+        /^\d+$/.test(segment)
+          ? `${formatted}[${segment}]`
+          : formatted
+            ? `${formatted}.${segment}`
+            : segment,
+      '',
+    );
   }
 
   protected loadMountedConfig(): void {
