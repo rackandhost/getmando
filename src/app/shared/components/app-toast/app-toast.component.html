@@ -1,20 +1,24 @@
-<div class="toast-stack" aria-label="Notifications">
+<div class="grid gap-3" role="group" aria-label="Notifications">
   @for (notification of notifications(); track notification.id) {
     <div
-      class="toast"
-      [class.toast-error]="notification.level === 'error'"
-      [class.toast-warning]="notification.level === 'warning'"
-      [class.toast-info]="notification.level === 'info'"
-      [class.toast-success]="notification.level === 'success'"
+      class="glass-card pointer-events-auto relative flex items-start gap-3 overflow-hidden rounded-2xl py-4 pr-3 pl-5 text-text"
       [attr.role]="notification.level === 'error' ? 'alert' : 'status'"
     >
-      <div class="toast-content">
-        <strong class="toast-level">{{ notification.level }}</strong>
-        <p class="toast-message">{{ notification.message }}</p>
+      <!-- Decorative accent strip: the level text label carries the meaning. -->
+      <span
+        aria-hidden="true"
+        class="absolute inset-y-0 left-0 w-1.5"
+        [class]="accentClass[notification.level]"
+      ></span>
+      <div class="min-w-0 flex-1">
+        <strong class="mb-1 block font-mono text-[11px] leading-4 tracking-[0.1em] uppercase">{{
+          notification.level
+        }}</strong>
+        <p class="text-sm leading-snug wrap-anywhere">{{ notification.message }}</p>
       </div>
       <button
         #dismissButton
-        class="toast-dismiss"
+        class="grid size-8 shrink-0 place-items-center rounded-full text-2xl leading-none transition-colors hover:bg-surface-2"
         type="button"
         [attr.aria-label]="
           'Dismiss ' + notification.level + ' notification: ' + notification.message

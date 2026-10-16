@@ -8,14 +8,14 @@ import {
   viewChildren,
 } from '@angular/core';
 
-import { NotificationService } from '../../../core/services/notification.service';
+import { Notification, NotificationService } from '../../../core/services/notification.service';
 
 @Component({
   selector: 'app-toast',
   templateUrl: './app-toast.component.html',
-  styleUrl: './app-toast.component.css',
   host: {
-    class: 'app-toast',
+    class:
+      'pointer-events-none fixed top-4 right-4 z-[1000] w-[min(24rem,calc(100vw-2rem))] max-[640px]:top-3 max-[640px]:right-3 max-[640px]:left-3 max-[640px]:w-auto',
   },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -25,6 +25,14 @@ export class AppToastComponent {
   private readonly dismissButtons = viewChildren<ElementRef<HTMLButtonElement>>('dismissButton');
 
   protected readonly notifications = this.notificationService.notifications;
+
+  /** Decorative level accent (design § 4.5); the level label carries the meaning. Literal for Tailwind. */
+  protected readonly accentClass: Record<Notification['level'], string> = {
+    error: 'bg-down',
+    success: 'bg-up',
+    warning: 'bg-accent',
+    info: 'bg-text',
+  };
 
   protected dismiss(id: number): void {
     const notifications = this.notifications();

@@ -29,6 +29,37 @@ describe('AppToastComponent', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
+  describe('container', () => {
+    it('is a group named Notifications even when empty', async () => {
+      await setup();
+
+      expect(screen.getByRole('group', { name: 'Notifications' })).toBeInTheDocument();
+    });
+
+    it('keeps every toast inside that group, in service order', async () => {
+      await setup([
+        { id: 1, level: 'error', message: 'Failure' },
+        { id: 2, level: 'info', message: 'Update' },
+      ]);
+
+      const group = screen.getByRole('group', { name: 'Notifications' });
+
+      expect(within(group).getByRole('alert')).toHaveTextContent('Failure');
+      expect(within(group).getByRole('status')).toHaveTextContent('Update');
+      expect(within(group).getAllByRole('button')).toHaveLength(2);
+    });
+
+    it('does not put an aria-label on anything without a role that allows it', async () => {
+      const view = await setup([{ id: 1, level: 'info', message: 'Update' }]);
+
+      const labelled = Array.from(view.container.querySelectorAll('[aria-label]')).filter(
+        (element) => !element.getAttribute('role') && !['BUTTON', 'A'].includes(element.tagName),
+      );
+
+      expect(labelled).toHaveLength(0);
+    });
+  });
+
   it('renders all levels in deterministic service order with visible labels', async () => {
     await setup([
       { id: 4, level: 'error', message: 'Could not load apps' },
