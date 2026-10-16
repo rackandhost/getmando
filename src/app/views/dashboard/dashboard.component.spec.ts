@@ -374,15 +374,15 @@ describe('DashboardComponent', () => {
   });
 
   describe('loading state', () => {
-    it('keeps its copy and hides the decorative hourglass from assistive technology', async () => {
+    it('keeps its copy and shows a decorative line icon instead of an emoji', async () => {
       await setup({ filteredApps: null });
 
       const title = screen.getByRole('heading', { level: 2, name: 'Loading dashboard...' });
+      const card = title.closest('section');
 
       expect(screen.getByText('Please wait while we load your applications')).toBeInTheDocument();
-      expect(title.closest('section')?.querySelector('[aria-hidden="true"]')).toHaveTextContent(
-        '⏳',
-      );
+      expect(card?.querySelector('[name="heroArrowPath"]')).toHaveAttribute('aria-hidden', 'true');
+      expect(card?.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
     });
   });
 });
