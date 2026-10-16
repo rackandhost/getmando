@@ -73,7 +73,7 @@ describe('token stylesheet', () => {
     ['--bg', '#F3F1EC', '#0D0F11'],
     ['--text', '#16181B', '#EDEBE6'],
     ['--accent', '#9A5B00', '#F0B04A'],
-    ['--minute-fill', 'rgba(154,91,0,0.75)', 'rgba(240,176,74,0.65)'],
+    ['--minute-fill', 'rgba(154,91,0,0.75)', 'rgba(240,176,74,0.85)'],
     ['--band', 'rgba(243,241,236,0.55)', 'rgba(13,15,17,0.62)'],
   ])('resolves %s to the specified value in light and in dark', (token, light, dark) => {
     const tokens = parseTokens(tokensCss);
