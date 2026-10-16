@@ -16,7 +16,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       inputs: { engines: [] },
     });
 
-    const trigger = screen.getByRole('button', { name: 'Select search engine' });
+    const trigger = screen.getByRole('button', { name: /^Select search engine/ });
 
     expect(trigger).toBeDisabled();
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -36,12 +36,12 @@ describe('AppSearchEngineSelectorComponent', () => {
       on: { engineSelected },
     });
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     expect(engineSelected).toHaveBeenCalledWith(googleEngine);
     expect(screen.queryByRole('listbox', { name: 'Search engines' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select search engine' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /^Select search engine/ })).toHaveFocus();
   });
 
   it.each([
@@ -56,13 +56,13 @@ describe('AppSearchEngineSelectorComponent', () => {
       on: { engineSelected },
     });
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.keyboard('{Home}');
     await user.keyboard(key);
 
     expect(engineSelected).toHaveBeenCalledWith(null);
     expect(screen.queryByRole('listbox', { name: 'Search engines' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select search engine' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /^Select search engine/ })).toHaveFocus();
   });
 
   it('should expose the actual selected option to assistive technology', async () => {
@@ -75,7 +75,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       },
     });
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
 
     expect(screen.getByRole('option', { name: 'Your apps' })).toHaveAttribute(
       'aria-selected',
@@ -95,7 +95,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       inputs: { engines: [googleEngine, duckDuckGoEngine] },
     });
 
-    const trigger = screen.getByRole('button', { name: 'Select search engine' });
+    const trigger = screen.getByRole('button', { name: /^Select search engine/ });
     trigger.focus();
     await user.keyboard('{ArrowDown}');
 
@@ -125,7 +125,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       inputs: { engines: [googleEngine, duckDuckGoEngine] },
     });
 
-    const trigger = screen.getByRole('button', { name: 'Select search engine' });
+    const trigger = screen.getByRole('button', { name: /^Select search engine/ });
     trigger.focus();
     await user.keyboard('{ArrowDown}');
     await user.keyboard('{ArrowDown}');
@@ -146,7 +146,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       });
       document.body.append(externalButton);
 
-      const trigger = screen.getByRole('button', { name: 'Select search engine' });
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
       trigger.focus();
       await user.keyboard('{ArrowDown}');
       await user.tab();
@@ -166,7 +166,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       inputs: { engines: [googleEngine] },
     });
 
-    const trigger = screen.getByRole('button', { name: 'Select search engine' });
+    const trigger = screen.getByRole('button', { name: /^Select search engine/ });
     await user.click(trigger);
     await user.keyboard('{Escape}');
 
@@ -180,7 +180,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         inputs: { engines: [googleEngine] },
       });
 
-      const trigger = screen.getByRole('button', { name: 'Select search engine' });
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
 
       expect(trigger).toHaveTextContent('Apps');
       expect(trigger.querySelector('[name="heroMagnifyingGlass"]')).toHaveAttribute(
@@ -198,11 +198,26 @@ describe('AppSearchEngineSelectorComponent', () => {
         inputs: { engines: [googleEngine], selectedEngine: googleEngine },
       });
 
-      const trigger = screen.getByRole('button', { name: 'Select search engine' });
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
 
       expect(trigger).toHaveTextContent(googleEngine.name);
       expect(trigger).not.toHaveTextContent('Apps');
       expect(trigger.querySelector('[name="heroMagnifyingGlass"]')).not.toBeNull();
+    });
+
+    it.each([
+      ['Apps scope', null, 'Select search engine, Apps'],
+      ['an engine', googleEngine, `Select search engine, ${googleEngine.name}`],
+    ])('has an accessible name that contains its visible label for %s', async (_, engine, name) => {
+      await render(AppSearchEngineSelectorComponent, {
+        inputs: { engines: [googleEngine], selectedEngine: engine },
+      });
+
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
+      const visibleLabel = trigger.textContent?.trim() ?? '';
+
+      expect(trigger).toHaveAccessibleName(name);
+      expect(trigger.getAttribute('aria-label')).toContain(visibleLabel);
     });
   });
 
@@ -213,7 +228,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         inputs: { engines: [googleEngine, duckDuckGoEngine] },
       });
 
-      await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
 
       const options = screen.getAllByRole('option');
 
@@ -232,7 +247,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         inputs: { engines: [googleEngine, duckDuckGoEngine], selectedEngine: selected ?? null },
       });
 
-      await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
 
       const checked = screen
         .getAllByRole('option')
@@ -256,7 +271,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         on: { engineSelected },
       });
 
-      const trigger = screen.getByRole('button', { name: 'Select search engine' });
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
       trigger.focus();
       await user.keyboard(openKey);
 
@@ -284,7 +299,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         });
         document.body.append(outside);
 
-        await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+        await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
         expect(screen.getByRole('listbox', { name: 'Search engines' })).toBeInTheDocument();
 
         await user.click(outside);
@@ -304,7 +319,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         on: { engineSelected },
       });
 
-      const trigger = screen.getByRole('button', { name: 'Select search engine' });
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
       await user.click(trigger);
       trigger.focus();
       await user.keyboard('{Escape}');
@@ -322,7 +337,7 @@ describe('AppSearchEngineSelectorComponent', () => {
         on: { engineSelected },
       });
 
-      const trigger = screen.getByRole('button', { name: 'Select search engine' });
+      const trigger = screen.getByRole('button', { name: /^Select search engine/ });
       await user.click(trigger);
       await user.keyboard('{ArrowDown}{Escape}');
 
@@ -338,7 +353,7 @@ describe('AppSearchEngineSelectorComponent', () => {
       inputs: { engines: [googleEngine] },
     });
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
 
     await expectNoAxeViolations(view.container);
   });
