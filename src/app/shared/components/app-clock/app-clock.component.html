@@ -1,23 +1,45 @@
-<section class="flex flex-col items-center justify-center gap-1 mb-6">
-  @if (dateOnTop) {
-    <ng-container *ngTemplateOutlet="dateTemplate"></ng-container>
-  }
-
-  <p class="text-5xl flex items-end gap-1">
-    {{ currentDate() | date: 'HH:mm' }}
-
-    @if (showSeconds) {
-      <small class="text-sm">{{ currentDate() | date: 'ss' }}</small>
+<section class="flex justify-center pb-[clamp(20px,3vw,32px)] pt-[clamp(32px,6vw,64px)]">
+  <div
+    class="glass-clock flex flex-col items-center gap-3 rounded-[26px] px-[clamp(28px,4vw,48px)] pb-[clamp(18px,2.2vw,24px)] pt-[clamp(20px,2.5vw,28px)] text-text"
+    role="img"
+    [attr.aria-label]="label()"
+  >
+    @if (dateOnTop) {
+      <ng-container *ngTemplateOutlet="pills" />
     }
-  </p>
 
-  @if (dateOnBottom) {
-    <ng-container *ngTemplateOutlet="dateTemplate"></ng-container>
-  }
+    <p
+      class="flex items-baseline text-[clamp(88px,11vw,150px)] leading-none font-extrabold tracking-[-0.03em]"
+    >
+      <span class="text-clock-ink">{{ parts().hours }}</span>
+      <span class="px-[0.06em] text-accent">:</span>
+      <span class="text-minute-fill [-webkit-text-stroke:2px_var(--accent)]">{{
+        parts().minutes
+      }}</span>
+      @if (showSeconds) {
+        <span
+          aria-hidden="true"
+          class="ml-[0.12em] font-mono text-[max(14px,0.18em)] font-semibold tracking-normal text-muted tabular-nums"
+          >{{ parts().seconds }}</span
+        >
+      }
+    </p>
+
+    @if (dateOnBottom) {
+      <ng-container *ngTemplateOutlet="pills" />
+    }
+  </div>
 </section>
 
-<ng-template #dateTemplate>
-  <p class="text-lg">
-    {{ currentDate() | date: dateFormat }}
-  </p>
+<ng-template #pills>
+  <div
+    class="flex items-center justify-center gap-2 font-mono text-xs font-semibold tracking-[0.16em]"
+  >
+    <span class="rounded-full bg-accent px-[11px] py-[5px] text-accent-ink">{{
+      parts().weekday | uppercase
+    }}</span>
+    <span class="rounded-full border border-pill-line bg-pill-bg px-[11px] py-[5px] text-text">{{
+      parts().date | uppercase
+    }}</span>
+  </div>
 </ng-template>
