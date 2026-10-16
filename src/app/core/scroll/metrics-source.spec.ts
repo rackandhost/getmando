@@ -120,4 +120,30 @@ describe('browser metrics source', () => {
     expect(run).toHaveBeenCalledTimes(1);
     expect(cancelled).not.toHaveBeenCalled();
   });
+
+  it('reports size changes of one element through a ResizeObserver and releases it', () => {
+    vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+    const element = document.createElement('div');
+    const listener = vi.fn();
+
+    const stop = createBrowserMetricsSource(document).observeSize(element, listener);
+    observers[0].callback();
+
+    expect(observers[0].observed).toEqual([element]);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    stop();
+    expect(observers[0].disconnected).toBe(true);
+  });
+
+  it('observes nothing, and does not throw, where ResizeObserver does not exist', () => {
+    vi.stubGlobal('ResizeObserver', undefined);
+
+    const stop = createBrowserMetricsSource(document).observeSize(
+      document.createElement('div'),
+      vi.fn(),
+    );
+
+    expect(() => stop()).not.toThrow();
+  });
 });

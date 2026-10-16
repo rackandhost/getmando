@@ -4,95 +4,10 @@ import type { Mock } from 'vitest';
 import { LoggerService } from '../services/logger.service';
 import { NotificationService } from '../services/notification.service';
 
-import { METRICS_SOURCE, type MetricsSource } from './metrics-source';
+import { FakeMetrics, docTopFor } from '../../../testing/fake-metrics';
+
+import { METRICS_SOURCE } from './metrics-source';
 import { ScrollStateService, type ChromeHandle, type ChromeProbe } from './scroll-state.service';
-
-/** Geometry of design.md § 4.1: 5 columns of 171 px cards, 14 px gap. */
-const docTopFor = (rows: number) => 709 + rows * 185;
-
-/** A document and a clock the test drives by hand; frames and timers run only when told to. */
-class FakeMetrics implements MetricsSource {
-  docTop = docTopFor(6);
-  delta = 306;
-  viewport = 900;
-  intent = 0;
-  reducedMotion = false;
-  time = 1_000;
-  scrollListeners = new Set<() => void>();
-  layoutListeners = new Set<() => void>();
-  private frames: (() => void)[] = [];
-  private timers: { at: number; run: () => void }[] = [];
-  private currentDocHeight = this.docTop;
-  private currentScrollY = 0;
-
-  scrollY = () => this.currentScrollY;
-  docHeight = () => this.currentDocHeight;
-  viewportHeight = () => this.viewport;
-  prefersReducedMotion = () => this.reducedMotion;
-  now = () => this.time;
-
-  onScroll(listener: () => void) {
-    this.scrollListeners.add(listener);
-    return () => this.scrollListeners.delete(listener);
-  }
-
-  onLayoutChange(listener: () => void) {
-    this.layoutListeners.add(listener);
-    return () => this.layoutListeners.delete(listener);
-  }
-
-  requestFrame(run: () => void) {
-    this.frames.push(run);
-    return () => {
-      this.frames = this.frames.filter((frame) => frame !== run);
-    };
-  }
-
-  after(ms: number, run: () => void) {
-    const timer = { at: this.time + ms, run };
-    this.timers.push(timer);
-    return () => {
-      this.timers = this.timers.filter((t) => t !== timer);
-    };
-  }
-
-  get pendingFrames(): number {
-    return this.frames.length;
-  }
-
-  /** Lays the page out for `mode`: a Scrolled document is Δ shorter and scrollY is clamped to it. */
-  layout(mode: 'static' | 'top' | 'scrolled') {
-    this.currentDocHeight = this.docTop - (mode === 'scrolled' ? this.delta : 0);
-    this.currentScrollY = Math.min(this.intent, Math.max(0, this.currentDocHeight - this.viewport));
-  }
-
-  /** The user scrolls to `y`: the scroll event fires (it does not run any frame by itself). */
-  scroll(y: number, mode: 'static' | 'top' | 'scrolled') {
-    this.intent = y;
-    this.layout(mode);
-    this.scrollListeners.forEach((listener) => listener());
-  }
-
-  /** Content or viewport changed: observers fire (they do not run any frame by itself). */
-  relayout(mode: 'static' | 'top' | 'scrolled') {
-    this.layout(mode);
-    this.layoutListeners.forEach((listener) => listener());
-  }
-
-  /** Runs the frames queued so far (not the ones they queue). */
-  frame() {
-    const queued = this.frames;
-    this.frames = [];
-    queued.forEach((run) => run());
-  }
-
-  advance(ms: number) {
-    this.time += ms;
-    const due = this.timers.filter((t) => t.at <= this.time).sort((a, b) => a.at - b.at);
-    this.timers = this.timers.filter((t) => t.at > this.time);
-    due.forEach((t) => t.run());
-  }
-}
 
 describe('ScrollStateService', () => {
   let metrics: FakeMetrics;

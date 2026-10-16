@@ -19,6 +19,8 @@ export interface MetricsSource {
   onScroll(listener: () => void): Cancel;
   /** The viewport or the content changed size, or fonts finished loading. */
   onLayoutChange(listener: () => void): Cancel;
+  /** The box of `element` changed size. */
+  observeSize(element: Element, listener: () => void): Cancel;
   /** Runs `run` on the next animation frame. */
   requestFrame(run: () => void): Cancel;
   /** Runs `run` after `ms` milliseconds. */
@@ -56,6 +58,13 @@ export function createBrowserMetricsSource(document: Document): MetricsSource {
         observer?.disconnect();
         document.fonts?.removeEventListener('loadingdone', listener);
       };
+    },
+
+    observeSize(element, listener) {
+      const observer =
+        typeof win.ResizeObserver === 'function' ? new win.ResizeObserver(() => listener()) : null;
+      observer?.observe(element);
+      return () => observer?.disconnect();
     },
 
     requestFrame(run) {
