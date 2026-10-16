@@ -18,10 +18,11 @@ describe('AppFinderComponent', () => {
     setSearchQuery: vi.fn(),
   };
 
-  const setup = async (searchEngines: SearchEngine[] = []) => {
+  const setup = async (searchEngines: SearchEngine[] = [], inputs: { compact?: boolean } = {}) => {
     appServiceMock.setSearchQuery.mockReset();
 
     return render(AppFinderComponent, {
+      inputs,
       providers: [
         {
           provide: AppService,
@@ -399,5 +400,71 @@ describe('AppFinderComponent', () => {
       'https://www.google.com/search?q=home%20assistant',
       '_blank',
     );
+  });
+
+  describe('dock variant', () => {
+    const bar = () =>
+      screen
+        .getByRole('searchbox', { name: 'Search applications' })
+        .closest<HTMLElement>('[data-compact]') as HTMLElement;
+
+    it('is neither compact nor expanded by default', async () => {
+      await setup();
+
+      expect(bar()).toHaveAttribute('data-compact', 'false');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('is compact and not expanded while idle in the scrolled dock', async () => {
+      await setup([], { compact: true });
+
+      expect(bar()).toHaveAttribute('data-compact', 'true');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('expands while the input has focus and collapses when it loses it', async () => {
+      const user = userEvent.setup();
+      await setup([], { compact: true });
+
+      await user.click(screen.getByRole('searchbox', { name: 'Search applications' }));
+      expect(bar()).toHaveAttribute('data-expanded', 'true');
+
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('stays expanded while there is a query, even without focus', async () => {
+      const user = userEvent.setup();
+      await setup([], { compact: true });
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-expanded', 'true');
+
+      await user.click(screen.getByRole('button', { name: 'Clear search' }));
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('expands while the engine menu is open and collapses when it closes', async () => {
+      const user = userEvent.setup();
+      await setup([DEFAULT_DASHBOARD_SEARCH_ENGINES[0]], { compact: true });
+
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+      expect(bar()).toHaveAttribute('data-expanded', 'true');
+
+      await user.keyboard('{Escape}');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('never expands outside the scrolled dock, so the full-size bar is unchanged', async () => {
+      const user = userEvent.setup();
+      await setup([DEFAULT_DASHBOARD_SEARCH_ENGINES[0]], { compact: false });
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
   });
 });

@@ -29,7 +29,12 @@ class StubScrollState {
 
 @Component({
   imports: [StickyDockDirective],
-  template: `<div id="dock" [appStickyDock]="probe()">dock</div>`,
+  template: `<div id="dock" [appStickyDock]="probe()">
+      dock
+      <button id="in-a" type="button">a</button>
+      <button id="in-b" type="button">b</button>
+    </div>
+    <button id="out" type="button">outside</button>`,
 })
 class HostComponent {
   readonly probe = signal<ChromeProbe>({
@@ -174,6 +179,84 @@ describe('StickyDockDirective', () => {
       metrics.frame();
       setMode('scrolled');
       expect(root().style.scrollPaddingTop).toBe('584px');
+
+      setMode('static');
+
+      expect(root().style.scrollPaddingTop).toBe('');
+    });
+  });
+
+  describe('while focus is inside the dock', () => {
+    const control = (id: string) => fixture.nativeElement.querySelector(`#${id}`) as HTMLElement;
+
+    beforeEach(() => {
+      metrics.frame();
+    });
+
+    it.each(['top', 'scrolled'] as const)(
+      'drops the padding as soon as a control inside the %s dock takes focus',
+      (mode) => {
+        setMode(mode);
+        expect(root().style.scrollPaddingTop).toBe('584px');
+
+        control('in-a').focus();
+
+        expect(root().style.scrollPaddingTop).toBe('');
+      },
+    );
+
+    it('keeps it dropped while focus moves between controls of the dock', () => {
+      setMode('scrolled');
+
+      control('in-a').focus();
+      control('in-b').focus();
+
+      expect(root().style.scrollPaddingTop).toBe('');
+    });
+
+    it('restores it synchronously when focus leaves for a control outside', () => {
+      setMode('scrolled');
+      control('in-a').focus();
+
+      control('out').focus();
+
+      expect(root().style.scrollPaddingTop).toBe('584px');
+    });
+
+    it('restores it when the focused control simply loses focus', () => {
+      setMode('scrolled');
+      control('in-a').focus();
+
+      control('in-a').blur();
+
+      expect(root().style.scrollPaddingTop).toBe('584px');
+    });
+
+    it('adds no padding while the dock is Static, however focus moves', () => {
+      control('in-a').focus();
+      control('out').focus();
+
+      expect(root().style.scrollPaddingTop).toBe('');
+    });
+
+    it('applies a height change that happened while focused once focus has left', () => {
+      setMode('scrolled');
+      control('in-a').focus();
+
+      height = 296;
+      metrics.resize(dock);
+      metrics.frame();
+      fixture.detectChanges();
+      expect(root().style.scrollPaddingTop).toBe('');
+
+      control('out').focus();
+
+      expect(root().style.scrollPaddingTop).toBe('296px');
+    });
+
+    it('does not bring the padding back when the dock goes Static with focus inside', () => {
+      setMode('scrolled');
+      control('in-a').focus();
 
       setMode('static');
 

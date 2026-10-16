@@ -1,4 +1,9 @@
-<header class="border-b border-line py-6">
+<header
+  class="border-b border-line transition-[padding] duration-300"
+  [attr.data-compact]="compact()"
+  [class.py-3]="compact()"
+  [class.py-6]="!compact()"
+>
   <div class="flex items-center justify-between gap-4">
     <div
       class="glass-chrome flex min-w-0 items-center gap-[14px] rounded-[18px] py-1.5 pl-1.5 pr-4 text-text"

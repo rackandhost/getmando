@@ -1,14 +1,25 @@
-<app-header />
+<!-- The dock sticks the header, clock, search and tabs while the scroll state allows it. The header
+     stays a top-level banner; the rest sits in a labelled region so no content is outside a landmark. -->
+<div
+  #dockEl
+  #dock="appStickyDock"
+  class="sticky top-0 z-20 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] pb-4 transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative"
+  [appStickyDock]="probe"
+>
+  @let compact = dock.mode() === 'scrolled';
+
+  <app-header [compact]="compact" />
+
+  <section aria-label="Dashboard controls">
+    <app-clock [compact]="compact" />
+
+    <app-finder [compact]="compact" />
+
+    <app-categories class="block" [compact]="compact" />
+  </section>
+</div>
 
 <main class="flex min-w-0 flex-1 flex-col">
-  <div class="flex flex-col justify-center py-6 md:pb-8 md:pt-0">
-    <app-clock />
-
-    <app-finder />
-
-    <app-categories class="block" />
-  </div>
-
   <!-- Apps grid: the window scrolls -->
   <div class="pb-6 pt-3 md:pt-6">
     @if (filteredApps(); as apps) {

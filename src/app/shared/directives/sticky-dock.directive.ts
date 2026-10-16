@@ -24,13 +24,18 @@ import {
  * - `data-dock="static|top|scrolled"` follows the registered chrome's mode; styles key off it.
  * - `--dock-height` is the live height of the host, measured one animation frame after a resize.
  * - While the dock is sticky, the document's `scroll-padding-top` equals that height, so a control
- *   focused or jumped to below the dock is never left underneath it.
+ *   focused or jumped to below the dock is never left underneath it. It is dropped while focus is
+ *   inside the dock: the browser would otherwise treat the dock's own controls (the search input's
+ *   caret above all) as hidden under that padding and scroll the page up to reveal them.
  */
 @Directive({
   selector: '[appStickyDock]',
+  exportAs: 'appStickyDock',
   host: {
     '[attr.data-dock]': 'mode()',
     '[style.--dock-height]': 'heightPx()',
+    '(focusin)': 'onFocusIn()',
+    '(focusout)': 'onFocusOut($event)',
   },
 })
 export class StickyDockDirective {
@@ -45,8 +50,10 @@ export class StickyDockDirective {
   private readonly handle = signal<ChromeHandle | null>(null);
   private readonly height = signal<number | null>(null);
   private cancelMeasure: Cancel | null = null;
+  private focusInside = false;
 
-  protected readonly mode = computed<ChromeMode>(() => this.handle()?.mode() ?? 'static');
+  /** The registered chrome's state; `static` until the service says otherwise. */
+  readonly mode = computed<ChromeMode>(() => this.handle()?.mode() ?? 'static');
   protected readonly heightPx = computed(() => {
     const height = this.height();
     return height === null ? null : `${height}px`;
@@ -62,14 +69,7 @@ export class StickyDockDirective {
       });
     });
 
-    effect(() => {
-      const height = this.height();
-      if (this.mode() !== 'static' && height !== null) {
-        this.root.style.scrollPaddingTop = `${height}px`;
-      } else {
-        this.root.style.removeProperty('scroll-padding-top');
-      }
-    });
+    effect(() => this.applyScrollPadding());
 
     // The observer only schedules a frame; the height is read and published in that frame.
     const stopObserving = this.source.observeSize(this.host, () => this.scheduleMeasure());
@@ -80,6 +80,32 @@ export class StickyDockDirective {
       this.cancelMeasure?.();
       this.root.style.removeProperty('scroll-padding-top');
     });
+  }
+
+  /** Controls inside the dock are already visible; the padding is only for what sits below it. */
+  private applyScrollPadding(): void {
+    const height = this.height();
+
+    if (this.mode() !== 'static' && height !== null && !this.focusInside) {
+      this.root.style.scrollPaddingTop = `${height}px`;
+    } else {
+      this.root.style.removeProperty('scroll-padding-top');
+    }
+  }
+
+  protected onFocusIn(): void {
+    this.focusInside = true;
+    this.applyScrollPadding();
+  }
+
+  /** Focus leaving for something outside restores the padding at once, before the browser reveals it. */
+  protected onFocusOut(event: FocusEvent): void {
+    if (event.relatedTarget instanceof Node && this.host.contains(event.relatedTarget)) {
+      return;
+    }
+
+    this.focusInside = false;
+    this.applyScrollPadding();
   }
 
   private scheduleMeasure(): void {

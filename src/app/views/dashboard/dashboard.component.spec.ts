@@ -10,6 +10,8 @@ import { ThemeService } from '../../core/services/theme.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { CategoryService } from '../../core/services/category.service';
 import { IconService } from '../../core/services/icon.service';
+import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
+import type { ChromeMode } from '../../core/scroll/scroll-state';
 
 import {
   APP_CATEGORY,
@@ -58,11 +60,13 @@ describe('DashboardComponent', () => {
     searchQuery = '',
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
     isDarkMode = true,
+    scrollState,
   }: {
     filteredApps?: SelfhostedApp[] | null;
     searchQuery?: string;
     settings?: DashboardSettings;
     isDarkMode?: boolean;
+    scrollState?: Pick<ScrollStateService, 'register'>;
   } = {}) => {
     appServiceMock.setSearchQuery.mockReset();
     appServiceMock.setSelectedCategory.mockReset();
@@ -120,6 +124,7 @@ describe('DashboardComponent', () => {
           provide: IconService,
           useValue: iconServiceMock,
         },
+        ...(scrollState ? [{ provide: ScrollStateService, useValue: scrollState }] : []),
       ],
     });
   };
@@ -383,6 +388,178 @@ describe('DashboardComponent', () => {
       expect(screen.getByText('Please wait while we load your applications')).toBeInTheDocument();
       expect(card?.querySelector('[name="heroArrowPath"]')).toHaveAttribute('aria-hidden', 'true');
       expect(card?.textContent).not.toMatch(/\p{Extended_Pictographic}/u);
+    });
+  });
+
+  describe('dock', () => {
+    const mode = signal<ChromeMode>('static');
+    const dispose = vi.fn();
+    let probe: ChromeProbe | undefined;
+    const scrollState = {
+      register: vi.fn((registered: ChromeProbe) => {
+        probe = registered;
+        return { mode: mode.asReadonly(), dispose };
+      }),
+    };
+
+    const stubMatchMedia = (matches: boolean) => {
+      window.matchMedia = vi.fn((query: string) => ({
+        matches,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })) as unknown as typeof window.matchMedia;
+    };
+
+    const renderDock = (settings = DEFAULT_DASHBOARD_CONFIG.settings) =>
+      setup({ filteredApps: [appFixture], settings, scrollState });
+
+    const dock = () => document.querySelector<HTMLElement>('[data-dock]') as HTMLElement;
+
+    beforeEach(() => {
+      mode.set('static');
+      probe = undefined;
+      scrollState.register.mockClear();
+      dispose.mockClear();
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(window, 'matchMedia');
+      document.documentElement.style.removeProperty('--dock-compact-height');
+    });
+
+    it('wraps the header, clock, search and tabs in one dock and leaves the grid outside', async () => {
+      await renderDock();
+
+      const stickyDock = dock();
+
+      expect(within(stickyDock).getByRole('banner')).toBeInTheDocument();
+      expect(within(stickyDock).getByRole('img', { name: /^\d\d:\d\d/ })).toBeInTheDocument();
+      expect(
+        within(stickyDock).getByRole('searchbox', { name: 'Search applications' }),
+      ).toBeInTheDocument();
+      expect(
+        within(stickyDock).getByRole('navigation', { name: 'Categories' }),
+      ).toBeInTheDocument();
+      expect(
+        within(stickyDock).queryByRole('list', { name: 'Applications' }),
+      ).not.toBeInTheDocument();
+      expect(stickyDock).not.toContainElement(screen.getByRole('main'));
+      expect(screen.getByRole('main')).toContainElement(
+        screen.getByRole('list', { name: 'Applications' }),
+      );
+    });
+
+    it('keeps the banner outside main and the dock content in a labelled region', async () => {
+      await renderDock();
+
+      expect(screen.getByRole('main')).not.toContainElement(screen.getByRole('banner'));
+      expect(
+        within(screen.getByRole('region', { name: 'Dashboard controls' })).getByRole('searchbox'),
+      ).toBeInTheDocument();
+    });
+
+    it('follows the scroll state through data-dock', async () => {
+      const view = await renderDock();
+
+      expect(dock()).toHaveAttribute('data-dock', 'static');
+
+      for (const next of ['top', 'scrolled', 'static'] as const) {
+        mode.set(next);
+        await view.fixture.whenStable();
+        expect(dock()).toHaveAttribute('data-dock', next);
+      }
+    });
+
+    it.each([
+      ['static', 'false'],
+      ['top', 'false'],
+      ['scrolled', 'true'],
+    ] as const)(
+      'makes header, clock, search and tabs compact only when scrolled (%s)',
+      async (state, expected) => {
+        const view = await renderDock();
+        mode.set(state);
+        await view.fixture.whenStable();
+
+        const compacts = Array.from(dock().querySelectorAll('[data-compact]'));
+
+        expect(compacts).toHaveLength(4);
+        compacts.forEach((element) => expect(element).toHaveAttribute('data-compact', expected));
+      },
+    );
+
+    it('keeps the seconds readout in the compact clock', async () => {
+      const view = await renderDock({ ...DEFAULT_DASHBOARD_CONFIG.settings, showSeconds: true });
+      mode.set('scrolled');
+      await view.fixture.whenStable();
+
+      expect(
+        within(dock())
+          .getByRole('img', { name: /^\d\d:\d\d/ })
+          .querySelector('[aria-hidden="true"]'),
+      ).not.toBeNull();
+    });
+
+    it('registers one probe for the desktop dock and disposes it on destroy', async () => {
+      const view = await renderDock();
+
+      expect(scrollState.register).toHaveBeenCalledOnce();
+      expect(probe?.id).toBe('dashboard-dock');
+      expect(probe?.minViewportHeight).toBe(720);
+
+      view.fixture.destroy();
+
+      expect(dispose).toHaveBeenCalledOnce();
+    });
+
+    it('measures the compaction delta as the Top height minus the compact-height token', async () => {
+      await renderDock();
+      vi.spyOn(dock(), 'getBoundingClientRect').mockReturnValue({ height: 584 } as DOMRect);
+      document.documentElement.style.setProperty('--dock-compact-height', '278px');
+
+      expect(probe?.compactDelta()).toBe(306);
+
+      document.documentElement.style.setProperty('--dock-compact-height', '300px');
+
+      expect(probe?.compactDelta()).toBe(284);
+    });
+
+    it('keeps the last Top height while scrolled, so flipping never changes the delta', async () => {
+      const view = await renderDock();
+      const rect = vi
+        .spyOn(dock(), 'getBoundingClientRect')
+        .mockReturnValue({ height: 584 } as DOMRect);
+      document.documentElement.style.setProperty('--dock-compact-height', '278px');
+      expect(probe?.compactDelta()).toBe(306);
+
+      mode.set('scrolled');
+      await view.fixture.whenStable();
+      rect.mockReturnValue({ height: 278 } as DOMRect);
+
+      expect(probe?.compactDelta()).toBe(306);
+    });
+
+    it('never reports a negative delta', async () => {
+      await renderDock();
+      vi.spyOn(dock(), 'getBoundingClientRect').mockReturnValue({ height: 100 } as DOMRect);
+      document.documentElement.style.setProperty('--dock-compact-height', '278px');
+
+      expect(probe?.compactDelta()).toBe(0);
+    });
+
+    it('keeps the desktop dock Static at 600 px wide or less (the mobile dock is separate)', async () => {
+      stubMatchMedia(false);
+      await renderDock();
+
+      expect(probe?.minViewportHeight).toBe(Number.POSITIVE_INFINITY);
+    });
+
+    it('keeps the 720 px height guard above 600 px wide', async () => {
+      stubMatchMedia(true);
+      await renderDock();
+
+      expect(probe?.minViewportHeight).toBe(720);
     });
   });
 });

@@ -11,7 +11,11 @@ describe('AppClockComponent', () => {
   // Tuesday 13 October 2026, 18:43:07 local time.
   const TUESDAY = new Date(2026, 9, 13, 18, 43, 7);
 
-  const setup = async (settingsOverride: Partial<DashboardSettings> = {}, now = TUESDAY) => {
+  const setup = async (
+    settingsOverride: Partial<DashboardSettings> = {},
+    now = TUESDAY,
+    inputs: { compact?: boolean } = {},
+  ) => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
     const settings = signal<DashboardSettings>({
@@ -24,6 +28,7 @@ describe('AppClockComponent', () => {
     });
 
     const view = await render(AppClockComponent, {
+      inputs,
       providers: [{ provide: SettingsService, useValue: { settings } }],
     });
 
@@ -160,5 +165,53 @@ describe('AppClockComponent', () => {
     expect(colon.className).toBe(before);
     expect(colon.className).not.toMatch(/animate|blink|pulse/);
     expect(colon.getAnimations?.() ?? []).toHaveLength(0);
+  });
+
+  describe('compact variant (scrolled dock)', () => {
+    const widget = () => screen.getByRole('img');
+
+    it('is not compact by default', async () => {
+      await setup();
+
+      expect(widget()).toHaveAttribute('data-compact', 'false');
+    });
+
+    it('is compact when asked and keeps the same time, date and accessible name', async () => {
+      await setup({}, TUESDAY, { compact: true });
+
+      expect(widget()).toHaveAttribute('data-compact', 'true');
+      expect(widget()).toHaveAccessibleName('18:43, Tuesday, 13 October 2026');
+      expect(screen.getByText('18')).toBeInTheDocument();
+      expect(screen.getByText('43')).toBeInTheDocument();
+    });
+
+    it('keeps the seconds readout', async () => {
+      await setup({ showSeconds: true }, TUESDAY, { compact: true });
+
+      expect(screen.getByText('07')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('puts the date pills after the digits even when datePosition is top', async () => {
+      await setup({ datePosition: 'top' }, TUESDAY, { compact: true });
+
+      expect(follows(screen.getByText('43'), screen.getByText('TUESDAY'))).toBe(true);
+      expect(follows(screen.getByText('TUESDAY'), screen.getByText('13 OCTOBER 2026'))).toBe(true);
+    });
+
+    it('restores the pills above the digits when the dock leaves the scrolled state', async () => {
+      const { fixture } = await setup({ datePosition: 'top' }, TUESDAY, { compact: true });
+
+      fixture.componentRef.setInput('compact', false);
+      fixture.detectChanges();
+
+      expect(follows(screen.getByText('TUESDAY'), screen.getByText('18'))).toBe(true);
+      expect(widget()).toHaveAttribute('data-compact', 'false');
+    });
+
+    it('hides no pill when compact and showDate is false', async () => {
+      await setup({ showDate: false }, TUESDAY, { compact: true });
+
+      expect(screen.queryByText('TUESDAY')).not.toBeInTheDocument();
+    });
   });
 });

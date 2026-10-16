@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { AppService } from '../../../core/services/app.service';
@@ -17,6 +17,9 @@ export class AppCategoriesComponent {
   private readonly appService = inject(AppService);
   private readonly categoryService = inject(CategoryService);
   private readonly searchService = inject(SearchService);
+
+  /** The scrolled dock tightens the tab gap from 28 px to 12 px (design.md § 4.1). */
+  readonly compact = input(false);
 
   readonly categories = this.categoryService.categories;
   readonly selectedCategory = this.categoryService.selectedCategory;

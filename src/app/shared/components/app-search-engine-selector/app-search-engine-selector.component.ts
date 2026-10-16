@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -55,6 +56,10 @@ export class AppSearchEngineSelectorComponent {
   protected readonly activeIndex = signal(0);
   protected readonly scopeLabel = computed(() => this.selectedEngine()?.name ?? 'Apps');
   private readonly injector = inject(Injector);
+
+  /** Lets the search bar know the menu is open, so a compact bar stays expanded while it is. */
+  readonly openChange = output<boolean>();
+  private readonly reportOpen = effect(() => this.openChange.emit(this.isOpen()));
 
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly options = viewChildren<ElementRef<HTMLElement>>('option');

@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   inject,
+  input,
   LOCALE_ID,
   OnDestroy,
   OnInit,
@@ -25,6 +26,9 @@ export class AppClockComponent implements OnInit, OnDestroy {
   private readonly locale = inject(LOCALE_ID);
 
   private intervalId: ReturnType<typeof setInterval> | undefined;
+
+  /** One row of 40 px digits with the pills inline, shown while the dock is scrolled. */
+  readonly compact = input(false);
 
   currentDate = signal<number>(Date.now());
 

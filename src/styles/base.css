@@ -82,6 +82,21 @@ body::after {
   box-shadow: 0 0 0 2px var(--focus-halo);
 }
 
+/*
+ * Focus inside a sticky dock must not scroll the page (the dock is sticky, so its controls are always in view).
+ * While a dock is sticky the document's scroll-padding-top equals its height (D9, see StickyDockDirective) so
+ * controls *below* it are never left underneath; that same padding makes the browser treat the dock's own
+ * controls as hidden and scroll up to "reveal" them. Two measures cover the two ways it does that:
+ *  - a negative scroll-margin-top of the dock's height on everything inside it, which takes effect before the
+ *    element gets focus (the browser scrolls before it dispatches focusin);
+ *  - the directive dropping the padding on focusin, which is in time for revealing a text caret (the search
+ *    input), a step that ignores scroll-margin.
+ */
+[data-dock='top'] *,
+[data-dock='scrolled'] * {
+  scroll-margin-top: calc(-1 * var(--dock-height, 0px));
+}
+
 /* Accessibility - Reduced motion: state changes apply instantly. */
 @media (prefers-reduced-motion: reduce) {
   *,
