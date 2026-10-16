@@ -4,11 +4,12 @@ import { CommonModule } from '@angular/common';
 import { AppService } from '../../../core/services/app.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { SearchService } from '../../../core/services/search.service';
+import { HorizontalNavDirective } from '../../directives/horizontal-nav.directive';
 
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, HorizontalNavDirective],
   templateUrl: 'app-categories.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
