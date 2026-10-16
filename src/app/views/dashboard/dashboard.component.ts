@@ -30,7 +30,7 @@ const MOBILE_DOCK_MIN_VIEWPORT_HEIGHT = 500;
 /** The mobile dock only compacts the search bar, 60 → 44 px (design.md § 4.1). */
 const MOBILE_DOCK_COMPACT_DELTA = 16;
 /** Mirrors `--dock-compact-height` in tokens.css, for when the stylesheet is not there to read. */
-const DEFAULT_DOCK_COMPACT_HEIGHT = 288;
+const DEFAULT_DOCK_COMPACT_HEIGHT = 284;
 
 @Component({
   selector: 'app-dashboard',

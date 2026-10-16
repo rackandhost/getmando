@@ -51,11 +51,11 @@ export class AppFinderComponent {
   protected readonly barSize = computed(() => {
     switch (this.size()) {
       case 'full':
-        return 'mx-auto h-[60px] max-w-full';
+        return 'mx-auto mb-7 h-[60px] max-w-full';
       case 'expanded':
-        return 'mx-auto h-[52px] max-w-full';
+        return 'mx-auto mb-3 h-[52px] max-w-full';
       case 'compact':
-        return 'mx-auto h-11 max-w-[440px]';
+        return 'mx-auto mb-3 h-11 max-w-[440px]';
     }
   });
 

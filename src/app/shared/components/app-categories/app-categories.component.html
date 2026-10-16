@@ -1,11 +1,8 @@
 <nav
   appHorizontalNav
   aria-label="Categories"
-  class="glass-chrome flex h-[45px] w-full items-stretch overflow-x-auto rounded-[var(--bar-radius)] px-[18px] transition-[gap] duration-300 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-  [attr.data-compact]="compact()"
+  class="glass-chrome flex h-[45px] w-full items-stretch gap-7 overflow-x-auto rounded-[var(--bar-radius)] px-[18px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
   [class.cursor-not-allowed]="haveSearch()"
-  [class.gap-3]="compact()"
-  [class.gap-7]="!compact()"
   [style.opacity]="haveSearch() ? 0.45 : null"
 >
   @for (category of categories(); track category.id) {

@@ -20,11 +20,9 @@
       class="max-[601px]:sticky max-[601px]:top-0 max-[601px]:z-20 max-[601px]:-mx-[clamp(16px,4vw,40px)] max-[601px]:px-[clamp(16px,4vw,40px)] max-[601px]:py-3 max-[601px]:transition-[background-color,box-shadow,backdrop-filter] max-[601px]:duration-300 max-[601px]:data-[dock=scrolled]:bg-[var(--band)] max-[601px]:data-[dock=scrolled]:shadow-[var(--band-shadow)] max-[601px]:data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] max-[601px]:data-[dock=static]:relative"
       [appStickyDock]="mobileProbe"
     >
-      @let barsCompact = compact || mobileDock.mode() === 'scrolled';
+      <app-finder [compact]="compact || mobileDock.mode() === 'scrolled'" />
 
-      <app-finder [compact]="barsCompact" />
-
-      <app-categories class="block" [compact]="barsCompact" />
+      <app-categories class="block" />
     </div>
   </section>
 </div>

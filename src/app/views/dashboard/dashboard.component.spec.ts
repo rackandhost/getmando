@@ -518,7 +518,7 @@ describe('DashboardComponent', () => {
       ['top', 'false'],
       ['scrolled', 'true'],
     ] as const)(
-      'makes header, clock, search and tabs compact only when scrolled (%s)',
+      'makes header, clock and search compact only when scrolled (%s)',
       async (state, expected) => {
         const view = await renderDock();
         mode.set(state);
@@ -526,7 +526,7 @@ describe('DashboardComponent', () => {
 
         const compacts = Array.from(dock().querySelectorAll('[data-compact]'));
 
-        expect(compacts).toHaveLength(4);
+        expect(compacts).toHaveLength(3);
         compacts.forEach((element) => expect(element).toHaveAttribute('data-compact', expected));
       },
     );
@@ -646,7 +646,7 @@ describe('DashboardComponent', () => {
         expect(dock()).toHaveAttribute('data-dock', 'static');
       });
 
-      it('compacts the search bar and the tabs but never the header or the clock', async () => {
+      it('compacts the search bar but never the header or the clock', async () => {
         const view = await renderDock();
         modes['dashboard-mobile-dock'].set('scrolled');
         await view.fixture.whenStable();
@@ -656,7 +656,7 @@ describe('DashboardComponent', () => {
           (element) => !inner.includes(element),
         );
 
-        expect(inner).toHaveLength(2);
+        expect(inner).toHaveLength(1);
         inner.forEach((element) => expect(element).toHaveAttribute('data-compact', 'true'));
         expect(outer).toHaveLength(2);
         outer.forEach((element) => expect(element).toHaveAttribute('data-compact', 'false'));
