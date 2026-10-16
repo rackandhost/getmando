@@ -44,6 +44,17 @@ class HostComponent {
   });
 }
 
+@Component({
+  imports: [StickyDockDirective],
+  template: `<div id="outer" [appStickyDock]="outerProbe">
+    <div id="inner" [appStickyDock]="innerProbe"><button id="field" type="button">f</button></div>
+  </div>`,
+})
+class NestedHostComponent {
+  readonly outerProbe: ChromeProbe = { id: 'outer', compactDelta: () => 0, minViewportHeight: 720 };
+  readonly innerProbe: ChromeProbe = { id: 'inner', compactDelta: () => 0, minViewportHeight: 500 };
+}
+
 describe('StickyDockDirective', () => {
   let metrics: FakeMetrics;
   let scrollState: StubScrollState;
@@ -291,6 +302,72 @@ describe('StickyDockDirective', () => {
       expect(metrics.sizeListeners.get(dock)?.size ?? 0).toBe(0);
       expect(metrics.pendingFrames).toBe(0);
       expect(root().style.scrollPaddingTop).toBe('');
+    });
+  });
+
+  describe('two docks on one page (the desktop and the mobile dock)', () => {
+    let nested: ComponentFixture<NestedHostComponent>;
+    let outer: HTMLElement;
+    let inner: HTMLElement;
+    const heights = { outer: 300, inner: 100 };
+
+    beforeEach(() => {
+      heights.outer = 300;
+      heights.inner = 100;
+      nested = TestBed.createComponent(NestedHostComponent);
+      outer = nested.nativeElement.querySelector('#outer');
+      inner = nested.nativeElement.querySelector('#inner');
+      vi.spyOn(outer, 'getBoundingClientRect').mockImplementation(
+        () => ({ height: heights.outer }) as unknown as DOMRect,
+      );
+      vi.spyOn(inner, 'getBoundingClientRect').mockImplementation(
+        () => ({ height: heights.inner }) as unknown as DOMRect,
+      );
+      nested.detectChanges();
+      metrics.frame();
+    });
+
+    afterEach(() => nested.destroy());
+
+    // The nested page registered after the one-dock fixture of the outer beforeEach.
+    const handle = (id: 'outer' | 'inner') =>
+      scrollState.handles[scrollState.probes.findIndex((probe) => probe.id === id)];
+
+    it('keeps the padding of the sticky dock when the Static one changes height', () => {
+      handle('outer').mode.set('scrolled');
+      nested.detectChanges();
+      expect(root().style.scrollPaddingTop).toBe('300px');
+
+      heights.inner = 90;
+      metrics.resize(inner);
+      metrics.frame();
+      nested.detectChanges();
+
+      expect(root().style.scrollPaddingTop).toBe('300px');
+    });
+
+    it('keeps the padding of the sticky dock when the Static one is the outer', () => {
+      handle('inner').mode.set('scrolled');
+      nested.detectChanges();
+      expect(root().style.scrollPaddingTop).toBe('100px');
+
+      heights.outer = 250;
+      metrics.resize(outer);
+      metrics.frame();
+      nested.detectChanges();
+
+      expect(root().style.scrollPaddingTop).toBe('100px');
+    });
+
+    it('lets the Static dock clear nothing when focus enters and leaves the nested controls', () => {
+      handle('inner').mode.set('top');
+      nested.detectChanges();
+      const field = nested.nativeElement.querySelector('#field') as HTMLElement;
+
+      field.focus();
+      field.blur();
+
+      expect(root().style.scrollPaddingTop).toBe('100px');
     });
   });
 });

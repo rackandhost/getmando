@@ -51,6 +51,8 @@ export class StickyDockDirective {
   private readonly height = signal<number | null>(null);
   private cancelMeasure: Cancel | null = null;
   private focusInside = false;
+  /** The document has one `scroll-padding-top`; with two docks on a page, only the one that set it may clear it. */
+  private ownsScrollPadding = false;
 
   /** The registered chrome's state; `static` until the service says otherwise. */
   readonly mode = computed<ChromeMode>(() => this.handle()?.mode() ?? 'static');
@@ -78,7 +80,7 @@ export class StickyDockDirective {
     inject(DestroyRef).onDestroy(() => {
       stopObserving();
       this.cancelMeasure?.();
-      this.root.style.removeProperty('scroll-padding-top');
+      this.releaseScrollPadding();
     });
   }
 
@@ -88,8 +90,16 @@ export class StickyDockDirective {
 
     if (this.mode() !== 'static' && height !== null && !this.focusInside) {
       this.root.style.scrollPaddingTop = `${height}px`;
+      this.ownsScrollPadding = true;
     } else {
+      this.releaseScrollPadding();
+    }
+  }
+
+  private releaseScrollPadding(): void {
+    if (this.ownsScrollPadding) {
       this.root.style.removeProperty('scroll-padding-top');
+      this.ownsScrollPadding = false;
     }
   }
 
