@@ -67,6 +67,14 @@ body::after {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Tailwind v4 leaves <button> at the default arrow: enabled buttons get the hand. In the base layer so
+   utilities (disabled:cursor-not-allowed, cursor-default) still win. Mouse-only affordance, not a11y. */
+@layer base {
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 /* Two-tone focus ring on every focusable element: visible on any backdrop in both themes (D12). */
 :focus-visible {
   outline: 2px solid var(--focus);
