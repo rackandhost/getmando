@@ -17,7 +17,7 @@
 
     <div
       #mobileDock="appStickyDock"
-      class="max-[601px]:sticky max-[601px]:top-0 max-[601px]:z-20 max-[601px]:-mx-[clamp(16px,4vw,40px)] max-[601px]:px-[clamp(16px,4vw,40px)] max-[601px]:pt-3 max-[601px]:transition-[background-color,box-shadow,backdrop-filter] max-[601px]:duration-300 max-[601px]:data-[dock=scrolled]:bg-[var(--band)] max-[601px]:data-[dock=scrolled]:shadow-[var(--band-shadow)] max-[601px]:data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] max-[601px]:data-[dock=static]:relative"
+      class="max-[601px]:sticky max-[601px]:top-0 max-[601px]:z-20 max-[601px]:-mx-[clamp(16px,4vw,40px)] max-[601px]:px-[clamp(16px,4vw,40px)] max-[601px]:py-3 max-[601px]:transition-[background-color,box-shadow,backdrop-filter] max-[601px]:duration-300 max-[601px]:data-[dock=scrolled]:bg-[var(--band)] max-[601px]:data-[dock=scrolled]:shadow-[var(--band-shadow)] max-[601px]:data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] max-[601px]:data-[dock=static]:relative"
       [appStickyDock]="mobileProbe"
     >
       @let barsCompact = compact || mobileDock.mode() === 'scrolled';
@@ -31,7 +31,7 @@
 
 <main class="flex min-w-0 flex-1 flex-col">
   <!-- Apps grid: the window scrolls -->
-  <div class="pb-6 pt-3 md:pt-6">
+  <div class="pb-6 pt-3 max-[601px]:pt-0 md:pt-6">
     @if (filteredApps(); as apps) {
       @if (apps.length > 0) {
         <ul
