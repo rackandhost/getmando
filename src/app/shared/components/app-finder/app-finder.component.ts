@@ -32,11 +32,9 @@ export class AppFinderComponent {
   protected readonly currentEngine = computed(() => this.selectedEngine() ?? null);
 
   get inputPlaceholder(): string {
-    if (this.currentEngine()) {
-      return `Search on the web... (press enter to search on ${this.currentEngine()?.name})`;
-    }
+    const engine = this.currentEngine();
 
-    return 'Search on your applications...';
+    return engine ? `Search on ${engine.name}…` : 'Search your applications…';
   }
 
   /**

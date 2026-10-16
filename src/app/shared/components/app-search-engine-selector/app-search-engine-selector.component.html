@@ -3,7 +3,7 @@
     #trigger
     aria-label="Select search engine"
     aria-haspopup="listbox"
-    class="absolute z-10 top-4.5 left-4 flex items-center gap-2 text-neutral-900 dark:text-white/70 hover:text-neutral-950 dark:hover:text-white transition-colors cursor-pointer group"
+    class="flex h-11 min-w-11 shrink-0 items-center justify-center rounded-[10px] text-text transition-colors hover:bg-surface-2 cursor-pointer group"
     [attr.aria-expanded]="isOpen()"
     [disabled]="validEngines().length === 0"
     (click)="toggle($event)"
@@ -16,7 +16,7 @@
         [name]="engine.icon"
       />
     } @else {
-      <ng-icon class="text-2xl opacity-50 relative bottom-1" name="heroMagnifyingGlass" />
+      <ng-icon class="text-2xl text-muted" name="heroMagnifyingGlass" />
     }
   </button>
 

@@ -1,4 +1,6 @@
-<div class="relative xl:w-4xl xl:block xl:mx-auto">
+<div
+  class="glass-chrome relative mb-6 flex h-[60px] w-full items-center gap-2 rounded-2xl pl-1.5 pr-2 text-text has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus has-[input:focus-visible]:shadow-[var(--glass-shadow),0_0_0_2px_var(--focus-halo)]"
+>
   <app-search-engine-selector
     [engines]="availableEngines()"
     [selectedEngine]="currentEngine()"
@@ -7,7 +9,7 @@
 
   <input
     aria-label="Search applications"
-    class="bg-white/10 backdrop-blur-md border border-white/20 rounded-4xl xl:w-4xl xl:block xl:mx-auto px-12 py-3 mb-6 text-xl text-neutral-800 dark:text-white placeholder-black/50 dark:placeholder-white/50 focus:bg-white/15 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20 w-full transition-all duration-300"
+    class="h-full min-w-0 flex-1 bg-transparent px-2 text-base text-text placeholder:text-muted focus-visible:[box-shadow:none]! focus-visible:outline-none! [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:appearance-none"
     type="search"
     (input)="onSearchInput($event)"
     (keyup.enter)="onSearchEnter()"
@@ -16,24 +18,22 @@
   />
 
   @if (haveSearch()) {
-    <ng-icon
+    <button
       aria-label="Clear search"
-      class="absolute z-10 top-3.5 right-11 text-2xl opacity-50 cursor-pointer hover:opacity-70 transition-opacity"
-      name="heroXMark"
-      tabindex="0"
+      class="flex size-9 shrink-0 items-center justify-center rounded-[10px] text-muted transition-colors hover:text-text"
+      type="button"
       (click)="onHandleResetSearch()"
-      (keydown.enter)="onHandleResetSearch()"
-      (keydown.space)="onHandleResetSearch()"
-    />
+    >
+      <ng-icon aria-hidden="true" class="text-xl" name="heroXMark" />
+    </button>
 
-    <ng-icon
+    <button
       aria-label="Search"
-      class="absolute z-10 top-3.5 right-4 text-2xl opacity-50 cursor-pointer hover:opacity-70 transition-opacity"
-      name="heroArrowRight"
-      tabindex="0"
+      class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-ink transition-transform active:scale-95"
+      type="button"
       (click)="onSearchEnter()"
-      (keydown.enter)="onSearchEnter()"
-      (keydown.space)="onSearchEnter()"
-    />
+    >
+      <ng-icon aria-hidden="true" class="text-xl" name="heroArrowRight" />
+    </button>
   }
 </div>
