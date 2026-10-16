@@ -45,14 +45,14 @@
       } @else {
         <!-- Empty state -->
         <section
-          class="flex flex-col items-center rounded-2xl border border-dashed border-line-strong bg-surface p-8 text-center"
+          class="flex flex-col items-start gap-2.5 rounded-[14px] border border-dashed border-line-strong bg-surface px-8 py-12"
         >
           <ng-icon
             aria-hidden="true"
-            class="mb-3 text-2xl [--ng-icon__color:var(--muted)]"
+            class="text-[28px] [--ng-icon__color:var(--muted)]"
             name="heroMagnifyingGlassMinus"
           />
-          <h2 class="mb-2 text-xl font-semibold text-text">No applications found</h2>
+          <h2 class="text-lg font-semibold text-text">No applications found</h2>
           <p class="text-sm text-muted">
             @if (searchQuery()) {
               Try adjusting your search query or select a different category.
