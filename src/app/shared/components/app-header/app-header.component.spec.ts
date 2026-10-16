@@ -19,9 +19,11 @@ describe('AppHeader', () => {
     isDark = signal(true),
     initialUrl = '/',
     metadata: { title: string; description: string } | null = DEFAULT_DASHBOARD_CONFIG.metadata,
+    inputs: Record<string, unknown> = {},
   ): Promise<void> => {
     await render(AppHeaderComponent, {
       imports: [CommonModule],
+      inputs,
       providers: [
         provideRouter([
           { path: '', children: [] },
@@ -82,6 +84,31 @@ describe('AppHeader', () => {
       expect(screen.getAllByRole('button')).toHaveLength(1);
       expect(screen.getByRole('link', { name: 'Open configurator' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+    });
+  });
+
+  describe('vertical padding', () => {
+    const bannerPadding = () => {
+      const { paddingTop, paddingBottom } = getComputedStyle(screen.getByRole('banner'));
+      return [paddingTop, paddingBottom];
+    };
+
+    it('is 24 px by default', async () => {
+      await setup();
+      expect(bannerPadding()).toEqual(['24px', '24px']);
+    });
+
+    it('is 12 px on both sides when compact', async () => {
+      await setup(undefined, undefined, '/', undefined, { compact: true });
+      expect(bannerPadding()).toEqual(['12px', '12px']);
+    });
+
+    it('takes the full and the compact padding from the host (configurator: 24 → 14)', async () => {
+      await setup(undefined, undefined, '/', undefined, {
+        verticalPadding: { full: 24, compact: 14 },
+        compact: true,
+      });
+      expect(bannerPadding()).toEqual(['14px', '14px']);
     });
   });
 

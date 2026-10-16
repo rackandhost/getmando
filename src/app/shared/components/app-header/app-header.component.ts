@@ -21,8 +21,15 @@ export class AppHeaderComponent {
   private readonly metadataService = inject(MetadataService);
   private readonly router = inject(Router);
 
-  /** The scrolled dock halves the header's vertical padding (design.md § 4.1). */
+  /** The scrolled dock reduces the header's vertical padding (design.md § 4.1). */
   readonly compact = input(false);
+
+  /** Vertical padding in px at the top of the page and once compact; the configurator uses 24 → 14. */
+  readonly verticalPadding = input({ full: 24, compact: 12 });
+
+  protected readonly paddingY = computed(() =>
+    this.compact() ? this.verticalPadding().compact : this.verticalPadding().full,
+  );
 
   readonly metadata = this.metadataService.metadata;
 

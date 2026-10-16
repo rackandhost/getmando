@@ -1,8 +1,8 @@
 <header
   class="border-b border-line transition-[padding] duration-300"
   [attr.data-compact]="compact()"
-  [class.py-3]="compact()"
-  [class.py-6]="!compact()"
+  [style.padding-top.px]="paddingY()"
+  [style.padding-bottom.px]="paddingY()"
 >
   <div class="flex items-center justify-between gap-4">
     <div

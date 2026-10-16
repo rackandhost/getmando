@@ -1,5 +1,5 @@
-import { signal } from '@angular/core';
-import { render, screen, waitFor } from '@testing-library/angular';
+import { signal, type WritableSignal } from '@angular/core';
+import { render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { Observable, of } from 'rxjs';
 
@@ -14,9 +14,29 @@ import { MetadataService } from '../../core/services/metadata.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
-
+import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
+import type { ChromeMode } from '../../core/scroll/scroll-state';
 import { ConfiguratorPageComponent } from './configurator-page.component';
 import { ConfiguratorStore } from './configurator.store';
+
+const SECTION_NAV = [
+  '01 Starting point',
+  '02 Metadata',
+  '03 Settings',
+  '04 Categories',
+  '05 Applications',
+  '06 Bookmarks',
+  '07 Export',
+];
+const SECTION_HEADINGS = [
+  'Choose a starting point',
+  'Metadata',
+  'Settings',
+  'Categories',
+  'Applications',
+  'Bookmarks',
+  'Export configuration',
+];
 
 describe('ConfiguratorPageComponent', () => {
   const originalFetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
@@ -490,6 +510,11 @@ describe('ConfiguratorPageComponent', () => {
     expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'Toggle theme' })).toHaveFocus();
+    // The section navigation precedes the content it navigates, as it does on screen.
+    for (const name of SECTION_NAV) {
+      await user.tab();
+      expect(screen.getByRole('link', { name })).toHaveFocus();
+    }
     await user.tab();
     expect(screen.getByRole('button', { name: 'Start empty' })).toHaveFocus();
     await user.tab();
@@ -524,6 +549,133 @@ describe('ConfiguratorPageComponent', () => {
 
     expect(store.updateBookmark).toHaveBeenLastCalledWith(0, {
       url: 'https://handbook.example.test',
+    });
+  });
+
+  describe('page layout', () => {
+    it('presents the setup eyebrow, the page heading and its description', async () => {
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      expect(screen.getByText('DASHBOARD SETUP')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Configuration editor' })).toBeInTheDocument();
+      expect(screen.getByText(/Your changes remain in this browser/)).toBeInTheDocument();
+    });
+
+    it('lists the seven numbered sections in the side navigation, in order', async () => {
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      const nav = screen.getByRole('navigation', { name: 'Configurator sections' });
+      const items = within(nav).getAllByRole('link');
+
+      expect(items.map((item) => item.textContent?.replace(/\s+/g, ' ').trim())).toEqual(
+        SECTION_NAV,
+      );
+    });
+
+    it('renders each section as a region labelled by its heading, numbered and in the same order', async () => {
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      const nav = screen.getByRole('navigation', { name: 'Configurator sections' });
+      let previous: HTMLElement | undefined;
+
+      within(nav)
+        .getAllByRole('link')
+        .forEach((link, index) => {
+          const section = document.getElementById(link.getAttribute('href')?.slice(1) ?? '');
+          expect(section, SECTION_NAV[index]).toBeInstanceOf(HTMLElement);
+          if (!section) return;
+
+          const heading = document.getElementById(section.getAttribute('aria-labelledby') ?? '');
+          expect(heading).toHaveTextContent(SECTION_HEADINGS[index]);
+          expect(within(section).getByText(`0${index + 1}`)).toBeInTheDocument();
+          if (previous) {
+            expect(
+              previous.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy();
+          }
+          previous = section;
+        });
+    });
+
+    describe('navigating to a section', () => {
+      const scrollIntoView = vi.fn();
+
+      beforeEach(() => {
+        scrollIntoView.mockClear();
+        // jsdom has no layout and does not implement scrolling.
+        Object.defineProperty(Element.prototype, 'scrollIntoView', {
+          configurable: true,
+          writable: true,
+          value: scrollIntoView,
+        });
+      });
+
+      afterEach(() => {
+        Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+      });
+
+      it('scrolls the section into view and focuses its heading, without leaving the page', async () => {
+        const user = userEvent.setup();
+        await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+        const address = window.location.href;
+
+        await user.click(screen.getByRole('link', { name: '05 Applications' }));
+
+        expect(scrollIntoView).toHaveBeenCalledOnce();
+        expect(scrollIntoView.mock.contexts[0]).toBe(
+          document.getElementById('section-applications'),
+        );
+        expect(screen.getByRole('heading', { name: 'Applications' })).toHaveFocus();
+        expect(window.location.href).toBe(address);
+      });
+    });
+  });
+
+  describe('sticky header', () => {
+    const mode: WritableSignal<ChromeMode> = signal('static');
+    const dispose = vi.fn();
+    const register = vi.fn((_probe: ChromeProbe) => ({ mode: mode.asReadonly(), dispose }));
+
+    beforeEach(() => {
+      mode.set('static');
+      register.mockClear();
+      dispose.mockClear();
+    });
+
+    const renderWithDock = () =>
+      render(ConfiguratorPageComponent, {
+        providers: [...defaultProviders(), { provide: ScrollStateService, useValue: { register } }],
+      });
+    const dock = () => screen.getByRole('banner').closest<HTMLElement>('[data-dock]');
+    const padding = () => getComputedStyle(screen.getByRole('banner')).paddingTop;
+
+    it('registers with the scroll state, losing 20 px when it compacts, and is released on destroy', async () => {
+      const view = await renderWithDock();
+
+      expect(register).toHaveBeenCalledOnce();
+      const probe = register.mock.calls[0][0];
+      expect(probe.id).toBe('configurator-header');
+      // Padding 24 → 14 on both sides.
+      expect(probe.compactDelta()).toBe(20);
+      expect(probe.minViewportHeight).toBe(500);
+
+      view.fixture.destroy();
+      expect(dispose).toHaveBeenCalledOnce();
+    });
+
+    it('stays at 24 px padding while static or at the top, and gains 14 px padding once scrolled', async () => {
+      await renderWithDock();
+
+      expect(dock()).toHaveAttribute('data-dock', 'static');
+      expect(padding()).toBe('24px');
+
+      mode.set('top');
+      await waitFor(() => expect(dock()).toHaveAttribute('data-dock', 'top'));
+      expect(padding()).toBe('24px');
+
+      mode.set('scrolled');
+      await waitFor(() => expect(dock()).toHaveAttribute('data-dock', 'scrolled'));
+      expect(padding()).toBe('14px');
     });
   });
 });

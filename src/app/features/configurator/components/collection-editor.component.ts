@@ -11,6 +11,8 @@ import { heroArrowDown, heroArrowUp, heroPlus } from '@ng-icons/heroicons/outlin
 
 import { IconConfig } from '../../../core/models/dashboard.models';
 
+import { ConfigSectionComponent } from './config-section.component';
+
 type CollectionName = 'categories' | 'applications' | 'bookmarks';
 type EditableItem = {
   id: string;
@@ -47,7 +49,7 @@ export type CollectionEditEvent =
 
 @Component({
   selector: 'app-collection-editor',
-  imports: [NgIcon],
+  imports: [NgIcon, ConfigSectionComponent],
   templateUrl: 'collection-editor.component.html',
   viewProviders: [provideIcons({ heroArrowDown, heroArrowUp, heroPlus })],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +61,8 @@ export class CollectionEditorComponent {
   readonly categoryOptions = input<readonly Pick<EditableItem, 'id' | 'name'>[]>([]);
   readonly fieldErrorIds = input<Readonly<Record<string, string>>>({});
   readonly fieldErrors = input<Readonly<Record<string, string>>>({});
+  /** The `04`–`06` shown beside the heading; empty when the editor is used outside the numbered page. */
+  readonly sectionNumber = input('');
   readonly addItem = output<void>();
   readonly removeItem = output<number>();
   readonly moveItem = output<{ from: number; to: number }>();

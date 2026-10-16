@@ -1,41 +1,29 @@
-<section
-  class="scroll-mt-6 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:scroll-mt-8 sm:p-8"
-  [attr.aria-labelledby]="collection() + '-heading'"
+<app-config-section
+  [description]="'Add, reorder, and update ' + collection() + ' without leaving the editor.'"
+  [number]="sectionNumber()"
+  [section]="collection()"
+  [title]="collection()[0].toUpperCase() + collection().slice(1)"
 >
-  <div
-    class="flex flex-col gap-4 border-b border-white/15 pb-5 sm:flex-row sm:items-center sm:justify-between"
+  <button
+    sectionAction
+    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
+    type="button"
+    (click)="add()"
   >
-    <div>
-      <h2
-        [id]="collection() + '-heading'"
-        class="text-2xl font-semibold text-neutral-900 dark:text-white"
-      >
-        {{ collection()[0].toUpperCase() + collection().slice(1) }}
-      </h2>
-      <p class="mt-2 text-sm leading-6 text-neutral-700 dark:text-white/70">
-        Add, reorder, and update {{ collection() }} without leaving the editor.
-      </p>
-    </div>
-    <button
-      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
-      type="button"
-      (click)="add()"
-    >
-      <ng-icon aria-hidden="true" name="heroPlus" />
-      {{ addLabel() }}
-    </button>
-  </div>
+    <ng-icon aria-hidden="true" name="heroPlus" />
+    {{ addLabel() }}
+  </button>
 
   @if (items().length === 0) {
     <p
-      class="mt-6 rounded-2xl border border-dashed border-white/30 bg-white/5 px-5 py-6 text-sm leading-6 text-neutral-700 dark:text-white/70"
+      class="rounded-2xl border border-dashed border-white/30 bg-white/5 px-5 py-6 text-sm leading-6 text-neutral-700 dark:text-white/70"
       role="status"
     >
       No {{ collection() }} yet. Add a {{ collectionLabel() }} to begin editing this collection.
     </p>
   }
 
-  <ol class="mt-6 space-y-5">
+  <ol class="space-y-5">
     @for (item of items(); track $index; let index = $index) {
       <li class="rounded-2xl border border-white/20 bg-white/10 p-5 shadow-lg shadow-black/5">
         <fieldset class="min-w-0">
@@ -336,4 +324,4 @@
       </li>
     }
   </ol>
-</section>
+</app-config-section>

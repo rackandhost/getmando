@@ -1,0 +1,28 @@
+<section
+  class="glass-card scroll-mt-5 rounded-[18px] p-7"
+  [attr.aria-labelledby]="headingId()"
+  [id]="id()"
+>
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-3">
+    <div class="flex items-baseline gap-4">
+      @if (number()) {
+        <span aria-hidden="true" class="font-mono text-[13px] font-medium text-accent">{{
+          number()
+        }}</span>
+      }
+      <div>
+        <h2 class="text-[19px] font-semibold text-text" tabindex="-1" [id]="headingId()">
+          {{ title() }}
+        </h2>
+        @if (description()) {
+          <p class="mt-1.5 text-sm text-muted">{{ description() }}</p>
+        }
+      </div>
+    </div>
+    <ng-content select="[sectionAction]" />
+  </div>
+
+  <div class="mt-6">
+    <ng-content />
+  </div>
+</section>

@@ -113,6 +113,7 @@ interface Pair {
 const PAIRS: Pair[] = [
   { name: 'text on card', surface: 'card', required: 4.5, ink: ['--text'] },
   { name: 'muted on card', surface: 'card', required: 4.5, ink: ['--muted'] },
+  { name: 'accent text on card', surface: 'card', required: 4.5, ink: ['--accent'] },
   { name: 'muted on hovered card', surface: 'cardHover', required: 4.5, ink: ['--muted'] },
   { name: 'UP on its pill', surface: 'card', required: 4.5, on: ['--up-bg'], ink: ['--up'] },
   { name: 'DOWN on its pill', surface: 'card', required: 4.5, on: ['--down-bg'], ink: ['--down'] },

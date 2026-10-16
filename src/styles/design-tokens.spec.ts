@@ -87,6 +87,7 @@ describe('token contrast audit', () => {
   const pairs = [
     'text on card',
     'muted on card',
+    'accent text on card',
     'UP on its pill',
     'DOWN on its pill',
     'text on bar',

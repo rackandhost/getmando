@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
@@ -16,12 +17,15 @@ import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
+import type { ChromeProbe } from '../../core/scroll/scroll-state.service';
 import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
+import { StickyDockDirective } from '../../shared/directives/sticky-dock.directive';
 
 import {
   CollectionEditEvent,
   CollectionEditorComponent,
 } from './components/collection-editor.component';
+import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 
 type BooleanSetting = Extract<
@@ -34,9 +38,33 @@ type BooleanSetting = Extract<
   | 'showLabels'
 >;
 
+/** Header padding in px at the top of the page and once scrolled (design.md § 4.1, "Configurator"). */
+const HEADER_PADDING = { full: 24, compact: 14 } as const;
+/** Below this viewport height the header stays Static, as the mobile dock does (design.md § 4.1). */
+const HEADER_MIN_VIEWPORT_HEIGHT = 500;
+
+const SECTIONS = [
+  { id: 'start', label: 'Starting point' },
+  { id: 'metadata', label: 'Metadata' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'applications', label: 'Applications' },
+  { id: 'bookmarks', label: 'Bookmarks' },
+  { id: 'export', label: 'Export' },
+].map((section, index) => ({
+  ...section,
+  number: String(index + 1).padStart(2, '0'),
+  elementId: configSectionId(section.id),
+}));
+
 @Component({
   selector: 'app-configurator-page',
-  imports: [AppHeaderComponent, CollectionEditorComponent],
+  imports: [
+    AppHeaderComponent,
+    CollectionEditorComponent,
+    ConfigSectionComponent,
+    StickyDockDirective,
+  ],
   templateUrl: 'configurator-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
@@ -49,6 +77,17 @@ export class ConfiguratorPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly yamlCodec = inject(YamlCodecService);
   private readonly yamlLoader = inject(YamlLoaderService);
+  private readonly document = inject(DOCUMENT);
+
+  protected readonly sections = SECTIONS;
+  protected readonly headerPadding = HEADER_PADDING;
+
+  /** The sticky header follows the shared scroll state; padding 24 → 14 on both sides loses 20 px. */
+  protected readonly probe: ChromeProbe = {
+    id: 'configurator-header',
+    compactDelta: () => 2 * (HEADER_PADDING.full - HEADER_PADDING.compact),
+    minViewportHeight: HEADER_MIN_VIEWPORT_HEIGHT,
+  };
 
   protected readonly draft = this.store.draft;
   protected readonly validationErrors = this.store.validationErrors;
@@ -157,6 +196,16 @@ export class ConfiguratorPageComponent {
     event.preventDefault();
     target.scrollIntoView({ block: 'center' });
     target.focus();
+  }
+
+  /**
+   * Scrolls a section below the sticky header (the dock's `scroll-padding-top`) and moves focus to its
+   * heading. A bare `#id` href would resolve against `<base href>` and leave the page.
+   */
+  protected goToSection(elementId: string, event: Event): void {
+    event.preventDefault();
+    this.document.getElementById(elementId)?.scrollIntoView({ block: 'start' });
+    this.document.getElementById(`${elementId}-heading`)?.focus({ preventScroll: true });
   }
 
   protected errorFor(path: readonly string[]): string | undefined {
