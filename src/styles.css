@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './styles/tokens.css';
 @import './styles/fonts.css';
+@import './styles/base.css';
 @custom-variant dark (&:where(.dark, .dark *));
 @source inline("xl:grid-cols-1");
 @source inline("xl:grid-cols-2");
@@ -14,80 +15,3 @@
 @source inline("xl:grid-cols-10");
 @source inline("xl:grid-cols-11");
 @source inline("xl:grid-cols-12");
-
-/* TailwindCSS 4 - Custom utilities and animations */
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-/* Focus visible styles - applied globally */
-:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.5);
-  outline-offset: 2px;
-}
-
-/* Accessibility - Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Body styles */
-body {
-  min-height: 100vh;
-  color: rgb(255 255 255);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  position: relative;
-}
-
-#app-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -2;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-body:after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: white;
-  z-index: -1;
-  opacity: 0.1;
-}
-
-/* Dark mode specific */
-.dark body:after {
-  background: black;
-  opacity: 0.6;
-}
