@@ -6,7 +6,6 @@ dist
 coverage
 .git
 .github
-openspec
 screenshots
 documentation
 *.md

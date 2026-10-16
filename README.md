@@ -711,6 +711,9 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 - Read [ARCHITECTURE.md](ARCHITECTURE.md) for the current system flows, ownership boundaries, and
   change map.
+- Non-trivial changes follow the spec-driven workflow in the separate
+  [getmando-specs](https://github.com/rackandhost/getmando-specs) repository: `openspec/specs/`
+  holds the shipped capabilities and `openspec/changes/` the active proposals.
 - Follow Angular best practices
 - Use TypeScript strict mode
 - Write tests for new features

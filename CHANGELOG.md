@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Documentation
+
+- **Specs moved to their own repository**: the `openspec/` directory now lives in
+  [getmando-specs](https://github.com/rackandhost/getmando-specs) instead of this repository, so
+  specifications evolve in their own history while this repository stays code-only. README.md and
+  ARCHITECTURE.md point there now. Historical entries below keep their original `openspec/...`
+  paths: they refer to where those files lived at the time.
+
 ## v2.1.1
 
 ### Bug Fixes

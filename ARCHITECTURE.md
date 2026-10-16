@@ -16,16 +16,19 @@ For a first contribution:
 
 1. Read [README.md](README.md) for setup and user-facing configuration.
 2. Read [AGENTS.md](AGENTS.md) for project coding, state, accessibility, and error conventions.
-3. Start the app with `npm install` and `npm start`. Use `npm run dev` to also run the write
+3. For any non-trivial change, read the applicable capability spec in the separate
+   [getmando-specs](https://github.com/rackandhost/getmando-specs) repository (see Repository
+   Shape below).
+4. Start the app with `npm install` and `npm start`. Use `npm run dev` to also run the write
    sidecar (needed only for the configurator's Save action).
-4. Follow startup from [src/main.ts](src/main.ts) to
+5. Follow startup from [src/main.ts](src/main.ts) to
    [src/app/app.config.ts](src/app/app.config.ts), then to
    [dashboard.initializer.ts](src/app/core/initializers/dashboard.initializer.ts).
-5. For UI work, begin at
+6. For UI work, begin at
    [dashboard.component.ts](src/app/views/dashboard/dashboard.component.ts) or
    [configurator-page.component.ts](src/app/features/configurator/configurator-page.component.ts)
    and move into the relevant shared component.
-6. Run `npm test`, `npm run lint`, `npm run format:check`, and `npm run build` before review. For
+7. Run `npm test`, `npm run lint`, `npm run format:check`, and `npm run build` before review. For
    sidecar changes also run `npm --prefix server run typecheck` and `npm --prefix server test`.
 
 ## Stack
@@ -85,6 +88,11 @@ Root build and delivery files are [angular.json](angular.json), [proxy.conf.json
 [Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). Kubernetes
 deployment manifests (the Kustomize base) live in [deploy/kubernetes](deploy/kubernetes). CI
 workflows live in [.github/workflows](.github/workflows).
+
+The project's specifications live in a separate repository,
+[getmando-specs](https://github.com/rackandhost/getmando-specs) (`openspec/` layout: `specs/` for
+shipped capabilities, `changes/` for active proposals), normally opened beside this repository
+through the `getmando.code-workspace` multi-root workspace.
 
 ### Dependency Rules
 
