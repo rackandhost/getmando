@@ -18,6 +18,7 @@ describe('AppHeader', () => {
     toggleThemeMock?: Mock,
     isDark = signal(true),
     initialUrl = '/',
+    metadata: { title: string; description: string } | null = DEFAULT_DASHBOARD_CONFIG.metadata,
   ): Promise<void> => {
     await render(AppHeaderComponent, {
       imports: [CommonModule],
@@ -36,7 +37,7 @@ describe('AppHeader', () => {
         {
           provide: MetadataService,
           useValue: {
-            metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata),
+            metadata: signal(metadata ?? undefined),
           },
         },
       ],
@@ -55,6 +56,32 @@ describe('AppHeader', () => {
       expect(screen.queryByText(DEFAULT_DASHBOARD_CONFIG.metadata.title)).toBeInTheDocument();
       expect(screen.queryByText(DEFAULT_DASHBOARD_CONFIG.metadata.description)).toBeInTheDocument();
       expect(screen.queryByRole('button')).toBeInTheDocument();
+    });
+
+    it('shows the YAML title and description in the chip', async () => {
+      await setup(undefined, undefined, '/', {
+        title: 'My dashboard',
+        description: 'Simply and lovelly',
+      });
+
+      expect(screen.getByRole('heading', { level: 1, name: 'My dashboard' })).toBeInTheDocument();
+      expect(screen.getByText('Simply and lovelly')).toBeInTheDocument();
+    });
+
+    it('falls back to the default title and description without metadata', async () => {
+      await setup(undefined, undefined, '/', null);
+
+      expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+      expect(screen.getByText('Your selfhosted applications')).toBeInTheDocument();
+    });
+
+    it('exposes only the configurator link and the theme toggle as actions', async () => {
+      await setup();
+
+      expect(screen.getAllByRole('link')).toHaveLength(1);
+      expect(screen.getAllByRole('button')).toHaveLength(1);
+      expect(screen.getByRole('link', { name: 'Open configurator' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
     });
   });
 
