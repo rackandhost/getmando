@@ -237,7 +237,7 @@ describe('AppFinderComponent', () => {
     expect(appServiceMock.setSearchQuery).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Select search engine' }));
-    await user.click(screen.getByRole('option', { name: 'Search on your apps' }));
+    await user.click(screen.getByRole('option', { name: 'Your apps' }));
 
     expect(searchInput).toHaveAttribute('placeholder', 'Search your applications…');
 
