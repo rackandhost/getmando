@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+} from '@angular/core';
 
 /** Id of a configurator section element; the side navigation links to it. */
 export function configSectionId(section: string): string {
@@ -22,6 +28,8 @@ export class ConfigSectionComponent {
   readonly number = input('');
   readonly title = input.required<string>();
   readonly description = input('');
+  /** Keeps a long description to a readable line length (the Export text is 640 px wide in the design). */
+  readonly narrowDescription = input(false, { transform: booleanAttribute });
 
   protected readonly id = computed(() => configSectionId(this.section()));
   protected readonly headingId = computed(() => `${this.id()}-heading`);

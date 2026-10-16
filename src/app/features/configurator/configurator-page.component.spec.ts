@@ -331,6 +331,54 @@ describe('ConfiguratorPageComponent', () => {
     expect(configWrite.save).not.toHaveBeenCalled();
   });
 
+  it('shows the token panel with a password field, help naming CONFIG_WRITE_TOKEN, and both actions', async () => {
+    const user = userEvent.setup();
+    store.toDashboardConfig.mockReturnValue(draft());
+    await render(ConfiguratorPageComponent, {
+      providers: [...defaultProviders(), ...exportProviders()],
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const token = screen.getByLabelText('Write token');
+    expect(token).toHaveAttribute('type', 'password');
+    expect(token).toHaveAttribute('autocomplete', 'off');
+    expect(token).toHaveAccessibleDescription(/CONFIG_WRITE_TOKEN/);
+    expect(screen.getByRole('button', { name: 'Save token & save' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+  });
+
+  it('closes the token panel on Cancel without storing or saving anything, and forgets what was typed', async () => {
+    const user = userEvent.setup();
+    store.toDashboardConfig.mockReturnValue(draft());
+    await render(ConfiguratorPageComponent, {
+      providers: [...defaultProviders(), ...exportProviders()],
+    });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.type(screen.getByLabelText('Write token'), 'half-typed');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+    expect(configWrite.setToken).not.toHaveBeenCalled();
+    expect(configWrite.save).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(screen.getByLabelText('Write token')).toHaveValue('');
+  });
+
+  it('offers Copy YAML, Download YAML and Save in the Export section', async () => {
+    await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+    const section = document.getElementById('section-export') as HTMLElement;
+
+    expect(
+      within(section)
+        .getAllByRole('button')
+        .map((button) => button.textContent?.trim()),
+    ).toEqual(['Copy YAML', 'Download YAML', 'Save']);
+  });
+
   it('keeps the write-token prompt free of detectable AXE violations', async () => {
     const user = userEvent.setup();
     store.validate.mockReturnValue(true);

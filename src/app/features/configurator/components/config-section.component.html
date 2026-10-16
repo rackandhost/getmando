@@ -15,7 +15,9 @@
           {{ title() }}
         </h2>
         @if (description()) {
-          <p class="mt-1.5 text-sm text-muted">{{ description() }}</p>
+          <p class="mt-1.5 text-sm text-muted" [class.max-w-160]="narrowDescription()">
+            {{ description() }}
+          </p>
         }
       </div>
     </div>
