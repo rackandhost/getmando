@@ -37,6 +37,7 @@ import {
   CollectionEditorComponent,
 } from './components/collection-editor.component';
 import { activeSection, activeThreshold } from './active-section';
+import { ChipAutocenterDirective } from './chip-autocenter.directive';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 
@@ -83,6 +84,7 @@ const SECTIONS = [
     AppHeaderComponent,
     CollectionEditorComponent,
     ConfigSectionComponent,
+    ChipAutocenterDirective,
     HorizontalNavDirective,
     StickyDockDirective,
   ],
