@@ -10,6 +10,8 @@ import { ConfigWriteService } from '../../core/services/config-write.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
+import { MetadataService } from '../../core/services/metadata.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
 
@@ -115,6 +117,14 @@ describe('ConfiguratorPageComponent', () => {
     return [
       { provide: ConfiguratorStore, useValue: store },
       { provide: AppService, useValue: appService },
+      {
+        provide: ThemeService,
+        useValue: { isDark: signal(true), toggleTheme: vi.fn() },
+      },
+      {
+        provide: MetadataService,
+        useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
+      },
       { provide: YamlLoaderService, useValue: yamlLoader },
     ];
   }
@@ -128,6 +138,20 @@ describe('ConfiguratorPageComponent', () => {
       ConfigExportService,
     ];
   }
+
+  it('renders the page header itself, ahead of the main landmark', async () => {
+    await render(ConfiguratorPageComponent, {
+      providers: defaultProviders(),
+    });
+
+    const banner = screen.getByRole('banner');
+    const main = screen.getByRole('main');
+
+    expect(banner).toHaveTextContent(DEFAULT_DASHBOARD_CONFIG.metadata.title);
+    expect(banner.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(main).not.toContainElement(banner);
+    expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+  });
 
   it('does not offer load mounted YAML when mounted configuration is unavailable', async () => {
     await render(ConfiguratorPageComponent, {
@@ -462,6 +486,10 @@ describe('ConfiguratorPageComponent', () => {
       providers: defaultProviders(),
     });
 
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Toggle theme' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'Start empty' })).toHaveFocus();
     await user.tab();

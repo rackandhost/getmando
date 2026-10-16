@@ -10,12 +10,14 @@ import { AppFinderComponent } from '../../shared/components/app-finder/app-finde
 import { AppCategoriesComponent } from '../../shared/components/app-categories/app-categories.component';
 import { AppLoadingComponent } from '../../shared/components/app-loading/app-loading.component';
 import { AppClockComponent } from '../../shared/components/app-clock/app-clock.component';
+import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
     CommonModule,
+    AppHeaderComponent,
     AppFinderComponent,
     AppCategoriesComponent,
     AppCardComponent,

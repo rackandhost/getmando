@@ -16,6 +16,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
+import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
 
 import {
   CollectionEditEvent,
@@ -35,7 +36,7 @@ type BooleanSetting = Extract<
 
 @Component({
   selector: 'app-configurator-page',
-  imports: [CollectionEditorComponent],
+  imports: [AppHeaderComponent, CollectionEditorComponent],
   templateUrl: 'configurator-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },

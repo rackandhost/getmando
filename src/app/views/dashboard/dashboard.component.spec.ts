@@ -134,6 +134,18 @@ describe('DashboardComponent', () => {
     expect(screen.queryByText('No applications found')).not.toBeInTheDocument();
   });
 
+  it('renders the page header itself, ahead of the main landmark', async () => {
+    await setup({ filteredApps: [appFixture] });
+
+    const banner = screen.getByRole('banner');
+    const main = screen.getByRole('main');
+
+    expect(banner).toHaveTextContent(DEFAULT_DASHBOARD_CONFIG.metadata.title);
+    expect(banner.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(main).not.toContainElement(banner);
+    expect(screen.getByRole('link', { name: 'Open configurator' })).toBeInTheDocument();
+  });
+
   it('should have no accessibility violations when applications are rendered', async () => {
     const secondAppFixture: SelfhostedApp = {
       ...appFixture,
