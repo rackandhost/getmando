@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/angular';
+import { render, screen, within } from '@testing-library/angular';
 import { signal } from '@angular/core';
 
 import { DashboardComponent } from './dashboard.component';
@@ -307,9 +307,9 @@ describe('DashboardComponent', () => {
 
     expect(grid).toBeInTheDocument();
     expect(grid).toHaveClass('grid', 'xl:grid-cols-5');
-    expect(screen.getAllByRole('button', { name: /^Open / })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Radarr' })).toBeInTheDocument();
+    expect(within(grid).getAllByRole('link')).toHaveLength(2);
+    expect(within(grid).getByRole('link', { name: 'Plex' })).toBeInTheDocument();
+    expect(within(grid).getByRole('link', { name: 'Radarr' })).toBeInTheDocument();
     expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument();
     expect(screen.queryByText('No applications found')).not.toBeInTheDocument();
   });

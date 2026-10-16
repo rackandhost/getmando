@@ -1,7 +1,4 @@
 import { Component, inject, input, output, ChangeDetectionStrategy, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroCheckMini, heroXMarkMini } from '@ng-icons/heroicons/mini';
 
 import { SelfhostedApp } from '../../../core/models/dashboard.models';
 
@@ -9,15 +6,15 @@ import { AppStatusService } from '../../../core/services/app-status.service';
 import { IconService } from '../../../core/services/icon.service';
 import { SettingsService } from '../../../core/services/settings.service';
 
+let nextCardId = 0;
+
 @Component({
   selector: 'app-card',
   standalone: true,
-  imports: [CommonModule, NgIcon],
   templateUrl: 'app-card.component.html',
   host: {
-    class: 'block',
+    class: 'block h-full',
   },
-  viewProviders: [provideIcons({ heroCheckMini, heroXMarkMini })],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppCardComponent {
@@ -33,6 +30,10 @@ export class AppCardComponent {
 
   private readonly iconService = inject(IconService);
 
+  private readonly id = nextCardId++;
+  protected readonly descriptionId = `app-card-${this.id}-description`;
+  protected readonly tagsId = `app-card-${this.id}-tags`;
+
   /**
    * Get icon URL as computed signal
    */
@@ -40,40 +41,38 @@ export class AppCardComponent {
 
   readonly showDescriptions = computed(() => this.settings().showDescriptions);
   readonly showLabels = computed(() => this.settings().showLabels);
+  protected readonly showTags = computed(() => this.showLabels() && this.app().tags.length > 0);
 
   /**
-   * Status badge for monitored apps — undefined while healthCheck is off or no check has run yet.
+   * Status pill for monitored apps — undefined while healthCheck is off or no check has run yet.
    */
   readonly status = computed(() =>
     this.app().healthCheck ? this.appStatusService.statuses()[this.app().id] : undefined,
   );
 
   /**
-   * Accessible name for the card button. The status badge is a decorative (`aria-hidden`) visual —
-   * an `aria-label` on the button would otherwise suppress it entirely for screen readers — so the
-   * up/down state is folded into the button's own name instead.
+   * Accessible name of the link. The pill is decorative (`aria-hidden`), so the up/down state is folded
+   * into the name: `<name>, online` / `<name>, offline`. It always contains the link's visible text (the
+   * name). Unmonitored apps keep the plain content name, so no label is set for them.
    */
-  readonly cardLabel = computed(() => {
+  protected readonly linkLabel = computed(() => {
     const status = this.status();
-    const base = `Open ${this.app().name}`;
-    return status ? `${base}, currently ${status.status}` : base;
+    if (!status) return null;
+    return `${this.app().name}, ${status.status === 'up' ? 'online' : 'offline'}`;
   });
 
-  /** Glyph shown inside the status badge — a non-colour cue (WCAG 1.4.1) alongside green/red. */
-  readonly statusIcon = computed(() => {
-    const status = this.status();
-    if (!status) return undefined;
-    return status.status === 'up' ? 'heroCheckMini' : 'heroXMarkMini';
+  /** The description and the tag list, whichever are shown, are the link's accessible description. */
+  protected readonly describedBy = computed(() => {
+    const ids = [
+      this.showDescriptions() ? this.descriptionId : null,
+      this.showTags() ? this.tagsId : null,
+    ].filter((id): id is string => id !== null);
+
+    return ids.length > 0 ? ids.join(' ') : null;
   });
 
-  /**
-   * Open application
-   */
-  openApp(): void {
-    const app = this.app();
-    const target = app.openNewTab ? '_blank' : '_self';
-
-    window.open(app.url, target);
-    this.appClick.emit(app);
+  /** The browser follows the link itself (new tab, middle click and so on); this only reports it. */
+  protected onLinkClick(): void {
+    this.appClick.emit(this.app());
   }
 }
