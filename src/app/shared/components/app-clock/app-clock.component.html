@@ -1,16 +1,20 @@
 <section
   class="flex justify-center transition-[padding] duration-300"
-  [class]="compact() ? 'pt-3 pb-2.5' : 'pt-[clamp(32px,6vw,64px)] pb-[clamp(20px,3vw,32px)]'"
+  [class]="
+    compact()
+      ? 'pt-3 pb-2.5'
+      : 'pt-[clamp(32px,6vw,64px)] pb-[clamp(20px,3vw,32px)] sm:pt-8 sm:pb-8'
+  "
 >
   <div
-    class="glass-clock flex items-center rounded-[26px] text-text transition-[padding] duration-300"
+    class="glass-clock flex items-center text-text transition-[padding,border-radius] duration-300"
     role="img"
     [attr.aria-label]="label()"
     [attr.data-compact]="compact()"
     [class]="
       compact()
-        ? 'flex-row px-[22px] py-2.5'
-        : 'flex-col gap-3 px-[clamp(28px,4vw,48px)] pt-[clamp(20px,2.5vw,28px)] pb-[clamp(18px,2.2vw,24px)]'
+        ? 'flex-row rounded-[26px] px-[22px] py-2.5'
+        : 'flex-col gap-3 rounded-[26px] px-[clamp(28px,4vw,48px)] pt-[clamp(20px,2.5vw,28px)] pb-[clamp(18px,2.2vw,24px)] sm:flex-row sm:rounded-[32px] sm:px-7 sm:py-[18px]'
     "
   >
     @if (dateOnTop && !compact()) {
@@ -19,7 +23,7 @@
 
     <p
       class="flex items-baseline leading-none font-extrabold tracking-[-0.03em] transition-[font-size] duration-300"
-      [class]="compact() ? 'text-[40px]' : 'text-[clamp(88px,11vw,150px)]'"
+      [class]="compact() ? 'text-[40px]' : 'text-[88px] sm:text-[54px]'"
     >
       <span
         class="text-clock-ink"
@@ -32,7 +36,7 @@
         [class]="
           compact()
             ? '[-webkit-text-stroke:1.2px_var(--accent)]'
-            : '[-webkit-text-stroke:2px_var(--accent)]'
+            : '[-webkit-text-stroke:2px_var(--accent)] sm:[-webkit-text-stroke:0]'
         "
         >{{ parts().minutes }}</span
       >
@@ -54,7 +58,7 @@
 <ng-template #pills>
   <div
     class="flex items-center justify-center gap-2 font-mono text-xs font-semibold tracking-[0.16em]"
-    [class]="compact() ? 'ml-4 border-l border-line pl-4' : ''"
+    [class]="compact() ? 'ml-4 border-l border-line pl-4' : 'sm:[&>span]:px-2 sm:[&>span]:py-1'"
   >
     <span class="rounded-full bg-accent px-[11px] py-[5px] text-accent-ink">{{
       parts().weekday | uppercase
