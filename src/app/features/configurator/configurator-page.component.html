@@ -198,19 +198,13 @@
         title="Settings"
       >
         <div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-x-5 gap-y-4">
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-            Theme
-            <select
-              id="field-settings-theme"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-              [value]="draft().settings.theme"
-              (change)="updateSettingText('theme', $event)"
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="auto">Auto</option>
-            </select>
-          </label>
+          <app-segmented
+            controlId="field-settings-theme"
+            label="Theme"
+            [options]="themeOptions"
+            [value]="draft().settings.theme"
+            (valueChange)="setSettingChoice('theme', $event)"
+          />
           <label class="block text-sm font-medium text-neutral-900 dark:text-white">
             Date format
             <input
@@ -220,18 +214,13 @@
               (input)="updateSettingText('dateFormat', $event)"
             />
           </label>
-          <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-            Date position
-            <select
-              id="field-settings-datePosition"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-              [value]="draft().settings.datePosition"
-              (change)="updateSettingText('datePosition', $event)"
-            >
-              <option value="top">Top</option>
-              <option value="bottom">Bottom</option>
-            </select>
-          </label>
+          <app-segmented
+            controlId="field-settings-datePosition"
+            label="Date position"
+            [options]="datePositionOptions"
+            [value]="draft().settings.datePosition"
+            (valueChange)="setSettingChoice('datePosition', $event)"
+          />
           <label class="block text-sm font-medium text-neutral-900 dark:text-white">
             Items per row
             <input
@@ -276,58 +265,34 @@
           </label>
         </div>
 
-        <fieldset class="mt-6 rounded-2xl border border-white/20 bg-white/5 p-4">
-          <legend class="px-1 text-sm font-semibold text-neutral-900 dark:text-white">
-            Display options
-          </legend>
+        <fieldset class="mt-6 rounded-[14px] border border-line p-4">
+          <legend class="px-1 text-sm font-semibold text-text">Display options</legend>
           <div class="mt-3 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
             @for (option of displayOptions; track option.field) {
-              <label
-                class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-              >
-                <input
-                  class="peer sr-only"
-                  type="checkbox"
-                  [id]="'field-settings-' + option.field"
-                  [checked]="isSettingEnabled(option.field)"
-                  (change)="updateSettingBoolean(option.field, $event)"
-                />
-                <span
-                  aria-hidden="true"
-                  class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-                ></span>
-                {{ option.label }}
-              </label>
+              <app-switch
+                [checked]="isSettingEnabled(option.field)"
+                [controlId]="'field-settings-' + option.field"
+                [label]="option.label"
+                (checkedChange)="setSettingBoolean(option.field, $event)"
+              />
             }
           </div>
         </fieldset>
 
         <fieldset
           id="field-settings-searchEngines"
-          class="mt-6 rounded-2xl border border-white/20 bg-white/5 p-4"
+          class="mt-6 rounded-[14px] border border-line p-4"
           tabindex="-1"
         >
-          <legend class="px-1 text-sm font-semibold text-neutral-900 dark:text-white">
-            Search engines
-          </legend>
+          <legend class="px-1 text-sm font-semibold text-text">Search engines</legend>
           <div class="mt-3 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
             @for (engine of searchEngineOptions; track engine) {
-              <label
-                class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-              >
-                <input
-                  class="peer sr-only"
-                  type="checkbox"
-                  [id]="'field-settings-searchEngines-' + engine"
-                  [checked]="hasSearchEngine(engine)"
-                  (change)="updateSearchEngines(engine, $event)"
-                />
-                <span
-                  aria-hidden="true"
-                  class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-                ></span>
-                {{ engine }}
-              </label>
+              <app-switch
+                [checked]="hasSearchEngine(engine)"
+                [controlId]="'field-settings-searchEngines-' + engine"
+                [label]="searchEngineLabels[engine]"
+                (checkedChange)="setSearchEngine(engine, $event)"
+              />
             }
           </div>
         </fieldset>

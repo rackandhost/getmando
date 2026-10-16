@@ -31,6 +31,11 @@ import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
 import type { ChromeProbe } from '../../core/scroll/scroll-state.service';
 import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
+import {
+  AppSegmentedComponent,
+  type SegmentedOption,
+} from '../../shared/components/app-segmented/app-segmented.component';
+import { AppSwitchComponent } from '../../shared/components/app-switch/app-switch.component';
 import { HorizontalNavDirective } from '../../shared/directives/horizontal-nav.directive';
 import { StickyDockDirective } from '../../shared/directives/sticky-dock.directive';
 
@@ -86,6 +91,8 @@ const SECTIONS = [
     NgIcon,
     AppHeaderComponent,
     CollectionEditorComponent,
+    AppSegmentedComponent,
+    AppSwitchComponent,
     ConfigSectionComponent,
     ChipAutocenterDirective,
     HorizontalNavDirective,
@@ -214,6 +221,24 @@ export class ConfiguratorPageComponent {
     { field: 'showDescriptions', label: 'Show descriptions' },
     { field: 'showLabels', label: 'Show labels' },
   ];
+  protected readonly searchEngineLabels: Record<
+    DashboardSettings['searchEngines'][number],
+    string
+  > = {
+    google: 'Google',
+    duckduckgo: 'DuckDuckGo',
+    startpage: 'Startpage',
+    youtube: 'YouTube',
+  };
+  protected readonly themeOptions: readonly SegmentedOption[] = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'auto', label: 'Auto' },
+  ];
+  protected readonly datePositionOptions: readonly SegmentedOption[] = [
+    { value: 'top', label: 'Top' },
+    { value: 'bottom', label: 'Bottom' },
+  ];
 
   protected startEmpty(): void {
     this.store.startEmpty();
@@ -263,17 +288,19 @@ export class ConfiguratorPageComponent {
     } as Partial<DashboardSettings>);
   }
 
-  protected updateSettingBoolean(field: BooleanSetting, event: Event): void {
-    this.store.updateSettings({
-      [field]: (event.target as HTMLInputElement).checked,
-    } as Partial<DashboardSettings>);
+  protected setSettingBoolean(field: BooleanSetting, checked: boolean): void {
+    this.store.updateSettings({ [field]: checked } as Partial<DashboardSettings>);
   }
 
-  protected updateSearchEngines(
+  /** Theme and date position: the value comes from a segmented control, already one of its options. */
+  protected setSettingChoice(field: 'theme' | 'datePosition', value: string): void {
+    this.store.updateSettings({ [field]: value } as Partial<DashboardSettings>);
+  }
+
+  protected setSearchEngine(
     engine: DashboardSettings['searchEngines'][number],
-    event: Event,
+    enabled: boolean,
   ): void {
-    const enabled = (event.target as HTMLInputElement).checked;
     const current = this.draft().settings.searchEngines;
     const searchEngines = enabled
       ? [...new Set([...current, engine])]

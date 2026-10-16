@@ -228,8 +228,8 @@ describe('ConfiguratorPageComponent', () => {
     await user.type(screen.getByLabelText('Dashboard description'), 'Updated description');
     await user.clear(screen.getByLabelText('Items per row'));
     await user.type(screen.getByLabelText('Items per row'), '6');
-    await user.click(screen.getByLabelText('Show date'));
-    await user.click(screen.getByLabelText('youtube'));
+    await user.click(screen.getByRole('switch', { name: 'Show date' }));
+    await user.click(screen.getByRole('switch', { name: 'YouTube' }));
 
     expect(store.updateMetadata).toHaveBeenLastCalledWith({ description: 'Updated description' });
     expect(store.updateSettings).toHaveBeenCalledWith({ itemsPerRow: 6 });
@@ -503,7 +503,7 @@ describe('ConfiguratorPageComponent', () => {
 
     expect(screen.getByRole('heading', { name: 'Configuration editor' })).toBeInTheDocument();
     expect(screen.getByLabelText('Dashboard title')).toHaveValue('Mando');
-    expect(screen.getByLabelText('Theme')).toHaveValue('dark');
+    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked();
     expect(screen.getByRole('alert')).toHaveTextContent("Category 'missing' does not exist.");
     expect(screen.getByLabelText('Application category for Plex')).toHaveAttribute(
       'aria-describedby',
@@ -954,6 +954,161 @@ describe('ConfiguratorPageComponent', () => {
       await renderPage();
 
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('switches and segmented controls', () => {
+    beforeEach(() => {
+      draft.set({
+        ...draft(),
+        settings: { ...draft().settings, showSeconds: false, searchEngines: [] },
+      });
+    });
+
+    it('presents every display option and search engine as a named switch reflecting the draft', async () => {
+      draft.set({
+        ...draft(),
+        settings: { ...draft().settings, showSeconds: true, searchEngines: ['duckduckgo'] },
+      });
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      const names = screen.getAllByRole('switch').map((control) => control.textContent?.trim());
+
+      expect(names).toEqual([
+        'Show seconds',
+        'Show date',
+        'Allow bookmarks',
+        'Show all category',
+        'Show descriptions',
+        'Show labels',
+        'Google',
+        'DuckDuckGo',
+        'Startpage',
+        'YouTube',
+      ]);
+      expect(screen.getByRole('switch', { name: 'Show seconds' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+      expect(screen.getByRole('switch', { name: 'DuckDuckGo' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+      expect(screen.getByRole('switch', { name: 'Google' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+    });
+
+    it('toggles Show seconds with the Space key and writes the same draft field as before', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      screen.getByRole('switch', { name: 'Show seconds' }).focus();
+      await user.keyboard(' ');
+
+      expect(store.updateSettings).toHaveBeenCalledExactlyOnceWith({ showSeconds: true });
+    });
+
+    it('adds and removes a search engine through its switch', async () => {
+      const user = userEvent.setup();
+      draft.set({ ...draft(), settings: { ...draft().settings, searchEngines: ['google'] } });
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      await user.click(screen.getByRole('switch', { name: 'Startpage' }));
+      expect(store.updateSettings).toHaveBeenLastCalledWith({
+        searchEngines: ['google', 'startpage'],
+      });
+
+      await user.click(screen.getByRole('switch', { name: 'Google' }));
+      expect(store.updateSettings).toHaveBeenLastCalledWith({ searchEngines: [] });
+    });
+
+    it('chooses the theme with the arrow keys: Dark then right arrow is Auto', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      const group = screen.getByRole('radiogroup', { name: 'Theme' });
+
+      expect(
+        within(group)
+          .getAllByRole('radio')
+          .map((r) => r.textContent?.trim()),
+      ).toEqual(['Light', 'Dark', 'Auto']);
+      await user.click(within(group).getByRole('radio', { name: 'Dark' }));
+      screen.getByRole('radio', { name: 'Dark' }).focus();
+      await user.keyboard('{ArrowRight}');
+
+      expect(store.updateSettings).toHaveBeenLastCalledWith({ theme: 'auto' });
+    });
+
+    it('chooses the date position from a Top | Bottom group', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      const group = screen.getByRole('radiogroup', { name: 'Date position' });
+
+      expect(
+        within(group)
+          .getAllByRole('radio')
+          .map((r) => r.textContent?.trim()),
+      ).toEqual(['Top', 'Bottom']);
+      const current = draft().settings.datePosition;
+      await user.click(
+        within(group).getByRole('radio', { name: current === 'top' ? 'Bottom' : 'Top' }),
+      );
+
+      expect(store.updateSettings).toHaveBeenLastCalledWith({
+        datePosition: current === 'top' ? 'bottom' : 'top',
+      });
+    });
+
+    it('exports showSeconds: true after the switch is turned on (data parity)', async () => {
+      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+      await render(ConfiguratorPageComponent, {
+        providers: [
+          { provide: AppService, useValue: appService },
+          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          {
+            provide: MetadataService,
+            useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
+          },
+          {
+            provide: YamlLoaderService,
+            useValue: {
+              mountedPath: '/config/dashboard.yaml',
+              mountedConfigResult: signal<MountedConfigResult>({
+                status: 'valid',
+                config: {
+                  ...draft(),
+                  settings: { ...draft().settings, showSeconds: false },
+                },
+              }),
+              refreshMountedConfig: yamlLoader.refreshMountedConfig,
+            },
+          },
+          { provide: LoggerService, useValue: logger },
+          { provide: NotificationService, useValue: notifications },
+          { provide: ConfigWriteService, useValue: configWrite },
+          ConfiguratorStore,
+          ConfigExportService,
+        ],
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Load mounted YAML' }));
+      expect(screen.getByRole('switch', { name: 'Show seconds' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+      await user.click(screen.getByRole('switch', { name: 'Show seconds' }));
+      expect(screen.getByRole('switch', { name: 'Show seconds' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('showSeconds: true');
     });
   });
 });

@@ -1,0 +1,23 @@
+<span class="text-[13px] font-medium text-text" [id]="labelId">{{ label() }}</span>
+<div
+  class="inline-flex w-full gap-1 rounded-[10px] border border-field-border bg-field p-1"
+  role="radiogroup"
+  tabindex="-1"
+  [attr.aria-labelledby]="labelId"
+  [attr.id]="controlId() ?? null"
+>
+  @for (option of options(); track option.value; let index = $index) {
+    <button
+      #radio
+      class="min-h-9 flex-1 rounded-md border border-transparent px-3 text-sm font-medium text-muted transition-colors duration-200 hover:text-text aria-checked:border-line-strong aria-checked:bg-surface-2 aria-checked:text-text"
+      role="radio"
+      type="button"
+      [attr.aria-checked]="option.value === value()"
+      [attr.tabindex]="option.value === value() ? 0 : -1"
+      (click)="select(option.value)"
+      (keydown)="onKeydown($event, index)"
+    >
+      {{ option.label }}
+    </button>
+  }
+</div>
