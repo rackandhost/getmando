@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './styles/tokens.css';
+@import './styles/fonts.css';
 @custom-variant dark (&:where(.dark, .dark *));
 @source inline("xl:grid-cols-1");
 @source inline("xl:grid-cols-2");
