@@ -13,6 +13,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class AppSwitchComponent {
   readonly label = input.required<string>();
+  /** Name for assistive technology when the visible label alone is ambiguous; it must contain the label. */
+  readonly accessibleName = input<string>();
   readonly checked = input(false);
   /** Id of the switch element, for error links that move focus to it. */
   readonly controlId = input<string>();

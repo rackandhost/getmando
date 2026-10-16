@@ -23,6 +23,8 @@ import {
 
 import { IconConfig } from '../../../core/models/dashboard.models';
 
+import { AppSwitchComponent } from '../../../shared/components/app-switch/app-switch.component';
+
 import { ConfigSectionComponent } from './config-section.component';
 
 type CollectionName = 'categories' | 'applications' | 'bookmarks';
@@ -61,7 +63,7 @@ export type CollectionEditEvent =
 
 @Component({
   selector: 'app-collection-editor',
-  imports: [NgIcon, ConfigSectionComponent],
+  imports: [NgIcon, AppSwitchComponent, ConfigSectionComponent],
   templateUrl: 'collection-editor.component.html',
   viewProviders: [
     provideIcons({ heroArrowDown, heroArrowUp, heroPencilSquare, heroPlus, heroTrash }),
@@ -83,6 +85,7 @@ export class CollectionEditorComponent {
   readonly editItem = output<CollectionEditEvent>();
 
   private readonly removeButtons = viewChildren<ElementRef<HTMLButtonElement>>('removeButton');
+  private readonly editButtons = viewChildren<ElementRef<HTMLButtonElement>>('editButton');
   private readonly nameInputs = viewChildren<ElementRef<HTMLInputElement>>('nameInput');
   private readonly moveUpButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveUpButton');
   private readonly moveDownButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveDownButton');
@@ -160,10 +163,10 @@ export class CollectionEditorComponent {
       category: `Application category for ${itemLabel}`,
       description: `${capitalized} description for ${itemLabel}`,
       url: `${capitalized} URL for ${itemLabel}`,
-      openNewTab: `Open ${itemLabel} in a new tab`,
+      openNewTab: `Open in new tab for ${itemLabel}`,
       tags: `${capitalized} tags for ${itemLabel}`,
-      favorite: `Mark ${itemLabel} as favorite`,
-      healthCheck: `Enable health checks for ${itemLabel}`,
+      favorite: `Favorite for ${itemLabel}`,
+      healthCheck: `Health check for ${itemLabel}`,
     };
 
     return labels[field];
@@ -177,8 +180,8 @@ export class CollectionEditorComponent {
     });
   }
 
-  protected editBoolean(index: number, field: BooleanField, event: Event): void {
-    this.editItem.emit({ index, field, value: (event.target as HTMLInputElement).checked });
+  protected setBoolean(index: number, field: BooleanField, value: boolean): void {
+    this.editItem.emit({ index, field, value });
   }
 
   protected editTags(index: number, event: Event): void {
@@ -239,10 +242,7 @@ export class CollectionEditorComponent {
   protected add(): void {
     const newIndex = this.items().length;
     this.addItem.emit();
-    this.openRows.update((rows) => new Set(rows).add(newIndex));
-    afterNextRender(() => this.nameInputs()[newIndex]?.nativeElement.focus(), {
-      injector: this.injector,
-    });
+    this.expand(newIndex);
   }
 
   protected remove(index: number): void {
@@ -277,11 +277,28 @@ export class CollectionEditorComponent {
     return this.openRows().has(index);
   }
 
+  /** Edit opens the editor and puts the focus in its first field, or closes it and keeps the focus on Edit. */
   protected toggle(index: number): void {
+    if (this.isOpen(index)) {
+      this.collapse(index);
+    } else {
+      this.expand(index);
+    }
+  }
+
+  protected collapse(index: number): void {
     this.openRows.update((rows) => {
       const next = new Set(rows);
-      if (!next.delete(index)) next.add(index);
+      next.delete(index);
       return next;
+    });
+    this.editButtons()[index]?.nativeElement.focus();
+  }
+
+  private expand(index: number): void {
+    this.openRows.update((rows) => new Set(rows).add(index));
+    afterNextRender(() => this.nameInputs()[index]?.nativeElement.focus(), {
+      injector: this.injector,
     });
   }
 

@@ -972,7 +972,9 @@ describe('ConfiguratorPageComponent', () => {
       });
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
 
-      const names = screen.getAllByRole('switch').map((control) => control.textContent?.trim());
+      const names = within(document.getElementById('section-settings') as HTMLElement)
+        .getAllByRole('switch')
+        .map((control) => control.textContent?.trim());
 
       expect(names).toEqual([
         'Show seconds',

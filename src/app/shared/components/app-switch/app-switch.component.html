@@ -3,6 +3,7 @@
   role="switch"
   type="button"
   [attr.aria-checked]="checked()"
+  [attr.aria-label]="accessibleName() ?? null"
   [attr.data-checked]="checked()"
   [attr.id]="controlId() ?? null"
   (click)="checkedChange.emit(!checked())"

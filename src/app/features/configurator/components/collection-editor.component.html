@@ -25,7 +25,10 @@
 
   <ol class="space-y-2.5">
     @for (item of items(); track $index; let index = $index) {
-      <li class="rounded-[14px] border border-line bg-surface-2">
+      <li
+        class="rounded-[14px] border border-line bg-surface-2 transition-colors duration-200 data-[open=true]:border-accent data-[open=true]:bg-accent/5"
+        [attr.data-open]="isOpen(index)"
+      >
         <!-- Row: what the item is at a glance, and what can be done with it. -->
         <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-3">
           <span aria-hidden="true" class="w-6 shrink-0 font-mono text-xs text-muted">{{
@@ -83,11 +86,12 @@
               <ng-icon aria-hidden="true" name="heroArrowDown" />
             </button>
             <button
+              #editButton
               type="button"
               [attr.aria-controls]="editorId(index)"
               [attr.aria-expanded]="isOpen(index)"
               [attr.aria-label]="'Edit ' + itemLabel(item)"
-              [class]="actionClass"
+              [class]="actionClass + ' aria-expanded:border-accent aria-expanded:bg-accent/10'"
               [title]="'Edit ' + itemLabel(item)"
               (click)="toggle(index)"
             >
@@ -106,30 +110,16 @@
           </div>
         </div>
 
-        <!-- Editor: the fields of the item, under its row. -->
+        <!-- Editor: the fields of the item, under its row. Escape closes it and returns to Edit. -->
         <div
           class="border-t border-line px-4 py-4"
           [hidden]="!isOpen(index)"
           [id]="editorId(index)"
+          (keydown.escape)="collapse(index)"
         >
           <fieldset class="min-w-0">
             <legend class="sr-only">{{ itemLabel(item) }}</legend>
-            <div class="grid gap-x-5 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
-              <label [class]="labelClass">
-                ID
-                <input
-                  [attr.aria-describedby]="describedBy(index, 'id')"
-                  [attr.aria-invalid]="errorId(index, 'id') ? 'true' : null"
-                  [attr.aria-label]="fieldLabel(item, 'id')"
-                  [class]="monoFieldClass"
-                  [id]="fieldId(index, 'id')"
-                  [value]="item.id"
-                  (input)="editText(index, 'id', $event)"
-                />
-                @if (errorMessage(index, 'id'); as error) {
-                  <p [class]="errorClass" [id]="errorId(index, 'id')">{{ error }}</p>
-                }
-              </label>
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-5 gap-y-4">
               <label [class]="labelClass">
                 Name
                 <input
@@ -164,7 +154,7 @@
                     <p [class]="errorClass" [id]="errorId(index, 'url')">{{ error }}</p>
                   }
                 </label>
-                <label [class]="labelClass + ' md:col-span-2 xl:col-span-3'">
+                <label [class]="labelClass + ' col-span-full'">
                   Description
                   <textarea
                     rows="2"
@@ -180,76 +170,53 @@
                     <p [class]="errorClass" [id]="errorId(index, 'description')">{{ error }}</p>
                   }
                 </label>
-                <label [class]="labelClass">
-                  Tags
-                  <input
-                    [attr.aria-describedby]="describedBy(index, 'tags')"
-                    [attr.aria-invalid]="errorId(index, 'tags') ? 'true' : null"
-                    [attr.aria-label]="fieldLabel(item, 'tags')"
-                    [class]="monoFieldClass"
-                    [id]="fieldId(index, 'tags')"
-                    [value]="(item.tags ?? []).join(', ')"
-                    (input)="editTags(index, $event)"
-                  />
-                  @if (errorMessage(index, 'tags'); as error) {
-                    <p [class]="errorClass" [id]="errorId(index, 'tags')">{{ error }}</p>
-                  }
-                </label>
-                <div class="flex flex-col justify-end gap-3">
-                  <label
-                    class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-                  >
+              }
+
+              @if (supportsIcon()) {
+                <!-- Part of the same grid; the group keeps the icon fields named together. -->
+                <fieldset class="contents">
+                  <legend class="sr-only">Icon for {{ itemLabel(item) }}</legend>
+                  <label [class]="labelClass">
+                    Icon type
+                    <select
+                      [attr.aria-describedby]="describedBy(index, 'iconType')"
+                      [attr.aria-invalid]="errorId(index, 'iconType') ? 'true' : null"
+                      [attr.aria-label]="'Icon type for ' + itemLabel(item)"
+                      [class]="fieldClass"
+                      [id]="fieldId(index, 'iconType')"
+                      [value]="iconType(index)"
+                      (change)="updateIconType(index, $event)"
+                    >
+                      <option value="url">URL</option>
+                      <option value="name">Name</option>
+                      <option value="initials">Initials</option>
+                    </select>
+                    @if (errorMessage(index, 'iconType'); as error) {
+                      <p [class]="errorClass" [id]="errorId(index, 'iconType')">{{ error }}</p>
+                    }
+                  </label>
+                  <label [class]="labelClass">
+                    {{ iconValueLabel(index) }}
                     <input
-                      class="peer sr-only"
-                      type="checkbox"
-                      [attr.aria-label]="fieldLabel(item, 'openNewTab')"
-                      [checked]="item.openNewTab ?? true"
-                      [id]="fieldId(index, 'openNewTab')"
-                      (change)="editBoolean(index, 'openNewTab', $event)"
+                      [attr.aria-describedby]="describedBy(index, 'iconValue')"
+                      [attr.aria-invalid]="errorId(index, 'iconValue') ? 'true' : null"
+                      [attr.aria-label]="iconValueLabel(index)"
+                      [class]="monoFieldClass"
+                      [id]="fieldId(index, 'iconValue')"
+                      [type]="iconType(index) === 'url' ? 'url' : 'text'"
+                      [value]="iconValue(index)"
+                      (input)="updateIconValue(index, $event)"
                     />
                     <span
-                      aria-hidden="true"
-                      class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-                    ></span>
-                    Open in new tab
+                      class="block text-xs leading-5 font-normal text-muted"
+                      [id]="collectionLabel() + '-icon-' + iconType(index) + '-help-' + index"
+                      >{{ iconHelp(index) }}</span
+                    >
+                    @if (errorMessage(index, 'iconValue'); as error) {
+                      <p [class]="errorClass" [id]="errorId(index, 'iconValue')">{{ error }}</p>
+                    }
                   </label>
-                  @if (collection() === 'applications') {
-                    <label
-                      class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-                    >
-                      <input
-                        class="peer sr-only"
-                        type="checkbox"
-                        [attr.aria-label]="fieldLabel(item, 'favorite')"
-                        [checked]="item.favorite ?? false"
-                        [id]="fieldId(index, 'favorite')"
-                        (change)="editBoolean(index, 'favorite', $event)"
-                      />
-                      <span
-                        aria-hidden="true"
-                        class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-                      ></span>
-                      Favorite
-                    </label>
-                    <label
-                      class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-                    >
-                      <input
-                        class="peer sr-only"
-                        type="checkbox"
-                        [attr.aria-label]="fieldLabel(item, 'healthCheck')"
-                        [checked]="item.healthCheck ?? false"
-                        [id]="fieldId(index, 'healthCheck')"
-                        (change)="editBoolean(index, 'healthCheck', $event)"
-                      />
-                      <span
-                        aria-hidden="true"
-                        class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-                      ></span>
-                      Health check
-                    </label>
-                  }
-                </div>
+                </fieldset>
               }
 
               @if (collection() === 'applications') {
@@ -280,54 +247,68 @@
                 </label>
               }
 
-              @if (supportsIcon()) {
-                <fieldset class="rounded-xl border border-line p-4 md:col-span-2 xl:col-span-3">
-                  <legend class="px-1 text-sm font-semibold text-text">
-                    Icon for {{ itemLabel(item) }}
-                  </legend>
-                  <div class="mt-3 grid gap-x-5 gap-y-4 md:grid-cols-2">
-                    <label [class]="labelClass">
-                      Icon type
-                      <select
-                        [attr.aria-describedby]="describedBy(index, 'iconType')"
-                        [attr.aria-invalid]="errorId(index, 'iconType') ? 'true' : null"
-                        [attr.aria-label]="'Icon type for ' + itemLabel(item)"
-                        [class]="fieldClass"
-                        [id]="fieldId(index, 'iconType')"
-                        [value]="iconType(index)"
-                        (change)="updateIconType(index, $event)"
-                      >
-                        <option value="url">URL</option>
-                        <option value="name">Name</option>
-                        <option value="initials">Initials</option>
-                      </select>
-                      @if (errorMessage(index, 'iconType'); as error) {
-                        <p [class]="errorClass" [id]="errorId(index, 'iconType')">{{ error }}</p>
-                      }
-                    </label>
-                    <label [class]="labelClass">
-                      {{ iconValueLabel(index) }}
-                      <input
-                        [attr.aria-describedby]="describedBy(index, 'iconValue')"
-                        [attr.aria-invalid]="errorId(index, 'iconValue') ? 'true' : null"
-                        [attr.aria-label]="iconValueLabel(index)"
-                        [class]="monoFieldClass"
-                        [id]="fieldId(index, 'iconValue')"
-                        [type]="iconType(index) === 'url' ? 'url' : 'text'"
-                        [value]="iconValue(index)"
-                        (input)="updateIconValue(index, $event)"
-                      />
-                      <span
-                        class="block text-xs leading-5 font-normal text-muted"
-                        [id]="collectionLabel() + '-icon-' + iconType(index) + '-help-' + index"
-                        >{{ iconHelp(index) }}</span
-                      >
-                      @if (errorMessage(index, 'iconValue'); as error) {
-                        <p [class]="errorClass" [id]="errorId(index, 'iconValue')">{{ error }}</p>
-                      }
-                    </label>
-                  </div>
-                </fieldset>
+              @if (collection() !== 'categories') {
+                <label [class]="labelClass">
+                  Tags
+                  <input
+                    [attr.aria-describedby]="describedBy(index, 'tags')"
+                    [attr.aria-invalid]="errorId(index, 'tags') ? 'true' : null"
+                    [attr.aria-label]="fieldLabel(item, 'tags')"
+                    [class]="monoFieldClass"
+                    [id]="fieldId(index, 'tags')"
+                    [value]="(item.tags ?? []).join(', ')"
+                    (input)="editTags(index, $event)"
+                  />
+                  @if (errorMessage(index, 'tags'); as error) {
+                    <p [class]="errorClass" [id]="errorId(index, 'tags')">{{ error }}</p>
+                  }
+                </label>
+              }
+
+              <label [class]="labelClass">
+                ID
+                <input
+                  [attr.aria-describedby]="describedBy(index, 'id')"
+                  [attr.aria-invalid]="errorId(index, 'id') ? 'true' : null"
+                  [attr.aria-label]="fieldLabel(item, 'id')"
+                  [class]="monoFieldClass"
+                  [id]="fieldId(index, 'id')"
+                  [value]="item.id"
+                  (input)="editText(index, 'id', $event)"
+                />
+                @if (errorMessage(index, 'id'); as error) {
+                  <p [class]="errorClass" [id]="errorId(index, 'id')">{{ error }}</p>
+                }
+              </label>
+
+              @if (collection() !== 'categories') {
+                <div
+                  class="col-span-full grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3"
+                >
+                  <app-switch
+                    label="Open in new tab"
+                    [accessibleName]="fieldLabel(item, 'openNewTab')"
+                    [checked]="item.openNewTab ?? true"
+                    [controlId]="fieldId(index, 'openNewTab')"
+                    (checkedChange)="setBoolean(index, 'openNewTab', $event)"
+                  />
+                  @if (collection() === 'applications') {
+                    <app-switch
+                      label="Favorite"
+                      [accessibleName]="fieldLabel(item, 'favorite')"
+                      [checked]="item.favorite ?? false"
+                      [controlId]="fieldId(index, 'favorite')"
+                      (checkedChange)="setBoolean(index, 'favorite', $event)"
+                    />
+                    <app-switch
+                      label="Health check"
+                      [accessibleName]="fieldLabel(item, 'healthCheck')"
+                      [checked]="item.healthCheck ?? false"
+                      [controlId]="fieldId(index, 'healthCheck')"
+                      (checkedChange)="setBoolean(index, 'healthCheck', $event)"
+                    />
+                  }
+                </div>
               }
             </div>
           </fieldset>
