@@ -1,28 +1,28 @@
 import { render, screen, within } from '@testing-library/angular';
 import { signal, type WritableSignal } from '@angular/core';
 
-import { DashboardComponent } from './dashboard.component';
+import { DashboardHorizontalComponent } from './dashboard-horizontal.component';
 
-import { AppService } from '../../core/services/app.service';
-import { SearchService } from '../../core/services/search.service';
-import { SettingsService } from '../../core/services/settings.service';
-import { ThemeService } from '../../core/services/theme.service';
-import { MetadataService } from '../../core/services/metadata.service';
-import { CategoryService } from '../../core/services/category.service';
-import { IconService } from '../../core/services/icon.service';
-import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
-import { AppShellComponent } from '../../shared/components/app-shell/app-shell.component';
-import type { ChromeMode } from '../../core/scroll/scroll-state';
+import { AppService } from '../../../core/services/app.service';
+import { SearchService } from '../../../core/services/search.service';
+import { SettingsService } from '../../../core/services/settings.service';
+import { ThemeService } from '../../../core/services/theme.service';
+import { MetadataService } from '../../../core/services/metadata.service';
+import { CategoryService } from '../../../core/services/category.service';
+import { IconService } from '../../../core/services/icon.service';
+import { ScrollStateService, type ChromeProbe } from '../../../core/scroll/scroll-state.service';
+import { AppShellComponent } from '../../../shared/components/app-shell/app-shell.component';
+import type { ChromeMode } from '../../../core/scroll/scroll-state';
 
 import {
   APP_CATEGORY,
   DEFAULT_DASHBOARD_CONFIG,
   DashboardSettings,
   SelfhostedApp,
-} from '../../core/models/dashboard.models';
-import { expectNoAxeViolations } from '../../../testing/a11y';
+} from '../../../core/models/dashboard.models';
+import { expectNoAxeViolations } from '../../../../testing/a11y';
 
-describe('DashboardComponent', () => {
+describe('DashboardHorizontalComponent', () => {
   const appFixture: SelfhostedApp = {
     id: 'plex',
     name: 'Plex',
@@ -131,11 +131,11 @@ describe('DashboardComponent', () => {
     ];
 
     return withShell
-      ? render('<app-shell><app-dashboard /></app-shell>', {
-          imports: [AppShellComponent, DashboardComponent],
+      ? render('<app-shell><app-dashboard-horizontal /></app-shell>', {
+          imports: [AppShellComponent, DashboardHorizontalComponent],
           providers,
         })
-      : render(DashboardComponent, { providers });
+      : render(DashboardHorizontalComponent, { providers });
   };
 
   it('should render the loading state while applications are still pending', async () => {
@@ -170,7 +170,7 @@ describe('DashboardComponent', () => {
       healthCheck: false,
     };
 
-    const view = await render(DashboardComponent, {
+    const view = await render(DashboardHorizontalComponent, {
       providers: [
         {
           provide: AppService,
@@ -226,7 +226,7 @@ describe('DashboardComponent', () => {
   });
 
   it('should have no accessibility violations in the loading state', async () => {
-    const view = await render(DashboardComponent, {
+    const view = await render(DashboardHorizontalComponent, {
       providers: [
         {
           provide: AppService,
