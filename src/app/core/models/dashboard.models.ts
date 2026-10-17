@@ -203,6 +203,7 @@ export type Category = z.infer<typeof CategorySchema>;
 export type SearchEngine = z.infer<typeof SearchEngineSchema>;
 export type DashboardMetadata = z.infer<typeof DashboardMetadataSchema>;
 export type DashboardSettings = z.infer<typeof DashboardSettingsSchema>;
+export type DashboardLayout = DashboardSettings['layout'];
 export type DashboardConfig = z.infer<typeof DashboardConfigSchema>;
 
 /**
