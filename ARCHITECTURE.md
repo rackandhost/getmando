@@ -91,7 +91,8 @@ server/                   config-write-api sidecar (own package.json and tests)
 Root build and delivery files are [angular.json](angular.json), [proxy.conf.json](proxy.conf.json),
 [Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). Kubernetes
 deployment manifests (the Kustomize base) live in [deploy/kubernetes](deploy/kubernetes). CI
-workflows live in [.github/workflows](.github/workflows).
+workflows live in [.github/workflows](.github/workflows); the Forgejo-only beta workflow lives in
+[.forgejo/workflows](.forgejo/workflows).
 
 The project's specifications live in a separate repository,
 [getmando-specs](https://github.com/rackandhost/getmando-specs) (`openspec/` layout: `specs/` for
@@ -515,6 +516,18 @@ On pushes to `main`, the Docker workflow builds `linux/amd64` and `linux/arm64` 
 [deploy/kubernetes](deploy/kubernetes) through a bypass-scoped bot account, and CI validates that
 Kustomize base with `kubectl kustomize` and kubeconform. A separate workflow reads the version from
 `package.json`, tags `v<version>`, and creates the matching GitHub release.
+
+Forgejo has its own, separate pipeline. Forgejo reads `.forgejo/workflows` and ignores
+`.github/workflows` when the former exists, and GitHub never reads `.forgejo`, so neither platform
+runs the other's workflows. [.forgejo/workflows/beta-publish.yml](.forgejo/workflows/beta-publish.yml)
+is manually dispatched and only acts on `develop`: it runs the lint, format, unit-test, build, and
+sidecar checks (no Kubernetes manifest validation), then builds `linux/amd64` and `linux/arm64`
+images and pushes them to the container registry of the Forgejo instance as `beta`,
+`v<version>-beta.<run number>`, and `sha-<commit>`. It never publishes `latest`, never creates
+releases or tags, and never commits back to the repository. Registry host and image name come from
+the instance and repository the run belongs to; the push uses a personal access token stored in the
+`REGISTRY_USER` and `REGISTRY_TOKEN` secrets, because the automatic job token only reaches the
+repository itself.
 
 ## Change Map
 

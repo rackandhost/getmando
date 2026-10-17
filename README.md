@@ -133,6 +133,20 @@ Then open `http://localhost:8080/configure` and Save.
 > **directory** `:rw` (`./config:/app/config:rw`, keeping your existing
 > `./config/dashboard.yaml` in place) and set `CONFIG_WRITE_TOKEN`.
 
+### Beta images (self-hosted Forgejo)
+
+The `develop` branch can be published as a **beta** image to a Forgejo container registry. Betas
+are never published to GHCR, never tagged `latest`, and are not meant for production. If you run
+your own Forgejo with this repository mirrored, you can pull them:
+
+```bash
+docker pull <forgejo-host>/<owner>/getmando:beta                 # moving pointer to the latest beta
+docker pull <forgejo-host>/<owner>/getmando:v2.1.1-beta.<run>    # immutable, one per run
+```
+
+The image is the same `linux/amd64` + `linux/arm64` build as production. See
+[ARCHITECTURE.md](ARCHITECTURE.md#build-and-deployment) for how a beta is produced.
+
 ---
 
 ## ☸️ Deploying on Kubernetes
