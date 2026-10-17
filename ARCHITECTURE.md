@@ -78,7 +78,7 @@ public/
 server/                   config-write-api sidecar (own package.json and tests)
   src/
     index.ts              environment parsing, status poller start, listen
-    app.ts                Fastify instance: authenticated POST /api/config, public GET /api/status
+    app.ts                Fastify instance: authenticated POST /api/config, public GET /api/status and GET /api/capabilities
     write-config.ts       atomic file write with .bak rotation
     status-poller.ts      periodic checks of healthCheck apps, in-memory status cache
     status-checker.ts     one reachability check (any HTTP response is up)
@@ -234,12 +234,15 @@ Output paths:
   missing token opens an inline prompt; the token is kept in `localStorage` under
   `config-write-token` and cleared on a `401`. On success the store is marked clean and
   `YamlLoaderService.refreshMountedConfig()` re-fetches the YAML and installs it into live
-  `AppService` state, so the dashboard reflects the save without a reload.
+  `AppService` state, so the dashboard reflects the save without a reload. The editor asks
+  `ConfigWriteService.isWriteEnabled()` (`GET /api/capabilities`) and disables Save, with the reason
+  next to it, only when the sidecar answers `{write: false}`; an unreachable sidecar or an
+  unexpected answer leaves Save available, and Save then reports the real error.
 
 ## Config Write Sidecar
 
 `server/` is a standalone Fastify service, bundled into the production image and started beside
-nginx. It exposes two routes; `POST /api/config` writes the configuration:
+nginx. It exposes three routes; `POST /api/config` writes the configuration:
 
 1. An `onRequest` hook compares the `x-config-token` header to `CONFIG_WRITE_TOKEN` before Fastify
    parses the body; a mismatch returns `401` and the payload is never read.
@@ -260,8 +263,10 @@ starts the sidecar in the background then execs nginx, with `tini` as PID 1. Loc
 ([scripts/dev.sh](scripts/dev.sh)) runs both processes and [proxy.conf.json](proxy.conf.json)
 forwards `/api` from the dev server to the sidecar.
 
-Without `CONFIG_WRITE_TOKEN`, or with the config mounted read-only, the dashboard still serves
-normally — only Save fails, Copy/Download remain available, and status checks keep working.
+Without `CONFIG_WRITE_TOKEN` the editor disables Save (the sidecar's `GET /api/capabilities` reports
+`{write: false}`, a boolean that never carries the token) while the dashboard still serves normally,
+Copy/Download remain available, and status checks keep working. With the config mounted read-only
+Save stays enabled and fails when used.
 
 ## App Status Checks
 

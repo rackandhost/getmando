@@ -10,6 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   heroArrowDownTray,
@@ -129,6 +130,11 @@ export class ConfiguratorPageComponent {
   private readonly yamlCodec = inject(YamlCodecService);
   private readonly yamlLoader = inject(YamlLoaderService);
   private readonly document = inject(DOCUMENT);
+
+  /** `false` only when the server says it has no write token; until it answers (or if it cannot), Save stays available. */
+  protected readonly writeEnabled = toSignal(this.configWrite.isWriteEnabled(), {
+    initialValue: true,
+  });
 
   protected readonly sections = SECTIONS;
   protected readonly headerPadding = HEADER_PADDING;

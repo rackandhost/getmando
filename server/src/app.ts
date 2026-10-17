@@ -61,6 +61,13 @@ export function buildApp({
     });
   });
 
+  // Unauthenticated and read-only: a single boolean saying whether POST /api/config can ever succeed
+  // (a token is configured), so the editor can disable Save up front. It never carries the token
+  // itself, which the user must supply out of band.
+  app.get('/api/capabilities', async (_request, reply) => {
+    return reply.code(200).send({ write: configWriteToken !== '' });
+  });
+
   // Route-level onRequest runs before Fastify parses the body, so an unauthorized request never
   // has its payload read, per the "before reading or validating its body" requirement. An unset
   // token can never match a provided header (and vice versa), so a token-less sidecar 401s every

@@ -347,15 +347,24 @@
             Download YAML
           </button>
           <button
+            [attr.aria-describedby]="writeEnabled() ? null : 'save-unavailable-help'"
             [class]="primaryActionClass + ' px-5'"
             type="button"
-            [disabled]="isSavingToServer()"
+            [disabled]="isSavingToServer() || !writeEnabled()"
             (click)="saveToServer()"
           >
             <ng-icon aria-hidden="true" class="text-base" name="heroCheck" />
             Save
           </button>
         </div>
+
+        @if (!writeEnabled()) {
+          <p id="save-unavailable-help" class="mt-3 max-w-[640px] text-[13px] text-muted">
+            Save is off: there is no
+            <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the server. Set it and
+            restart to save from here; Copy and Download still work.
+          </p>
+        }
 
         @if (showTokenPrompt()) {
           <div

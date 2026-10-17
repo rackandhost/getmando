@@ -14,6 +14,7 @@ export type ConfigWriteResult =
 const TOKEN_STORAGE_KEY = 'config-write-token';
 const CONFIG_WRITE_URL = '/api/config';
 const TOKEN_HEADER = 'X-Config-Token';
+const CAPABILITIES_URL = '/api/capabilities';
 
 /**
  * POSTs the configurator draft to the write-api sidecar. The shared-secret token has no
@@ -30,6 +31,18 @@ export class ConfigWriteService {
 
   setToken(token: string): void {
     this.writeStorage(() => localStorage.setItem(TOKEN_STORAGE_KEY, token));
+  }
+
+  /**
+   * Whether the sidecar has a write token configured, so the editor can disable Save up front. Only an
+   * explicit `write: false` says so: an unreachable sidecar, a missing endpoint or an unexpected body
+   * tell nothing about the token, and Save then reports the real error itself.
+   */
+  isWriteEnabled(): Observable<boolean> {
+    return this.http.get<{ write?: unknown }>(CAPABILITIES_URL).pipe(
+      map((capabilities) => capabilities?.write !== false),
+      catchError(() => of(true)),
+    );
   }
 
   save(config: DashboardConfig): Observable<ConfigWriteResult> {

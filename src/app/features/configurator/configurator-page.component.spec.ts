@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal, type WritableSignal } from '@angular/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { Observable, of } from 'rxjs';
+import { NEVER, Observable, of } from 'rxjs';
 
 import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../../core/models/dashboard.models';
 import { AppService } from '../../core/services/app.service';
@@ -83,6 +83,7 @@ describe('ConfiguratorPageComponent', () => {
     hasToken: vi.fn(() => false),
     setToken: vi.fn(),
     save: vi.fn(),
+    isWriteEnabled: vi.fn(() => of(true)),
   };
   const appService = { initializeConfig: vi.fn() };
   const yamlLoader = {
@@ -145,6 +146,7 @@ describe('ConfiguratorPageComponent', () => {
     store.toDashboardConfig.mockReturnValue(undefined);
     store.canLoadMountedConfig.mockReturnValue(false);
     configWrite.hasToken.mockReturnValue(false);
+    configWrite.isWriteEnabled.mockReturnValue(of(true));
     yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'unavailable', message: 'n/a' }));
     source.set(null);
   });
@@ -162,6 +164,7 @@ describe('ConfiguratorPageComponent', () => {
         useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
       },
       { provide: YamlLoaderService, useValue: yamlLoader },
+      { provide: ConfigWriteService, useValue: configWrite },
     ];
   }
 
@@ -317,6 +320,41 @@ describe('ConfiguratorPageComponent', () => {
 
     expect(configWrite.save).not.toHaveBeenCalled();
     expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+  });
+
+  describe('when the server has no write token', () => {
+    it('disables Save, says why, and leaves Copy and Download available', async () => {
+      const user = userEvent.setup();
+      configWrite.isWriteEnabled.mockReturnValue(of(false));
+      store.toDashboardConfig.mockReturnValue(draft());
+      await render(ConfiguratorPageComponent, {
+        providers: [...defaultProviders(), ...exportProviders()],
+      });
+
+      const save = screen.getByRole('button', { name: 'Save' });
+      expect(save).toBeDisabled();
+      expect(save).toHaveAccessibleDescription(/CONFIG_WRITE_TOKEN/);
+      expect(screen.getByRole('button', { name: 'Copy YAML' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Download YAML' })).toBeEnabled();
+
+      await user.click(save);
+
+      expect(configWrite.save).not.toHaveBeenCalled();
+      expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['has a write token', of(true)],
+      ['has not answered yet', NEVER],
+    ])('keeps Save available and says nothing while the server %s', async (_label, capability) => {
+      configWrite.isWriteEnabled.mockReturnValue(capability);
+      await render(ConfiguratorPageComponent, {
+        providers: [...defaultProviders(), ...exportProviders()],
+      });
+
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+      expect(screen.queryByText(/CONFIG_WRITE_TOKEN on the server/)).not.toBeInTheDocument();
+    });
   });
 
   describe('revealing the errors', () => {
