@@ -8,6 +8,21 @@ html {
   scrollbar-gutter: stable;
 }
 
+/*
+ * The configurator moves between its sections, fields and error summary with scrollIntoView; like the
+ * prototype it does so smoothly. Only while that page is mounted (the dashboard has none), and never
+ * under reduced motion.
+ */
+html:has(app-configurator-page) {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(app-configurator-page) {
+    scroll-behavior: auto;
+  }
+}
+
 /* D15: scroll anchoring must not move scrollTop behind the scroll-state logic's back. */
 @utility overflow-anchor-none {
   overflow-anchor: none;
