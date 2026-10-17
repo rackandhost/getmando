@@ -10,7 +10,9 @@
 <main class="min-w-0 flex-1">
   <div class="glass-card mt-10 mb-7 flex max-w-[760px] flex-col gap-2.5 rounded-3xl px-8 py-7">
     <p class="font-mono text-xs font-medium tracking-[0.14em] text-accent">DASHBOARD SETUP</p>
-    <h1 class="text-[40px] leading-[1.1] font-semibold tracking-[-0.02em] text-text">
+    <h1
+      class="text-[40px] leading-[1.1] font-semibold tracking-[-0.02em] wrap-anywhere text-text max-[330px]:text-[30px]"
+    >
       Configuration editor
     </h1>
     <p class="text-[15px] leading-[1.55] text-muted">
@@ -59,7 +61,7 @@
         section="start"
         title="Choose a starting point"
       >
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3">
           <button
             aria-describedby="start-empty-caption"
             aria-labelledby="start-empty-title"
@@ -151,7 +153,7 @@
         section="metadata"
         title="Metadata"
       >
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-x-5 gap-y-4">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
           <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Dashboard title
             <input
@@ -193,7 +195,7 @@
         section="settings"
         title="Settings"
       >
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-x-5 gap-y-4">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
           <app-segmented
             controlId="field-settings-theme"
             label="Theme"
@@ -258,11 +260,13 @@
           </label>
         </div>
 
-        <fieldset class="mt-7 border-t border-line pt-6">
+        <fieldset class="mt-7 min-w-0 border-t border-line pt-6">
           <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
             Display options
           </legend>
-          <div class="clear-both grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2.5">
+          <div
+            class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-2.5"
+          >
             @for (option of displayOptions; track option.field) {
               <app-switch
                 [checked]="isSettingEnabled(option.field)"
@@ -276,13 +280,15 @@
 
         <fieldset
           id="field-settings-searchEngines"
-          class="mt-7 border-t border-line pt-6"
+          class="mt-7 min-w-0 border-t border-line pt-6"
           tabindex="-1"
         >
           <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
             Search engines
           </legend>
-          <div class="clear-both grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2.5">
+          <div
+            class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-2.5"
+          >
             @for (engine of searchEngineOptions; track engine) {
               <app-switch
                 [checked]="hasSearchEngine(engine)"
