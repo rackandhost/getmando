@@ -110,6 +110,36 @@ describe('ConfiguratorStore', () => {
     expect(notifications.success).not.toHaveBeenCalled();
   });
 
+  describe('starting point', () => {
+    it('has no chosen starting point until the user picks one', () => {
+      expect(store.source()).toBeNull();
+    });
+
+    it('records starting empty, loading the mounted YAML and a successful import', () => {
+      mountedConfigResult.set({ status: 'valid', config: validConfig });
+      codec.parse.mockReturnValue({ success: true, config: validConfig });
+
+      store.startEmpty();
+      expect(store.source()).toBe('empty');
+
+      store.loadMountedConfig();
+      expect(store.source()).toBe('mounted');
+
+      store.importLocalYaml('metadata: {}');
+      expect(store.source()).toBe('import');
+    });
+
+    it('keeps the previous starting point when an import is invalid or the mounted YAML is unavailable', () => {
+      store.startEmpty();
+      codec.parse.mockReturnValue({ success: false, errors: [{ path: [], message: 'Invalid.' }] });
+
+      store.importLocalYaml('invalid: yaml');
+      store.loadMountedConfig();
+
+      expect(store.source()).toBe('empty');
+    });
+  });
+
   it('imports valid YAML into the draft and marks it dirty without browser persistence', () => {
     const getItem = vi.spyOn(Storage.prototype, 'getItem');
     const setItem = vi.spyOn(Storage.prototype, 'setItem');

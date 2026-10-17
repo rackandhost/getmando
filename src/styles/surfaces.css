@@ -1,0 +1,94 @@
+/*
+ * Surface recipes of the UI redesign (design.md § 3.2, spec design-system "Glass surfaces with a
+ * legibility floor"). Components take a recipe class and add only their own radius and layout.
+ *
+ * glass-chrome  header chip, buttons, search bar, tab bar, footer, sticky bands   floor --floor-bar
+ * glass-clock   clock widget                                                       floor --floor-clock
+ * glass-card    app cards, configurator panels, toasts, loading and error states   floor --floor-card
+ * glass-field   configurator text fields, selects, textareas (sit on a glass-card, no floor of their own)
+ *
+ * Each of the three glass surfaces declares, as custom properties, the stack it paints:
+ *   --glass-floor     opacity of the opaque --surface floor under the glass
+ *   --glass-layer     the glass colour or gradient painted over the floor
+ *   --glass-fallback  the opaque colour painted alone where backdrop-filter is unsupported
+ * src/testing/token-audit.ts reads these three, so the contrast audit measures the stack that is painted.
+ */
+
+@utility glass-chrome {
+  --glass-floor: var(--floor-bar);
+  --glass-layer: var(--chrome);
+  --glass-fallback: var(--surface);
+  --glass-floor-color: color-mix(
+    in srgb,
+    var(--surface) calc(var(--glass-floor) * 100%),
+    transparent
+  );
+
+  background:
+    var(--glass-layer), linear-gradient(var(--glass-floor-color), var(--glass-floor-color));
+  border: 1px solid var(--chrome-line);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass);
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: var(--glass-fallback);
+  }
+}
+
+@utility glass-clock {
+  --glass-floor: var(--floor-clock);
+  --glass-layer: var(--chrome);
+  --glass-fallback: var(--surface);
+  --glass-floor-color: color-mix(
+    in srgb,
+    var(--surface) calc(var(--glass-floor) * 100%),
+    transparent
+  );
+
+  background:
+    var(--glass-layer), linear-gradient(var(--glass-floor-color), var(--glass-floor-color));
+  border: 1px solid var(--chrome-line);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass);
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: var(--glass-fallback);
+  }
+}
+
+/*
+ * The card's hover colour is swapped through this registered custom property so the browser can interpolate it
+ * (a plain var() inside a background cannot be transitioned). Cards set --glass-layer: var(--card-layer).
+ */
+@property --card-layer {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+@utility glass-card {
+  --glass-floor: var(--floor-card);
+  --glass-layer: var(--card);
+  --glass-fallback: var(--surface);
+  --glass-floor-color: color-mix(
+    in srgb,
+    var(--surface) calc(var(--glass-floor) * 100%),
+    transparent
+  );
+
+  background:
+    linear-gradient(var(--glass-layer), var(--glass-layer)),
+    linear-gradient(var(--glass-floor-color), var(--glass-floor-color));
+  border: 1px solid var(--card-line);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: var(--card-glass);
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: var(--glass-fallback);
+  }
+}
+
+@utility glass-field {
+  background: var(--field);
+  border: 1px solid var(--field-border);
+}

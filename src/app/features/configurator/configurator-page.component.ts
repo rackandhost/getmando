@@ -1,4 +1,25 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  heroArrowDownTray,
+  heroArrowUpTray,
+  heroCheck,
+  heroClipboardDocument,
+  heroDocument,
+  heroServerStack,
+} from '@ng-icons/heroicons/outline';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -9,6 +30,7 @@ import {
   DashboardSettings,
   SelfhostedApp,
 } from '../../core/models/dashboard.models';
+import { METRICS_SOURCE, type Cancel } from '../../core/scroll/metrics-source';
 import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
@@ -16,11 +38,23 @@ import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
+import type { ChromeProbe } from '../../core/scroll/scroll-state.service';
+import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
+import {
+  AppSegmentedComponent,
+  type SegmentedOption,
+} from '../../shared/components/app-segmented/app-segmented.component';
+import { AppSwitchComponent } from '../../shared/components/app-switch/app-switch.component';
+import { HorizontalNavDirective } from '../../shared/directives/horizontal-nav.directive';
+import { StickyDockDirective } from '../../shared/directives/sticky-dock.directive';
 
 import {
   CollectionEditEvent,
   CollectionEditorComponent,
 } from './components/collection-editor.component';
+import { activeSection, activeThreshold } from './active-section';
+import { ChipAutocenterDirective } from './chip-autocenter.directive';
+import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 
 type BooleanSetting = Extract<
@@ -33,9 +67,56 @@ type BooleanSetting = Extract<
   | 'showLabels'
 >;
 
+/** Header padding in px at the top of the page and once scrolled (design.md § 4.1, "Configurator"). */
+const HEADER_PADDING = { full: 24, compact: 14 } as const;
+/** Below this viewport height the header stays Static, as the mobile dock does (design.md § 4.1). */
+const HEADER_MIN_VIEWPORT_HEIGHT = 500;
+
+/** Up to this viewport width (px) the layout is one column and the side navigation is a chip bar. */
+const NARROW_MAX_WIDTH = 900;
+/** Where the chip bar sticks (below the scrolled header), and the air a chip leaves above its section. */
+const CHIP_BAR_TOP = 96;
+const CHIP_BAR_CLEARANCE = 16;
+/** Air the sections keep under the sticky header on a wide page. */
+const SECTION_CLEARANCE = 20;
+
+const SECTIONS = [
+  { id: 'start', label: 'Starting point' },
+  { id: 'metadata', label: 'Metadata' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'applications', label: 'Applications' },
+  { id: 'bookmarks', label: 'Bookmarks' },
+  { id: 'export', label: 'Export' },
+].map((section, index) => ({
+  ...section,
+  number: String(index + 1).padStart(2, '0'),
+  elementId: configSectionId(section.id),
+}));
+
 @Component({
   selector: 'app-configurator-page',
-  imports: [CollectionEditorComponent],
+  imports: [
+    NgIcon,
+    AppHeaderComponent,
+    CollectionEditorComponent,
+    AppSegmentedComponent,
+    AppSwitchComponent,
+    ConfigSectionComponent,
+    ChipAutocenterDirective,
+    HorizontalNavDirective,
+    StickyDockDirective,
+  ],
+  viewProviders: [
+    provideIcons({
+      heroArrowDownTray,
+      heroArrowUpTray,
+      heroCheck,
+      heroClipboardDocument,
+      heroDocument,
+      heroServerStack,
+    }),
+  ],
   templateUrl: 'configurator-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
@@ -48,9 +129,108 @@ export class ConfiguratorPageComponent {
   private readonly notifications = inject(NotificationService);
   private readonly yamlCodec = inject(YamlCodecService);
   private readonly yamlLoader = inject(YamlLoaderService);
+  private readonly document = inject(DOCUMENT);
+
+  /** `false` only when the server says it has no write token; until it answers (or if it cannot), Save stays available. */
+  protected readonly writeEnabled = toSignal(this.configWrite.isWriteEnabled(), {
+    initialValue: true,
+  });
+
+  protected readonly sections = SECTIONS;
+  protected readonly headerPadding = HEADER_PADDING;
+
+  /** The sticky header follows the shared scroll state; padding 24 → 14 on both sides loses 20 px. */
+  protected readonly probe: ChromeProbe = {
+    id: 'configurator-header',
+    compactDelta: () => 2 * (HEADER_PADDING.full - HEADER_PADDING.compact),
+    minViewportHeight: HEADER_MIN_VIEWPORT_HEIGHT,
+  };
+
+  private readonly source = inject(METRICS_SOURCE);
+  private readonly injector = inject(Injector);
+  private readonly errorSummary = viewChild<ElementRef<HTMLElement>>('errorSummary');
+  private readonly dock = viewChild<ElementRef<HTMLElement>>('dockEl');
+  private readonly nav = viewChild<ElementRef<HTMLElement>>('navEl');
+  /** Space (px) the sections keep under the sticky stack when scrolled to; bound to `--section-margin`. */
+  protected readonly sectionMargin = signal(SECTION_CLEARANCE);
+  private cancelFrame: Cancel | null = null;
+
+  /** The section the side navigation marks as current (`id` of `sections`). */
+  protected readonly activeId = signal(SECTIONS[0].id);
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+
+    afterNextRender(() => {
+      const stops = [
+        this.source.onScroll(() => this.scheduleSpy()),
+        this.source.onLayoutChange(() => this.scheduleSpy()),
+      ];
+      this.scheduleSpy();
+
+      destroyRef.onDestroy(() => {
+        stops.forEach((stop) => stop());
+        this.cancelFrame?.();
+      });
+    });
+  }
+
+  /** Scroll and layout events only schedule a frame; the measurement happens in it. */
+  private scheduleSpy(): void {
+    if (this.cancelFrame) return;
+
+    this.cancelFrame = this.source.requestFrame(() => {
+      this.cancelFrame = null;
+      this.updateActiveSection();
+    });
+  }
+
+  private updateActiveSection(): void {
+    const positions = SECTIONS.flatMap(({ id, elementId }) => {
+      const element = this.document.getElementById(elementId);
+      return element ? [{ id, top: element.getBoundingClientRect().top }] : [];
+    });
+    const narrow = (this.document.defaultView?.innerWidth ?? Infinity) <= NARROW_MAX_WIDTH;
+    const bar = narrow ? this.nav()?.nativeElement.getBoundingClientRect() : undefined;
+    const stack = this.stackHeight(bar);
+    this.sectionMargin.set(this.marginFor(bar));
+    const atBottom =
+      this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
+
+    const active = activeSection(positions, activeThreshold(stack, narrow), atBottom);
+    if (active) this.activeId.set(active);
+  }
+
+  /**
+   * Height of what still covers the top of the viewport: the header while it is sticky (none once it has
+   * scrolled away) and, on a narrow page, the chip bar once it is stuck under it.
+   */
+  private stackHeight(bar: DOMRect | undefined): number {
+    const header = Math.max(0, this.dock()?.nativeElement.getBoundingClientRect().bottom ?? 0);
+    if (bar && bar.top <= CHIP_BAR_TOP + 1) return Math.max(header, bar.bottom);
+    return header;
+  }
+
+  /**
+   * `scroll-margin-top` of the sections. The header's height already is the document's `scroll-padding-top`;
+   * on a narrow page the margin adds what the chip bar covers beyond it, so a chip lands its section clear of the bar.
+   */
+  private marginFor(bar: DOMRect | undefined): number {
+    if (!bar) return SECTION_CLEARANCE;
+
+    const padding = parseFloat(this.document.documentElement.style.scrollPaddingTop) || 0;
+    return Math.max(SECTION_CLEARANCE, CHIP_BAR_TOP + bar.height + CHIP_BAR_CLEARANCE - padding);
+  }
 
   protected readonly draft = this.store.draft;
   protected readonly validationErrors = this.store.validationErrors;
+  protected readonly startingPoint = this.store.source;
+  protected readonly mountedPath = this.yamlLoader.mountedPath;
+  /** Export actions (mockup `config-5-export`): 44 px, radius 10; secondary on `--surface-2`, primary on `--accent`. */
+  protected readonly secondaryActionClass =
+    'flex h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface-2 px-4 text-sm font-medium text-text transition-colors duration-200 hover:bg-line disabled:cursor-not-allowed disabled:opacity-60';
+  protected readonly primaryActionClass =
+    'flex h-11 items-center gap-2 rounded-[10px] bg-accent text-sm font-semibold text-accent-ink transition-[filter] duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60';
   protected readonly isSavingToServer = signal(false);
   protected readonly showTokenPrompt = signal(false);
   protected readonly pendingToken = signal('');
@@ -67,9 +247,27 @@ export class ConfiguratorPageComponent {
     { field: 'showSeconds', label: 'Show seconds' },
     { field: 'showDate', label: 'Show date' },
     { field: 'allowBookmarks', label: 'Allow bookmarks' },
-    { field: 'showAllCategory', label: 'Show all category' },
+    { field: 'showAllCategory', label: 'Show “Apps” category' },
     { field: 'showDescriptions', label: 'Show descriptions' },
     { field: 'showLabels', label: 'Show labels' },
+  ];
+  protected readonly searchEngineLabels: Record<
+    DashboardSettings['searchEngines'][number],
+    string
+  > = {
+    google: 'Google',
+    duckduckgo: 'DuckDuckGo',
+    startpage: 'Startpage',
+    youtube: 'YouTube',
+  };
+  protected readonly themeOptions: readonly SegmentedOption[] = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'auto', label: 'Auto' },
+  ];
+  protected readonly datePositionOptions: readonly SegmentedOption[] = [
+    { value: 'top', label: 'Top' },
+    { value: 'bottom', label: 'Bottom' },
   ];
 
   protected startEmpty(): void {
@@ -78,6 +276,19 @@ export class ConfiguratorPageComponent {
 
   protected canLoadMountedConfig(): boolean {
     return this.store.canLoadMountedConfig();
+  }
+
+  /** `applications[6].category` for `['applications', '6', 'category']`; empty when the error has no field. */
+  protected formatPath(path: readonly string[]): string {
+    return path.reduce(
+      (formatted, segment) =>
+        /^\d+$/.test(segment)
+          ? `${formatted}[${segment}]`
+          : formatted
+            ? `${formatted}.${segment}`
+            : segment,
+      '',
+    );
   }
 
   protected loadMountedConfig(): void {
@@ -107,17 +318,19 @@ export class ConfiguratorPageComponent {
     } as Partial<DashboardSettings>);
   }
 
-  protected updateSettingBoolean(field: BooleanSetting, event: Event): void {
-    this.store.updateSettings({
-      [field]: (event.target as HTMLInputElement).checked,
-    } as Partial<DashboardSettings>);
+  protected setSettingBoolean(field: BooleanSetting, checked: boolean): void {
+    this.store.updateSettings({ [field]: checked } as Partial<DashboardSettings>);
   }
 
-  protected updateSearchEngines(
+  /** Theme and date position: the value comes from a segmented control, already one of its options. */
+  protected setSettingChoice(field: 'theme' | 'datePosition', value: string): void {
+    this.store.updateSettings({ [field]: value } as Partial<DashboardSettings>);
+  }
+
+  protected setSearchEngine(
     engine: DashboardSettings['searchEngines'][number],
-    event: Event,
+    enabled: boolean,
   ): void {
-    const enabled = (event.target as HTMLInputElement).checked;
     const current = this.draft().settings.searchEngines;
     const searchEngines = enabled
       ? [...new Set([...current, engine])]
@@ -148,14 +361,37 @@ export class ConfiguratorPageComponent {
     return this.errorFor(path) ? this.errorId(path) : undefined;
   }
 
-  /** Native `#id` anchor navigation only scrolls the document, not this page's own scroll region. */
+  /** The page's own path in front of an anchor: a bare `#id` resolves against `<base href>` and points at the app root. */
+  protected anchorHref(elementId: string): string {
+    return `${this.document.location.pathname}#${elementId}`;
+  }
+
+  /**
+   * Native `#id` anchor navigation only scrolls the document, not this page's own scroll region. A field
+   * that is not rendered (an empty collection has no rows) takes the user to its section instead of
+   * letting the click navigate.
+   */
   protected jumpToField(path: readonly string[], event: Event): void {
-    const target = document.getElementById(this.fieldId(path));
-    if (!target) return;
+    const target = this.document.getElementById(this.fieldId(path));
+    if (!target) {
+      if (path[0]) this.goToSection(`section-${path[0]}`, event);
+      else event.preventDefault();
+      return;
+    }
 
     event.preventDefault();
     target.scrollIntoView({ block: 'center' });
     target.focus();
+  }
+
+  /**
+   * Scrolls a section below the sticky header (the dock's `scroll-padding-top`) and moves focus to its
+   * heading. A bare `#id` href would resolve against `<base href>` and leave the page.
+   */
+  protected goToSection(elementId: string, event: Event): void {
+    event.preventDefault();
+    this.document.getElementById(elementId)?.scrollIntoView({ block: 'start' });
+    this.document.getElementById(`${elementId}-heading`)?.focus({ preventScroll: true });
   }
 
   protected errorFor(path: readonly string[]): string | undefined {
@@ -243,7 +479,7 @@ export class ConfiguratorPageComponent {
   }
 
   protected async saveToServer(): Promise<void> {
-    const config = this.store.toDashboardConfig();
+    const config = this.exportableConfig();
     if (!config) return;
 
     if (!this.configWrite.hasToken()) {
@@ -262,7 +498,7 @@ export class ConfiguratorPageComponent {
     this.pendingToken.set('');
     this.showTokenPrompt.set(false);
 
-    const config = this.store.toDashboardConfig();
+    const config = this.exportableConfig();
     if (!config) return;
 
     await this.performSave(config);
@@ -291,6 +527,7 @@ export class ConfiguratorPageComponent {
 
     if (result.status === 'invalid') {
       this.store.reportServerValidationErrors(result.errors);
+      this.revealErrors();
       this.notifications.error('The server rejected the configuration. Check the errors below.');
       return;
     }
@@ -313,8 +550,25 @@ export class ConfiguratorPageComponent {
     }
   }
 
-  private serializeExportableDraft(): string | undefined {
+  /** The validated draft, or `undefined` after bringing the error summary into view. */
+  private exportableConfig(): DashboardConfig | undefined {
     const config = this.store.toDashboardConfig();
+    if (!config) this.revealErrors();
+    return config;
+  }
+
+  /**
+   * The summary sits at the top of the page, far from Export and Save: once it has rendered, scroll to it so
+   * a rejected action is not mistaken for one that did nothing.
+   */
+  private revealErrors(): void {
+    afterNextRender(() => this.errorSummary()?.nativeElement.scrollIntoView({ block: 'start' }), {
+      injector: this.injector,
+    });
+  }
+
+  private serializeExportableDraft(): string | undefined {
+    const config = this.exportableConfig();
     return config ? this.yamlCodec.serialize(config) : undefined;
   }
 

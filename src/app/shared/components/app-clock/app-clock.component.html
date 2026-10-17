@@ -1,23 +1,64 @@
-<section class="flex flex-col items-center justify-center gap-1 mb-6">
-  @if (dateOnTop) {
-    <ng-container *ngTemplateOutlet="dateTemplate"></ng-container>
-  }
-
-  <p class="text-5xl flex items-end gap-1">
-    {{ currentDate() | date: 'HH:mm' }}
-
-    @if (showSeconds) {
-      <small class="text-sm">{{ currentDate() | date: 'ss' }}</small>
+<section
+  class="flex justify-center transition-[padding] duration-300"
+  [class]="compact() ? 'pt-3 pb-2.5' : 'pt-8 pb-5 min-[601px]:pb-8'"
+>
+  <div
+    class="glass-clock flex items-center justify-center text-text transition-[padding,border-radius] duration-300"
+    role="img"
+    [attr.aria-label]="label()"
+    [attr.data-compact]="compact()"
+    [class]="
+      compact()
+        ? 'rounded-[26px] px-[22px] py-2.5'
+        : 'flex-wrap gap-1.5 rounded-[32px] px-3 py-3 min-[601px]:gap-3 min-[601px]:px-7 min-[601px]:py-[18px]'
+    "
+  >
+    @if (dateOnTop && !compact()) {
+      <ng-container *ngTemplateOutlet="pills" />
     }
-  </p>
 
-  @if (dateOnBottom) {
-    <ng-container *ngTemplateOutlet="dateTemplate"></ng-container>
-  }
+    <p
+      class="flex items-baseline leading-none font-extrabold tracking-[-0.03em] transition-[font-size] duration-300"
+      [class]="compact() ? 'text-[40px]' : 'text-[clamp(32px,9.5vw,40px)] min-[601px]:text-[54px]'"
+    >
+      <span
+        class="text-clock-ink"
+        [class]="compact() ? '[-webkit-text-stroke:1px_var(--clock-ink)]' : ''"
+        >{{ parts().hours }}</span
+      >
+      <span class="px-[0.06em] text-accent">:</span>
+      <span
+        class="text-minute-fill"
+        [class]="compact() ? '[-webkit-text-stroke:1.2px_var(--accent)]' : ''"
+        >{{ parts().minutes }}</span
+      >
+      @if (showSeconds) {
+        <span
+          aria-hidden="true"
+          class="ml-[0.12em] font-mono text-[max(14px,0.18em)] font-semibold tracking-normal text-muted tabular-nums"
+          >{{ parts().seconds }}</span
+        >
+      }
+    </p>
+
+    @if (dateOnBottom || (dateOnTop && compact())) {
+      <ng-container *ngTemplateOutlet="pills" />
+    }
+  </div>
 </section>
 
-<ng-template #dateTemplate>
-  <p class="text-lg">
-    {{ currentDate() | date: dateFormat }}
-  </p>
+<ng-template #pills>
+  <div
+    class="flex items-center justify-center font-mono font-semibold"
+    [class]="
+      compact()
+        ? 'ml-4 gap-2 border-l border-line pl-4 text-xs tracking-[0.16em] [&>span]:px-[11px] [&>span]:py-[5px]'
+        : 'gap-1 text-[10px] tracking-[0.08em] min-[601px]:gap-2 min-[601px]:text-xs min-[601px]:tracking-[0.16em] [&>span]:px-[5px] [&>span]:py-[3px] min-[601px]:[&>span]:px-2 min-[601px]:[&>span]:py-1'
+    "
+  >
+    <span class="rounded-full bg-accent text-accent-ink">{{ parts().weekday | uppercase }}</span>
+    <span class="rounded-full border border-pill-line bg-pill-bg text-text">{{
+      parts().date | uppercase
+    }}</span>
+  </div>
 </ng-template>

@@ -21,7 +21,8 @@ export class YamlLoaderService {
   private readonly yamlParser = inject(YamlParserService);
   private readonly logger = inject(LoggerService);
   private readonly notifications = inject(NotificationService);
-  private readonly configPath = '/config/dashboard.yaml';
+  /** Where the mounted dashboard YAML is served from. */
+  readonly mountedPath = '/config/dashboard.yaml';
   private readonly mountedResultState = signal<MountedConfigResult | undefined>(undefined);
   private mountedRequest?: Observable<MountedConfigResult>;
 
@@ -42,7 +43,7 @@ export class YamlLoaderService {
   }
 
   private fetchMountedConfig(): Observable<MountedConfigResult> {
-    return this.http.get(this.configPath, { responseType: 'text' }).pipe(
+    return this.http.get(this.mountedPath, { responseType: 'text' }).pipe(
       retry({
         count: 3,
         delay: (error: unknown, retryCount) =>
@@ -91,7 +92,7 @@ export class YamlLoaderService {
   }
 
   configExists(): Observable<boolean> {
-    return this.http.head(this.configPath).pipe(
+    return this.http.head(this.mountedPath).pipe(
       map(() => true),
       catchError(() => of(false)),
     );

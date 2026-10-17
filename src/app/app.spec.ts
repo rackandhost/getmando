@@ -74,14 +74,24 @@ describe('App', () => {
     expect(fixture.nativeElement.querySelectorAll('app-toast')).toHaveLength(1);
   });
 
-  it('renders the shared header and footer once around the routed content', async () => {
-    await render(App, { providers: shellProviders });
+  it('renders the footer once after the routed content and leaves the header to each view', async () => {
+    await render(App, {
+      providers: [
+        ...shellProviders.slice(1),
+        provideRouter([{ path: '', component: StubPageComponent }]),
+      ],
+    });
 
-    expect(screen.getByRole('banner')).toHaveTextContent('Mando');
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('contentinfo')).toHaveLength(1);
     expect(screen.getByRole('contentinfo')).toHaveTextContent('Powered by Mando');
+    expect(
+      (await screen.findByRole('main')).compareDocumentPosition(screen.getByRole('contentinfo')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it('keeps the header before the routed content in tab order', async () => {
+  it('keeps the routed content before the footer in tab order', async () => {
     const user = userEvent.setup();
     await render(App, {
       providers: [
@@ -91,11 +101,9 @@ describe('App', () => {
     });
 
     await user.tab();
-    expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('button', { name: 'Toggle theme' })).toHaveFocus();
-    await user.tab();
     expect(screen.getByRole('button', { name: 'Stub action' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Mando' })).toHaveFocus();
   });
 
   it('applies the background image that matches the current theme', async () => {

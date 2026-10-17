@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
 import { AppFooterComponent } from '../app-footer/app-footer.component';
-import { AppHeaderComponent } from '../app-header/app-header.component';
 
-/** Fixed header, scrollable routed content, and fixed footer shared by every route. */
+/**
+ * Centred page container shared by every route. The window scrolls: routed content (which renders its
+ * own header) is followed by the footer in normal flow.
+ */
 @Component({
   selector: 'app-shell',
-  imports: [AppFooterComponent, AppHeaderComponent],
+  imports: [AppFooterComponent],
   templateUrl: 'app-shell.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

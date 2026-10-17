@@ -1,19 +1,40 @@
-<main class="flex min-h-0 flex-1 flex-col overflow-hidden">
-  <div class="shrink-0 p-6 md:p-8 md:pt-0 flex flex-col justify-center">
-    <app-clock />
+<!-- Above 600 px the outer dock is the sticky one and holds the header, clock, search and tabs. At or below it
+     the outer dock and the region are `display: contents` and the inner dock (search + tabs) is the sticky
+     one, so header and clock scroll away. The header stays a top-level banner; the rest sits in a labelled
+     region so no content is outside a landmark. -->
+<div
+  #dockEl
+  #dock="appStickyDock"
+  class="sticky top-0 z-20 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] pb-4 transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative max-[601px]:contents"
+  [appStickyDock]="probe"
+>
+  @let compact = dock.mode() === 'scrolled';
 
-    <app-finder />
+  <app-header [compact]="compact" />
 
-    <app-categories class="flex items-center justify-center" />
-  </div>
+  <section aria-label="Dashboard controls" class="max-[601px]:contents">
+    <app-clock [compact]="compact" />
 
-  <!-- Apps grid - scrollable -->
-  <div class="flex-1 overflow-y-auto px-6 md:px-8 pt-3 md:pt-6 pb-14">
+    <div
+      #mobileDock="appStickyDock"
+      class="max-[601px]:sticky max-[601px]:top-0 max-[601px]:z-20 max-[601px]:-mx-[clamp(16px,4vw,40px)] max-[601px]:px-[clamp(16px,4vw,40px)] max-[601px]:py-3 max-[601px]:transition-[background-color,box-shadow,backdrop-filter] max-[601px]:duration-300 max-[601px]:data-[dock=scrolled]:bg-[var(--band)] max-[601px]:data-[dock=scrolled]:shadow-[var(--band-shadow)] max-[601px]:data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] max-[601px]:data-[dock=static]:relative"
+      [appStickyDock]="mobileProbe"
+    >
+      <app-finder [compact]="compact || mobileDock.mode() === 'scrolled'" />
+
+      <app-categories class="block" />
+    </div>
+  </section>
+</div>
+
+<main class="flex min-w-0 flex-1 flex-col">
+  <!-- Apps grid: the window scrolls -->
+  <div class="pb-6 pt-3 max-[601px]:pt-0 md:pt-6">
     @if (filteredApps(); as apps) {
       @if (apps.length > 0) {
         <ul
           aria-label="Applications"
-          [class]="`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${itemsPerRow} gap-4 md:gap-6`"
+          [class]="`grid grid-cols-1 gap-[14px] md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${itemsPerRow}`"
         >
           @for (app of apps; track app.id) {
             <li>
@@ -24,11 +45,15 @@
       } @else {
         <!-- Empty state -->
         <section
-          class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-12 md:p-16 text-center shadow-lg"
+          class="flex flex-col items-start gap-2.5 rounded-[14px] border border-dashed border-line-strong bg-surface px-8 py-12"
         >
-          <div class="text-6xl mb-4">🔍</div>
-          <h2 class="text-2xl font-semibold text-white mb-2">No applications found</h2>
-          <p class="text-white/70">
+          <ng-icon
+            aria-hidden="true"
+            class="text-[28px] [--ng-icon__color:var(--muted)]"
+            name="heroMagnifyingGlassMinus"
+          />
+          <h2 class="text-lg font-semibold text-text">No applications found</h2>
+          <p class="text-sm text-muted">
             @if (searchQuery()) {
               Try adjusting your search query or select a different category.
             } @else {

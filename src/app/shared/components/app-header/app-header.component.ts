@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
@@ -20,6 +20,16 @@ export class AppHeaderComponent {
   private readonly themeService = inject(ThemeService);
   private readonly metadataService = inject(MetadataService);
   private readonly router = inject(Router);
+
+  /** The scrolled dock reduces the header's vertical padding (design.md § 4.1). */
+  readonly compact = input(false);
+
+  /** Vertical padding in px at the top of the page and once compact; the configurator uses 24 → 14. */
+  readonly verticalPadding = input({ full: 24, compact: 12 });
+
+  protected readonly paddingY = computed(() =>
+    this.compact() ? this.verticalPadding().compact : this.verticalPadding().full,
+  );
 
   readonly metadata = this.metadataService.metadata;
 

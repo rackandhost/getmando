@@ -18,10 +18,11 @@ describe('AppFinderComponent', () => {
     setSearchQuery: vi.fn(),
   };
 
-  const setup = async (searchEngines: SearchEngine[] = []) => {
+  const setup = async (searchEngines: SearchEngine[] = [], inputs: { compact?: boolean } = {}) => {
     appServiceMock.setSearchQuery.mockReset();
 
     return render(AppFinderComponent, {
+      inputs,
       providers: [
         {
           provide: AppService,
@@ -46,7 +47,7 @@ describe('AppFinderComponent', () => {
 
     expect(screen.getByRole('searchbox', { name: 'Search applications' })).toHaveAttribute(
       'placeholder',
-      'Search on your applications...',
+      'Search your applications…',
     );
   });
 
@@ -75,7 +76,7 @@ describe('AppFinderComponent', () => {
 
     const view = await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
 
     await expectNoAxeViolations(view.container);
   });
@@ -111,15 +112,12 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
 
-    expect(searchInput).toHaveAttribute(
-      'placeholder',
-      `Search on the web... (press enter to search on ${googleEngine.name})`,
-    );
+    expect(searchInput).toHaveAttribute('placeholder', `Search on ${googleEngine.name}…`);
 
     await user.type(searchInput, 'grafana');
 
@@ -133,7 +131,7 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
@@ -158,7 +156,7 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
@@ -181,7 +179,7 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
@@ -209,14 +207,11 @@ describe('AppFinderComponent', () => {
 
     expect(appServiceMock.setSearchQuery).toHaveBeenLastCalledWith('plex');
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     expect(searchInput).toHaveValue('');
-    expect(searchInput).toHaveAttribute(
-      'placeholder',
-      `Search on the web... (press enter to search on ${googleEngine.name})`,
-    );
+    expect(searchInput).toHaveAttribute('placeholder', `Search on ${googleEngine.name}…`);
     expect(appServiceMock.setSearchQuery).toHaveBeenLastCalledWith('');
 
     const callsBeforeExternalTyping = appServiceMock.setSearchQuery.mock.calls.length;
@@ -233,7 +228,7 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
@@ -242,10 +237,10 @@ describe('AppFinderComponent', () => {
 
     expect(appServiceMock.setSearchQuery).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
-    await user.click(screen.getByRole('option', { name: 'Search on your apps' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+    await user.click(screen.getByRole('option', { name: 'Your apps' }));
 
-    expect(searchInput).toHaveAttribute('placeholder', 'Search on your applications...');
+    expect(searchInput).toHaveAttribute('placeholder', 'Search your applications…');
 
     await user.type(searchInput, 'radarr');
 
@@ -301,6 +296,44 @@ describe('AppFinderComponent', () => {
     expect(appServiceMock.setSearchQuery).toHaveBeenLastCalledWith('');
   });
 
+  describe('clear and submit buttons', () => {
+    it('are absent until there is a query', async () => {
+      await setup();
+
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+    });
+
+    it('appear as real buttons with a query and both go away after clearing', async () => {
+      const user = userEvent.setup();
+      await setup();
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'media');
+
+      expect(screen.getByRole('button', { name: 'Clear search' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Clear search' }));
+
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+    });
+
+    it('submits to the selected engine from the accent button, once per activation', async () => {
+      const user = userEvent.setup();
+      const googleEngine = DEFAULT_DASHBOARD_SEARCH_ENGINES[0];
+      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => window);
+      await setup([googleEngine]);
+
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+      await user.click(screen.getByRole('option', { name: googleEngine.name }));
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(screen.getByRole('button', { name: 'Search' }));
+
+      expect(windowOpenSpy).toHaveBeenCalledTimes(1);
+      expect(windowOpenSpy).toHaveBeenCalledWith('https://www.google.com/search?q=plex', '_blank');
+    });
+  });
   it('should clear search via keyboard Space on clear icon', async () => {
     const user = userEvent.setup();
 
@@ -326,7 +359,7 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
@@ -351,7 +384,7 @@ describe('AppFinderComponent', () => {
 
     await setup([googleEngine]);
 
-    await user.click(screen.getByRole('button', { name: 'Select search engine' }));
+    await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
     await user.click(screen.getByRole('option', { name: googleEngine.name }));
 
     const searchInput = screen.getByRole('searchbox', { name: 'Search applications' });
@@ -367,5 +400,90 @@ describe('AppFinderComponent', () => {
       'https://www.google.com/search?q=home%20assistant',
       '_blank',
     );
+  });
+
+  describe('dock variant', () => {
+    const bar = () =>
+      screen
+        .getByRole('searchbox', { name: 'Search applications' })
+        .closest<HTMLElement>('[data-compact]') as HTMLElement;
+
+    it('is neither compact nor expanded by default', async () => {
+      await setup();
+
+      expect(bar()).toHaveAttribute('data-compact', 'false');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('is compact and not expanded while idle in the scrolled dock', async () => {
+      await setup([], { compact: true });
+
+      expect(bar()).toHaveAttribute('data-compact', 'true');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('expands while the input has focus and collapses when it loses it', async () => {
+      const user = userEvent.setup();
+      await setup([], { compact: true });
+
+      await user.click(screen.getByRole('searchbox', { name: 'Search applications' }));
+      expect(bar()).toHaveAttribute('data-expanded', 'true');
+
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('stays expanded while there is a query, even without focus', async () => {
+      const user = userEvent.setup();
+      await setup([], { compact: true });
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-expanded', 'true');
+
+      await user.click(screen.getByRole('button', { name: 'Clear search' }));
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('expands while the engine menu is open and collapses when it closes', async () => {
+      const user = userEvent.setup();
+      await setup([DEFAULT_DASHBOARD_SEARCH_ENGINES[0]], { compact: true });
+
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+      expect(bar()).toHaveAttribute('data-expanded', 'true');
+
+      await user.keyboard('{Escape}');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('never expands outside the scrolled dock, so the full-size bar is unchanged', async () => {
+      const user = userEvent.setup();
+      await setup([DEFAULT_DASHBOARD_SEARCH_ENGINES[0]], { compact: false });
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('exposes its size (full, compact, expanded) so the buttons inside can scale with it', async () => {
+      const user = userEvent.setup();
+      const view = await setup();
+
+      expect(bar()).toHaveAttribute('data-size', 'full');
+
+      view.fixture.componentRef.setInput('compact', true);
+      view.fixture.detectChanges();
+      expect(bar()).toHaveAttribute('data-size', 'compact');
+
+      await user.click(screen.getByRole('searchbox', { name: 'Search applications' }));
+      expect(bar()).toHaveAttribute('data-size', 'expanded');
+
+      await user.click(document.body);
+      view.fixture.componentRef.setInput('compact', false);
+      view.fixture.detectChanges();
+      expect(bar()).toHaveAttribute('data-size', 'full');
+    });
   });
 });

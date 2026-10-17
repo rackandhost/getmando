@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroArrowRight, heroXMark } from '@ng-icons/heroicons/outline';
 
@@ -31,12 +31,51 @@ export class AppFinderComponent {
   protected readonly availableEngines = computed(() => this.searchService.searchEngines());
   protected readonly currentEngine = computed(() => this.selectedEngine() ?? null);
 
-  get inputPlaceholder(): string {
-    if (this.currentEngine()) {
-      return `Search on the web... (press enter to search on ${this.currentEngine()?.name})`;
-    }
+  /** The scrolled dock shrinks the bar to 44 px / 440 px wide (design.md § 4.1). */
+  readonly compact = input(false);
 
-    return 'Search on your applications...';
+  protected readonly inputFocused = signal(false);
+  protected readonly menuOpen = signal(false);
+
+  /** Compact bars grow back while the input has focus, a query is typed or the engine menu is open. */
+  protected readonly expanded = computed(
+    () => this.compact() && (this.inputFocused() || this.haveSearch() || this.menuOpen()),
+  );
+
+  /** Which of the bar's three sizes is showing; the buttons inside scale with it (see the template). */
+  protected readonly size = computed<'full' | 'compact' | 'expanded'>(() => {
+    if (!this.compact()) return 'full';
+    return this.expanded() ? 'expanded' : 'compact';
+  });
+
+  protected readonly barSize = computed(() => {
+    switch (this.size()) {
+      case 'full':
+        return 'mx-auto mb-7 h-[60px] max-w-full';
+      case 'expanded':
+        return 'mx-auto mb-3 h-[52px] max-w-full';
+      case 'compact':
+        return 'mx-auto mb-3 h-11 max-w-[440px]';
+    }
+  });
+
+  protected onFocusIn(event: FocusEvent): void {
+    if (event.target instanceof HTMLInputElement) this.inputFocused.set(true);
+  }
+
+  /** Focus moving to the engine or clear button inside the bar is not leaving it, so the bar keeps its size. */
+  protected onFocusOut(event: FocusEvent): void {
+    const bar = event.currentTarget as HTMLElement;
+
+    if (!(event.relatedTarget instanceof Node) || !bar.contains(event.relatedTarget)) {
+      this.inputFocused.set(false);
+    }
+  }
+
+  get inputPlaceholder(): string {
+    const engine = this.currentEngine();
+
+    return engine ? `Search on ${engine.name}…` : 'Search your applications…';
   }
 
   /**

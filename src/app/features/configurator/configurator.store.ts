@@ -99,6 +99,9 @@ function toParseErrors(
   }));
 }
 
+/** Where the current draft came from, once the user has chosen. */
+export type StartingPoint = 'empty' | 'mounted' | 'import';
+
 /** Holds the browser-only configuration draft until it passes the shared schema boundary. */
 @Injectable()
 export class ConfiguratorStore {
@@ -107,10 +110,12 @@ export class ConfiguratorStore {
   private readonly notifications = inject(NotificationService);
   private readonly draftState = signal<ConfiguratorDraft>(createEmptyDraft());
   private readonly dirtyState = signal(false);
+  private readonly sourceState = signal<StartingPoint | null>(null);
   private readonly validationErrorState = signal<readonly ParseError[]>([]);
 
   readonly draft = this.draftState.asReadonly();
   readonly isDirty = this.dirtyState.asReadonly();
+  readonly source = this.sourceState.asReadonly();
   readonly validationErrors = this.validationErrorState.asReadonly();
   readonly canLoadMountedConfig = computed(
     () => this.yamlLoader.mountedConfigResult()?.status === 'valid',
@@ -120,6 +125,7 @@ export class ConfiguratorStore {
     this.draftState.set(createEmptyDraft());
     this.validationErrorState.set([]);
     this.dirtyState.set(false);
+    this.sourceState.set('empty');
     this.notifications.success('Started a new empty configuration draft.');
   }
 
@@ -130,6 +136,7 @@ export class ConfiguratorStore {
     this.draftState.set(cloneConfig(blankDefaultBackgroundImages(mountedConfig.config)));
     this.validationErrorState.set([]);
     this.dirtyState.set(false);
+    this.sourceState.set('mounted');
     this.notifications.success('Loaded the mounted dashboard YAML.');
   }
 
@@ -144,6 +151,7 @@ export class ConfiguratorStore {
     this.draftState.set(cloneConfig(blankDefaultBackgroundImages(result.config)));
     this.validationErrorState.set([]);
     this.dirtyState.set(true);
+    this.sourceState.set('import');
     this.notifications.success('Imported the local YAML file into the draft.');
   }
 

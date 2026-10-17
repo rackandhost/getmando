@@ -1,15 +1,37 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
+  effect,
   ElementRef,
+  inject,
+  Injector,
   input,
   output,
+  signal,
+  untracked,
   viewChildren,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroArrowDown, heroArrowUp, heroPlus } from '@ng-icons/heroicons/outline';
+import {
+  heroChevronDown,
+  heroChevronUp,
+  heroPencil,
+  heroPlus,
+  heroTrash,
+} from '@ng-icons/heroicons/outline';
 
 import { IconConfig } from '../../../core/models/dashboard.models';
+
+import { IconService } from '../../../core/services/icon.service';
+import {
+  AppSelectComponent,
+  type SelectOption,
+} from '../../../shared/components/app-select/app-select.component';
+import { AppSwitchComponent } from '../../../shared/components/app-switch/app-switch.component';
+
+import { ConfigSectionComponent } from './config-section.component';
 
 type CollectionName = 'categories' | 'applications' | 'bookmarks';
 type EditableItem = {
@@ -47,9 +69,11 @@ export type CollectionEditEvent =
 
 @Component({
   selector: 'app-collection-editor',
-  imports: [NgIcon],
+  imports: [NgIcon, AppSelectComponent, AppSwitchComponent, ConfigSectionComponent],
   templateUrl: 'collection-editor.component.html',
-  viewProviders: [provideIcons({ heroArrowDown, heroArrowUp, heroPlus })],
+  viewProviders: [
+    provideIcons({ heroChevronDown, heroChevronUp, heroPencil, heroPlus, heroTrash }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
 })
@@ -59,16 +83,66 @@ export class CollectionEditorComponent {
   readonly categoryOptions = input<readonly Pick<EditableItem, 'id' | 'name'>[]>([]);
   readonly fieldErrorIds = input<Readonly<Record<string, string>>>({});
   readonly fieldErrors = input<Readonly<Record<string, string>>>({});
+  /** The `04`–`06` shown beside the heading; empty when the editor is used outside the numbered page. */
+  readonly sectionNumber = input('');
   readonly addItem = output<void>();
   readonly removeItem = output<number>();
   readonly moveItem = output<{ from: number; to: number }>();
   readonly editItem = output<CollectionEditEvent>();
 
   private readonly removeButtons = viewChildren<ElementRef<HTMLButtonElement>>('removeButton');
+  private readonly editButtons = viewChildren<ElementRef<HTMLButtonElement>>('editButton');
   private readonly nameInputs = viewChildren<ElementRef<HTMLInputElement>>('nameInput');
+  private readonly moveUpButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveUpButton');
+  private readonly moveDownButtons = viewChildren<ElementRef<HTMLButtonElement>>('moveDownButton');
+  private readonly injector = inject(Injector);
+  private readonly iconService = inject(IconService);
+  /** Rows whose editor is open: opened by Edit, by Add, and by validation errors. */
+  private readonly openRows = signal<ReadonlySet<number>>(new Set());
+
+  protected readonly labelClass = 'flex flex-col gap-2 text-[13px] font-medium text-text';
+  protected readonly fieldClass =
+    'glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text';
+  protected readonly monoFieldClass = `${this.fieldClass} font-mono`;
+  protected readonly textareaClass =
+    'glass-field min-h-11 w-full rounded-[10px] px-3 py-2.5 text-sm font-normal text-text';
+  protected readonly errorClass = 'text-[13px] font-medium text-down';
+  /** Ghost icon buttons of a row (mockup): 40 px, radius 8, no border, muted until hovered. */
+  protected readonly actionClass =
+    'grid size-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:size-11';
+  protected readonly dangerActionClass =
+    'grid size-10 place-items-center rounded-lg text-down transition-colors hover:bg-down-bg pointer-coarse:size-11';
+  protected readonly selectButtonClass =
+    'glass-field h-11 rounded-[10px] pl-3.5 pr-4 text-sm font-normal text-text';
+  protected readonly iconTypeOptions: readonly SelectOption[] = [
+    { value: 'url', label: 'URL' },
+    { value: 'name', label: 'Name' },
+    { value: 'initials', label: 'Initials' },
+  ];
+  protected readonly categorySelectOptions = computed(() =>
+    this.categoryOptions().map(({ id, name }) => ({ value: id, label: name })),
+  );
+
+  constructor() {
+    // A row with a validation error opens, so the error and its field can be seen and reached.
+    effect(() => {
+      const rows = Object.keys(this.fieldErrors())
+        .map((key) => Number.parseInt(key, 10))
+        .filter(Number.isInteger);
+      if (rows.length === 0) return;
+
+      untracked(() => this.openRows.update((open) => new Set([...open, ...rows])));
+    });
+  }
 
   protected addLabel(): string {
     return `Add ${this.collectionLabel()}`;
+  }
+
+  /** `4 categories`, `1 bookmark`: what the section shows under its title. */
+  protected countLabel(): string {
+    const count = this.items().length;
+    return `${count} ${count === 1 ? this.collectionLabel() : this.collection()}`;
   }
 
   protected errorId(index: number, field: EditableField | IconField): string | undefined {
@@ -114,25 +188,25 @@ export class CollectionEditorComponent {
       category: `Application category for ${itemLabel}`,
       description: `${capitalized} description for ${itemLabel}`,
       url: `${capitalized} URL for ${itemLabel}`,
-      openNewTab: `Open ${itemLabel} in a new tab`,
+      openNewTab: `Open in new tab for ${itemLabel}`,
       tags: `${capitalized} tags for ${itemLabel}`,
-      favorite: `Mark ${itemLabel} as favorite`,
-      healthCheck: `Enable health checks for ${itemLabel}`,
+      favorite: `Favorite for ${itemLabel}`,
+      healthCheck: `Health check for ${itemLabel}`,
     };
 
     return labels[field];
   }
 
   protected editText(index: number, field: TextField, event: Event): void {
-    this.editItem.emit({
-      index,
-      field,
-      value: (event.target as HTMLInputElement | HTMLSelectElement).value,
-    });
+    this.setText(index, field, (event.target as HTMLInputElement).value);
   }
 
-  protected editBoolean(index: number, field: BooleanField, event: Event): void {
-    this.editItem.emit({ index, field, value: (event.target as HTMLInputElement).checked });
+  protected setText(index: number, field: TextField, value: string): void {
+    this.editItem.emit({ index, field, value });
+  }
+
+  protected setBoolean(index: number, field: BooleanField, value: boolean): void {
+    this.editItem.emit({ index, field, value });
   }
 
   protected editTags(index: number, event: Event): void {
@@ -149,6 +223,12 @@ export class CollectionEditorComponent {
 
   protected iconValue(index: number): string {
     return this.itemIcon(this.items()[index]).value;
+  }
+
+  /** What the field is called on screen: `Icon URL`, `Icon name` or `Icon initials`. */
+  protected iconValueText(index: number): string {
+    const type = this.iconType(index);
+    return `Icon ${type === 'url' ? 'URL' : type}`;
   }
 
   protected iconValueLabel(index: number): string {
@@ -168,8 +248,7 @@ export class CollectionEditorComponent {
     }
   }
 
-  protected updateIconType(index: number, event: Event): void {
-    const type = (event.target as HTMLSelectElement).value;
+  protected setIconType(index: number, type: string): void {
     if (!this.isIconType(type)) return;
 
     this.editItem.emit({
@@ -191,23 +270,111 @@ export class CollectionEditorComponent {
   }
 
   protected add(): void {
+    const newIndex = this.items().length;
     this.addItem.emit();
-    queueMicrotask(() => {
-      const nameInputs = this.nameInputs();
-      nameInputs[nameInputs.length - 1]?.nativeElement.focus();
-    });
+    this.expand(newIndex);
   }
 
   protected remove(index: number): void {
     this.removeItem.emit(index);
-    queueMicrotask(() => {
-      const survivor = this.removeButtons()[Math.min(index, this.removeButtons().length - 1)];
-      survivor?.nativeElement.focus();
+    this.remapOpenRows((row) => (row === index ? null : row > index ? row - 1 : row));
+    afterNextRender(
+      () => {
+        const buttons = this.removeButtons();
+        buttons[Math.min(index, buttons.length - 1)]?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** The moved item keeps its editor open and its focus: on the same-direction button, or the other at an end. */
+  protected move(from: number, to: number): void {
+    const buttons = to < from ? this.moveUpButtons : this.moveDownButtons;
+    const others = to < from ? this.moveDownButtons : this.moveUpButtons;
+
+    this.moveItem.emit({ from, to });
+    this.remapOpenRows((row) => (row === from ? to : row === to ? from : row));
+    afterNextRender(
+      () => {
+        const same = buttons()[to]?.nativeElement;
+        (same && !same.disabled ? same : others()[to]?.nativeElement)?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  protected isOpen(index: number): boolean {
+    return this.openRows().has(index);
+  }
+
+  /** Edit opens the editor and puts the focus in its first field, or closes it and keeps the focus on Edit. */
+  protected toggle(index: number): void {
+    if (this.isOpen(index)) {
+      this.collapse(index);
+    } else {
+      this.expand(index);
+    }
+  }
+
+  protected collapse(index: number): void {
+    this.openRows.update((rows) => {
+      const next = new Set(rows);
+      next.delete(index);
+      return next;
+    });
+    this.editButtons()[index]?.nativeElement.focus();
+  }
+
+  private expand(index: number): void {
+    this.openRows.update((rows) => new Set(rows).add(index));
+    afterNextRender(() => this.nameInputs()[index]?.nativeElement.focus(), {
+      injector: this.injector,
     });
   }
 
-  protected move(from: number, to: number): void {
-    this.moveItem.emit({ from, to });
+  protected editorId(index: number): string {
+    return `${this.collection()}-editor-${index}`;
+  }
+
+  protected rowNumber(index: number): string {
+    return String(index + 1).padStart(2, '0');
+  }
+
+  /** Categories are identified by their id; applications and bookmarks by where they lead. */
+  protected secondaryText(item: EditableItem): string {
+    return this.collection() === 'categories' ? item.id : item.url || item.id;
+  }
+
+  /** The tag of an application's row is its category's id (mockup `config-3`), the same text as the category row shows. */
+  protected categoryTag(item: EditableItem): string {
+    return this.collection() === 'applications' ? (item.category ?? '') : '';
+  }
+
+  /** `health · new tab`, `new tab`, or nothing. */
+  protected flagsSummary(item: EditableItem): string {
+    if (this.collection() === 'categories') return '';
+    return [
+      this.collection() === 'applications' && item.healthCheck ? 'health' : '',
+      (item.openNewTab ?? true) ? 'new tab' : '',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }
+
+  /** The icon as the dashboard shows it: the CDN icon of a name, the URL, or the generated initials. */
+  protected iconUrl(item: EditableItem): string {
+    const icon = this.itemIcon(item);
+    const usable = icon.type === 'initials' || icon.value.trim() !== '';
+    return this.iconService.getIconUrlFromConfig(
+      usable ? icon : { type: 'initials', value: '' },
+      this.itemLabel(item),
+    );
+  }
+
+  /** Generated initials fill the tile; real icons sit inside it, as on the dashboard cards. */
+  protected iconImageClass(item: EditableItem): string {
+    const generated = this.itemIcon(item).type === 'initials' || this.itemIcon(item).value === '';
+    return generated ? 'size-full object-cover' : 'size-6 object-contain';
   }
 
   protected collectionLabel(): string {
@@ -216,6 +383,19 @@ export class CollectionEditorComponent {
 
   protected supportsIcon(): boolean {
     return this.collection() === 'applications' || this.collection() === 'bookmarks';
+  }
+
+  /** Items are tracked by position, so the open rows follow their items through a move or a removal. */
+  private remapOpenRows(map: (row: number) => number | null): void {
+    this.openRows.update(
+      (rows) =>
+        new Set(
+          [...rows].flatMap((row) => {
+            const mapped = map(row);
+            return mapped === null ? [] : [mapped];
+          }),
+        ),
+    );
   }
 
   private errorKey(index: number, field: EditableField | IconField): string {

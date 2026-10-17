@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/angular';
+import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
+
+import { IconService } from '../../../core/services/icon.service';
 
 import { CollectionEditEvent, CollectionEditorComponent } from './collection-editor.component';
 
@@ -71,6 +73,7 @@ describe('CollectionEditorComponent', () => {
       on: { editItem: edited },
     });
 
+    await user.click(screen.getByRole('button', { name: 'Edit Media' }));
     expect(screen.getByRole('group', { name: 'Icon for Media' })).toBeInTheDocument();
     const type = screen.getByLabelText('Icon type for Media');
     const field = screen.getByLabelText('Icon name for Media');
@@ -81,7 +84,8 @@ describe('CollectionEditorComponent', () => {
       'application-icon-name-help-0',
     );
 
-    await user.selectOptions(type, 'url');
+    await user.click(type);
+    await user.click(screen.getByRole('option', { name: 'URL' }));
     view.fixture.componentRef.setInput('items', [
       { id: 'media', name: 'Media', icon: { type: 'url', value: 'folder' } },
     ]);
@@ -116,10 +120,11 @@ describe('CollectionEditorComponent', () => {
         on: { editItem: edited },
       });
 
+      await user.click(screen.getByRole('button', { name: /^Edit / }));
       const field = screen.getByLabelText(fieldLabel);
       await user.click(field);
       if (collection === 'applications') {
-        await user.selectOptions(field, 'tools');
+        await user.click(screen.getByRole('option', { name: 'Tools' }));
       } else {
         await user.keyboard('{Control>}a{/Control}Updated');
       }
@@ -147,35 +152,42 @@ describe('CollectionEditorComponent', () => {
     },
   );
 
+  it.each(['categories', 'applications', 'bookmarks'] as const)(
+    'renders no empty list for an empty %s collection, only the explanation',
+    async (collection) => {
+      await render(CollectionEditorComponent, {
+        inputs: { collection, items: [] },
+      });
+
+      expect(screen.queryByRole('list')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    },
+  );
+
   it.each([
     ['categories', [{ id: 'media', name: 'Media' }], 'Category ID for Media'],
     ['applications', [{ id: 'plex', name: 'Plex', category: 'media' }], 'Application ID for Plex'],
     ['bookmarks', [{ id: 'docs', name: 'Docs' }], 'Bookmark ID for Docs'],
-  ] as const)('preserves keyboard focus while editing %s IDs', async (collection, items, label) => {
-    const user = userEvent.setup();
-    const edited = vi.fn((event: CollectionEditEvent) => {
-      if (event.field !== 'id') return;
+  ] as const)(
+    'shows the %s ID but does not let the user edit it',
+    async (collection, items, label) => {
+      const user = userEvent.setup();
+      const edited = vi.fn();
+      await render(CollectionEditorComponent, {
+        inputs: { collection, items },
+        on: { editItem: edited },
+      });
 
-      view.fixture.componentRef.setInput(
-        'items',
-        items.map((item, itemIndex) =>
-          itemIndex === event.index ? { ...item, id: event.value } : item,
-        ),
-      );
-      view.fixture.detectChanges();
-    });
-    const view = await render(CollectionEditorComponent, {
-      inputs: { collection, items },
-      on: { editItem: edited },
-    });
+      const field = screen.getByLabelText(label);
+      expect(field).toHaveValue(items[0].id);
+      expect(field).toBeDisabled();
 
-    const field = screen.getByLabelText(label);
-    await user.click(field);
-    await user.type(field, '-updated');
+      await user.type(field, '-updated');
 
-    expect(screen.getByLabelText(/ID for/)).toHaveValue(`${items[0].id}-updated`);
-    expect(screen.getByLabelText(/ID for/)).toHaveFocus();
-  });
+      expect(field).toHaveValue(items[0].id);
+      expect(edited).not.toHaveBeenCalled();
+    },
+  );
 
   it('selects an application category from the current draft categories', async () => {
     const user = userEvent.setup();
@@ -189,12 +201,14 @@ describe('CollectionEditorComponent', () => {
       on: { editItem: edited },
     });
 
+    await user.click(screen.getByRole('button', { name: 'Edit Plex' }));
     const category = screen.getByLabelText('Application category for Plex');
-    expect(category).toHaveValue('media');
-    expect(screen.getByRole('option', { name: 'Media' })).toHaveValue('media');
+    expect(category).toHaveTextContent('Media');
     expect(screen.queryByRole('textbox', { name: 'Application category for Plex' })).toBeNull();
 
-    await user.selectOptions(category, 'tools');
+    await user.click(category);
+    expect(screen.getByRole('option', { name: 'Media' })).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('option', { name: 'Tools' }));
     expect(edited).toHaveBeenLastCalledWith({ index: 0, field: 'category', value: 'tools' });
   });
 
@@ -210,8 +224,8 @@ describe('CollectionEditorComponent', () => {
       },
     });
 
-    expect(screen.getByLabelText('Application category for Plex')).toHaveValue('media');
-    expect(screen.getByLabelText('Application category for Grafana')).toHaveValue('tools');
+    expect(screen.getByLabelText('Application category for Plex')).toHaveTextContent('Media');
+    expect(screen.getByLabelText('Application category for Grafana')).toHaveTextContent('Tools');
   });
 
   it('edits schema-backed application fields through accessible controls', async () => {
@@ -244,9 +258,9 @@ describe('CollectionEditorComponent', () => {
     await user.type(screen.getByLabelText('Application description for Plex'), 'Updated media');
     await user.clear(screen.getByLabelText('Application tags for Plex'));
     await user.type(screen.getByLabelText('Application tags for Plex'), 'media, streaming');
-    await user.click(screen.getByLabelText('Open Plex in a new tab'));
-    await user.click(screen.getByLabelText('Mark Plex as favorite'));
-    await user.click(screen.getByLabelText('Enable health checks for Plex'));
+    await user.click(screen.getByLabelText('Open in new tab for Plex'));
+    await user.click(screen.getByLabelText('Favorite for Plex'));
+    await user.click(screen.getByLabelText('Health check for Plex'));
 
     expect(edited).toHaveBeenCalledWith({
       index: 0,
@@ -268,7 +282,7 @@ describe('CollectionEditorComponent', () => {
       },
     });
 
-    expect(screen.getByLabelText('Enable health checks for Plex')).toBeChecked();
+    expect(screen.getByLabelText('Health check for Plex')).toBeChecked();
   });
 
   it('does not expose the healthCheck toggle for bookmarks', async () => {
@@ -279,7 +293,7 @@ describe('CollectionEditorComponent', () => {
       },
     });
 
-    expect(screen.queryByLabelText('Enable health checks for Docs')).toBeNull();
+    expect(screen.queryByLabelText('Health check for Docs')).toBeNull();
   });
 
   it('exposes an accessible bookmark URL field that emits typed draft edits', async () => {
@@ -328,12 +342,14 @@ describe('CollectionEditorComponent', () => {
       on: { editItem: edited },
     });
 
+    await user.click(screen.getByRole('button', { name: 'Edit Docs' }));
     await user.type(screen.getByLabelText('Bookmark description for Docs'), 'Handbook');
     await user.type(screen.getByLabelText('Bookmark tags for Docs'), 'docs, team');
-    await user.selectOptions(screen.getByLabelText('Icon type for Docs'), 'name');
+    await user.click(screen.getByLabelText('Icon type for Docs'));
+    await user.click(screen.getByRole('option', { name: 'Name' }));
     await user.clear(screen.getByLabelText('Icon initials for Docs'));
     await user.type(screen.getByLabelText('Icon initials for Docs'), 'book');
-    await user.click(screen.getByLabelText('Open Docs in a new tab'));
+    await user.click(screen.getByLabelText('Open in new tab for Docs'));
 
     expect(edited).toHaveBeenCalledWith({ index: 0, field: 'description', value: 'Handbook' });
     expect(edited).toHaveBeenCalledWith({ index: 0, field: 'tags', value: ['docs', 'team'] });
@@ -359,9 +375,11 @@ describe('CollectionEditorComponent', () => {
       },
     });
 
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Edit Plex' }));
     expect(screen.getByLabelText('Application category for Plex')).toBeDisabled();
-    expect(screen.getByLabelText('Application category for Plex')).toHaveValue('');
-    expect(screen.getByRole('option', { name: 'No categories available' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Application category for Plex')).toHaveTextContent(
+      'No categories available',
+    );
   });
 
   it('renders move controls as icon-only buttons with accessible names and visible tooltips', async () => {
@@ -375,5 +393,437 @@ describe('CollectionEditorComponent', () => {
     expect(moveDown).toHaveAttribute('title', 'Move Media down');
     expect(moveUp).toHaveTextContent('');
     expect(moveDown).toHaveTextContent('');
+  });
+
+  describe('rows', () => {
+    const apps = [
+      {
+        id: 'plex',
+        name: 'Plex',
+        url: 'https://plex.example.test',
+        description: '',
+        category: 'media',
+        icon: { type: 'initials' as const, value: 'PL' },
+        openNewTab: true,
+        healthCheck: true,
+        favorite: false,
+        tags: [],
+      },
+      {
+        id: 'grafana',
+        name: 'Grafana',
+        url: 'http://grafana.local',
+        description: '',
+        category: 'tools',
+        icon: { type: 'url' as const, value: 'https://grafana.local/logo.svg' },
+        openNewTab: false,
+        healthCheck: false,
+        favorite: false,
+        tags: [],
+      },
+      {
+        id: 'docs',
+        name: 'Docs',
+        url: 'http://docs.local',
+        description: '',
+        category: 'media',
+        icon: { type: 'name' as const, value: 'docs' },
+        openNewTab: true,
+        healthCheck: false,
+        favorite: false,
+        tags: [],
+      },
+    ];
+    const rowOf = (item: string) =>
+      screen.getByRole('button', { name: `Edit ${item}` }).closest('li') as HTMLElement;
+    /** The row itself, without the editor under it. */
+    const summaryOf = (item: string) => rowOf(item).firstElementChild as HTMLElement;
+    const renderApps = (inputs: Record<string, unknown> = {}) =>
+      render(CollectionEditorComponent, {
+        inputs: { collection: 'applications', items: apps, categoryOptions: categories, ...inputs },
+      });
+
+    it('summarises an application: index, name, URL in mono, category id tag and flags', async () => {
+      await renderApps({
+        categoryOptions: [
+          { id: 'media', name: 'Media' },
+          { id: 'tools', name: 'Tools' },
+        ],
+      });
+
+      const plex = within(summaryOf('Plex'));
+      expect(plex.getByText('01')).toBeInTheDocument();
+      expect(plex.getByText('https://plex.example.test')).toHaveClass('font-mono');
+      expect(plex.getByText('media', { selector: 'span' })).toHaveClass('font-mono');
+      expect(plex.getByText('health · new tab')).toBeInTheDocument();
+      expect(within(summaryOf('Grafana')).queryByText(/new tab|health/)).not.toBeInTheDocument();
+      expect(within(summaryOf('Docs')).getByText('new tab')).toBeInTheDocument();
+      expect(within(summaryOf('Docs')).getByText('03')).toBeInTheDocument();
+    });
+
+    describe('icons', () => {
+      const getIconUrlFromConfig = vi.fn(
+        (icon: { type: string; value: string }, name: string) =>
+          `icon://${icon.type}/${icon.value}/${name}`,
+      );
+      const renderIcons = (items: readonly (typeof apps)[number][]) =>
+        render(CollectionEditorComponent, {
+          inputs: { collection: 'applications' as const, items, categoryOptions: categories },
+          providers: [{ provide: IconService, useValue: { getIconUrlFromConfig } }],
+        });
+      const iconOf = (item: string) => summaryOf(item).querySelector('img');
+
+      it('shows each application icon the way the dashboard resolves it, never just letters', async () => {
+        await renderIcons(apps);
+
+        expect(iconOf('Plex')).toHaveAttribute('src', 'icon://initials/PL/Plex');
+        expect(iconOf('Grafana')).toHaveAttribute(
+          'src',
+          'icon://url/https://grafana.local/logo.svg/Grafana',
+        );
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/docs/Docs');
+        expect(summaryOf('Docs')).not.toHaveTextContent(/\bDO\b/);
+      });
+
+      it('falls back to generated initials while an icon name or URL is still empty', async () => {
+        await renderIcons([{ ...apps[2], icon: { type: 'name', value: '  ' } }]);
+
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://initials//Docs');
+      });
+
+      it('follows the icon the user is editing', async () => {
+        const view = await renderIcons([apps[2]]);
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/docs/Docs');
+
+        view.fixture.componentRef.setInput('items', [
+          { ...apps[2], icon: { type: 'name', value: 'wiki' } },
+        ]);
+        view.fixture.detectChanges();
+
+        expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/wiki/Docs');
+      });
+    });
+
+    it.each([
+      ['categories', categories, '2 categories'],
+      ['applications', apps, '3 applications'],
+      ['bookmarks', [apps[0]], '1 bookmark'],
+      ['bookmarks', [], '0 bookmarks'],
+    ] as const)('says how many %s it holds under its title', async (collection, items, text) => {
+      await render(CollectionEditorComponent, {
+        inputs: { collection, items: [...items], categoryOptions: categories },
+      });
+
+      expect(screen.getByText(text)).toBeInTheDocument();
+    });
+
+    it('shows a category as its id with no tag and no flags', async () => {
+      await render(CollectionEditorComponent, {
+        inputs: { collection: 'categories', items: categories },
+      });
+
+      const media = within(summaryOf('Media'));
+      expect(media.getByText('media')).toHaveClass('font-mono');
+      expect(media.queryByText(/new tab|health/)).not.toBeInTheDocument();
+    });
+
+    it('gives every row action an accessible name that contains the item name', async () => {
+      await renderApps();
+
+      for (const name of ['Move Plex up', 'Move Plex down', 'Edit Plex', 'Remove Plex']) {
+        expect(within(rowOf('Plex')).getByRole('button', { name })).toBeInTheDocument();
+      }
+    });
+
+    it('keeps the editor hidden until Edit is activated, and hides it again on the second activation', async () => {
+      const user = userEvent.setup();
+      await renderApps();
+      const edit = screen.getByRole('button', { name: 'Edit Plex' });
+      const field = screen.getByLabelText('Application name for Plex');
+
+      expect(edit).toHaveAttribute('aria-expanded', 'false');
+      expect(field).not.toBeVisible();
+
+      await user.click(edit);
+      expect(edit).toHaveAttribute('aria-expanded', 'true');
+      expect(field).toBeVisible();
+      expect(document.getElementById(edit.getAttribute('aria-controls') ?? '')).toContainElement(
+        field,
+      );
+
+      await user.click(edit);
+      expect(edit).toHaveAttribute('aria-expanded', 'false');
+      expect(field).not.toBeVisible();
+    });
+
+    it('opens the editor of a row that has validation errors so the error and its field are visible', async () => {
+      await renderApps({
+        fieldErrorIds: { '1-url': 'error-applications-1-url' },
+        fieldErrors: { '1-url': 'URL must be absolute.' },
+      });
+
+      expect(screen.getByLabelText('Application URL for Grafana')).toBeVisible();
+      expect(screen.getByText('URL must be absolute.')).toBeVisible();
+      expect(screen.getByLabelText('Application URL for Plex')).not.toBeVisible();
+    });
+
+    it('opens the editor of a newly added item and focuses its name field', async () => {
+      const user = userEvent.setup();
+      const view = await renderApps();
+      view.fixture.componentInstance.addItem.subscribe(() => {
+        view.fixture.componentRef.setInput('items', [
+          ...apps,
+          { ...apps[0], id: 'new', name: 'New app' },
+        ]);
+        view.fixture.detectChanges();
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Add application' }));
+
+      expect(screen.getByLabelText('Application name for New app')).toBeVisible();
+      expect(screen.getByLabelText('Application name for New app')).toHaveFocus();
+    });
+
+    describe('reordering', () => {
+      const reorder = async (initial: readonly (typeof apps)[number][]) => {
+        const user = userEvent.setup();
+        let current = [...initial];
+        const view = await render(CollectionEditorComponent, {
+          inputs: { collection: 'applications', items: current, categoryOptions: categories },
+          on: {
+            moveItem: ({ from, to }: { from: number; to: number }) => {
+              const next = [...current];
+              next.splice(to, 0, ...next.splice(from, 1));
+              current = next;
+              view.fixture.componentRef.setInput('items', current);
+              view.fixture.detectChanges();
+            },
+          },
+        });
+        return { user, view };
+      };
+
+      it('keeps focus on the same button of the moved item', async () => {
+        const { user } = await reorder([...apps, { ...apps[0], id: 'last', name: 'Last' }]);
+
+        await user.click(screen.getByRole('button', { name: 'Move Grafana down' }));
+
+        expect(screen.getByRole('button', { name: 'Move Grafana down' })).toHaveFocus();
+      });
+
+      it('falls back to the other move button when the item reaches an end', async () => {
+        const { user } = await reorder(apps);
+
+        await user.click(screen.getByRole('button', { name: 'Move Grafana down' }));
+
+        expect(screen.getByRole('button', { name: 'Move Grafana down' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Move Grafana up' })).toHaveFocus();
+      });
+
+      it('keeps the editor of the moved item open', async () => {
+        const { user } = await reorder(apps);
+        await user.click(screen.getByRole('button', { name: 'Edit Plex' }));
+
+        await user.click(screen.getByRole('button', { name: 'Move Plex down' }));
+
+        expect(screen.getByLabelText('Application name for Plex')).toBeVisible();
+        expect(screen.getByLabelText('Application name for Grafana')).not.toBeVisible();
+      });
+    });
+
+    it('names each field with its visible label plus the item it belongs to (label in name)', async () => {
+      const user = userEvent.setup();
+      await renderApps();
+      await user.click(screen.getByRole('button', { name: 'Edit Plex' }));
+
+      // The three per-application toggles (new tab, favorite, health check) become switches in task 3.8.
+      const labelled = Array.from(rowOf('Plex').querySelectorAll('label')).flatMap((label) => {
+        const control = label.querySelector('input:not([type=checkbox]), select, textarea');
+        const visible = Array.from(label.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent?.trim())
+          .join(' ')
+          .trim();
+        return control && visible
+          ? [{ visible, name: control.getAttribute('aria-label') ?? '' }]
+          : [];
+      });
+
+      expect(labelled.length).toBeGreaterThan(4);
+      for (const { visible, name } of labelled) {
+        expect(name.toLowerCase(), `${visible} → ${name}`).toContain(visible.toLowerCase());
+      }
+    });
+
+    it('names each switch with its visible label plus the item (label in name)', async () => {
+      const user = userEvent.setup();
+      await renderApps();
+      await user.click(screen.getByRole('button', { name: 'Edit Plex' }));
+
+      const switches = within(rowOf('Plex')).getAllByRole('switch');
+
+      expect(switches.map((control) => control.textContent?.trim())).toEqual([
+        'Open in new tab',
+        'Favorite',
+        'Health check',
+      ]);
+      for (const control of switches) {
+        expect(control.getAttribute('aria-label')).toContain(control.textContent?.trim());
+        expect(control.getAttribute('aria-label')).toContain('Plex');
+      }
+    });
+  });
+
+  describe('inline editor', () => {
+    const plex = {
+      id: 'plex',
+      name: 'Plex',
+      url: 'https://plex.example.test',
+      description: 'Media server',
+      category: 'media',
+      icon: { type: 'name' as const, value: 'plex' },
+      openNewTab: true,
+      healthCheck: true,
+      favorite: false,
+      tags: ['media'],
+    };
+    const renderPlex = (
+      inputs: Record<string, unknown> = {},
+      collection: 'categories' | 'applications' | 'bookmarks' = 'applications',
+    ) =>
+      render(CollectionEditorComponent, {
+        inputs: { collection, items: [plex], categoryOptions: categories, ...inputs },
+      });
+    const edit = () => screen.getByRole('button', { name: 'Edit Plex' });
+
+    it('expands under the row with every field of an application, in the order of the design', async () => {
+      const user = userEvent.setup();
+      await renderPlex();
+
+      await user.click(edit());
+
+      const row = edit().closest('li') as HTMLElement;
+      const editor = document.getElementById(edit().getAttribute('aria-controls') ?? '');
+      expect(editor).toBeVisible();
+      expect(row.firstElementChild).not.toContainElement(editor);
+      expect(row).toContainElement(editor);
+
+      const controls = within(editor as HTMLElement)
+        .getAllByRole('textbox')
+        .concat(
+          within(editor as HTMLElement).getAllByRole('button'),
+          within(editor as HTMLElement).getAllByRole('switch'),
+        )
+        .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+        .map((control) => control.getAttribute('aria-label'));
+
+      expect(controls).toEqual([
+        'Application name for Plex',
+        'Application URL for Plex',
+        'Application description for Plex',
+        'Icon type for Plex',
+        'Icon name for Plex',
+        'Application category for Plex',
+        'Application tags for Plex',
+        'Application ID for Plex',
+        'Open in new tab for Plex',
+        'Favorite for Plex',
+        'Health check for Plex',
+      ]);
+    });
+
+    it('moves the focus to the first field when it opens', async () => {
+      const user = userEvent.setup();
+      await renderPlex();
+
+      await user.click(edit());
+
+      expect(screen.getByLabelText('Application name for Plex')).toHaveFocus();
+    });
+
+    it('gives the editor of a category only its name and id', async () => {
+      const user = userEvent.setup();
+      await renderPlex({}, 'categories');
+
+      await user.click(edit());
+
+      const editor = document.getElementById(edit().getAttribute('aria-controls') ?? '');
+      expect(
+        within(editor as HTMLElement)
+          .getAllByRole('textbox')
+          .map((control) => control.getAttribute('aria-label')),
+      ).toEqual(['Category name for Plex', 'Category ID for Plex']);
+      expect(within(editor as HTMLElement).queryByRole('switch')).toBeNull();
+    });
+
+    it('gives a bookmark only the new-tab switch', async () => {
+      const user = userEvent.setup();
+      await renderPlex({}, 'bookmarks');
+
+      await user.click(edit());
+
+      expect(
+        screen.getAllByRole('switch').map((control) => control.getAttribute('aria-label')),
+      ).toEqual(['Open in new tab for Plex']);
+    });
+
+    it('closes with Escape and returns the focus to the Edit button', async () => {
+      const user = userEvent.setup();
+      await renderPlex();
+      await user.click(edit());
+      expect(screen.getByLabelText('Application name for Plex')).toHaveFocus();
+
+      await user.keyboard('{Escape}');
+
+      expect(edit()).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByLabelText('Application name for Plex')).not.toBeVisible();
+      expect(edit()).toHaveFocus();
+    });
+
+    it('keeps the focus on the Edit button when it closes the editor itself', async () => {
+      const user = userEvent.setup();
+      await renderPlex();
+      await user.click(edit());
+
+      await user.click(edit());
+
+      expect(edit()).toHaveAttribute('aria-expanded', 'false');
+      expect(edit()).toHaveFocus();
+    });
+
+    it('does not take the focus when validation errors open the editor', async () => {
+      await renderPlex({
+        fieldErrorIds: { '0-url': 'error-applications-0-url' },
+        fieldErrors: { '0-url': 'URL must be absolute.' },
+      });
+
+      expect(screen.getByLabelText('Application URL for Plex')).toBeVisible();
+      expect(document.body).toHaveFocus();
+    });
+
+    it('shows the saved flags in the three switches and emits the opposite value when one is clicked', async () => {
+      const user = userEvent.setup();
+      const edited = vi.fn();
+      await render(CollectionEditorComponent, {
+        inputs: { collection: 'applications', items: [plex], categoryOptions: categories },
+        on: { editItem: edited },
+      });
+      await user.click(edit());
+
+      const newTab = screen.getByRole('switch', { name: 'Open in new tab for Plex' });
+      const favorite = screen.getByRole('switch', { name: 'Favorite for Plex' });
+      const health = screen.getByRole('switch', { name: 'Health check for Plex' });
+      expect(newTab).toBeChecked();
+      expect(favorite).not.toBeChecked();
+      expect(health).toBeChecked();
+
+      await user.click(newTab);
+      await user.click(favorite);
+      await user.click(health);
+
+      expect(edited).toHaveBeenCalledWith({ index: 0, field: 'openNewTab', value: false });
+      expect(edited).toHaveBeenCalledWith({ index: 0, field: 'favorite', value: true });
+      expect(edited).toHaveBeenCalledWith({ index: 0, field: 'healthCheck', value: false });
+    });
   });
 });

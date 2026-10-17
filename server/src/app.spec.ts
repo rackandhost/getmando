@@ -161,6 +161,29 @@ describe('POST /api/config — token auth', () => {
   });
 });
 
+describe('GET /api/capabilities', () => {
+  const targetPath = '/unused/dashboard.yaml';
+
+  it('reports that writing is enabled when a token is configured, without exposing the token', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({ method: 'GET', url: '/api/capabilities' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ write: true });
+    expect(response.body).not.toContain(token);
+  });
+
+  it('reports that writing is disabled when the token is unset, so the editor can disable Save', async () => {
+    const app = buildApp({ configWriteToken: '', targetPath });
+
+    const response = await app.inject({ method: 'GET', url: '/api/capabilities' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ write: false });
+  });
+});
+
 describe('POST /api/config — schema validation and write', () => {
   let dir: string;
   let targetPath: string;

@@ -4,15 +4,16 @@ import { firstValueFrom, of, throwError } from 'rxjs';
 
 import { DEFAULT_DASHBOARD_CONFIG } from '../models/dashboard.models';
 
+import type { Mock } from 'vitest';
 import { ConfigWriteService } from './config-write.service';
 
 describe('ConfigWriteService', () => {
   let service: ConfigWriteService;
-  let httpClient: { post: ReturnType<typeof vi.fn> };
+  let httpClient: { post: Mock; get: Mock };
 
   beforeEach(() => {
     localStorage.clear();
-    httpClient = { post: vi.fn() };
+    httpClient = { post: vi.fn(), get: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [ConfigWriteService, { provide: HttpClient, useValue: httpClient }],
@@ -109,5 +110,33 @@ describe('ConfigWriteService', () => {
       status: 'error',
       message: expect.any(String),
     });
+  });
+
+  describe('isWriteEnabled', () => {
+    it('asks the sidecar and reports a server that has a write token as enabled', async () => {
+      httpClient.get.mockReturnValue(of({ write: true }));
+
+      await expect(firstValueFrom(service.isWriteEnabled())).resolves.toBe(true);
+      expect(httpClient.get).toHaveBeenCalledWith('/api/capabilities');
+    });
+
+    it('reports a server without a write token as disabled', async () => {
+      httpClient.get.mockReturnValue(of({ write: false }));
+
+      await expect(firstValueFrom(service.isWriteEnabled())).resolves.toBe(false);
+    });
+
+    it.each([
+      ['an unreachable sidecar', throwError(() => new ProgressEvent('error'))],
+      ['a missing endpoint', throwError(() => new HttpErrorResponse({ status: 404 }))],
+      ['an unexpected body', of({ unexpected: true })],
+    ])(
+      'assumes writing is possible after %s, so Save can report the real error',
+      async (_label, response) => {
+        httpClient.get.mockReturnValue(response);
+
+        await expect(firstValueFrom(service.isWriteEnabled())).resolves.toBe(true);
+      },
+    );
   });
 });

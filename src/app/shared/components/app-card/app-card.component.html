@@ -1,64 +1,66 @@
-<button
-  class="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl h-full p-6 cursor-pointer flex flex-col items-center text-center transition-all duration-300 hover:bg-white/15 hover:shadow-2xl hover:border-white/30 hover:-translate-y-1 hover:scale-105 group"
-  type="button"
-  [attr.aria-label]="cardLabel()"
-  (click)="openApp()"
+<div
+  class="group/card glass-card relative flex h-full flex-col gap-3 rounded-2xl p-[18px] text-text transition-[translate,box-shadow,border-color,--card-layer] duration-300 ease-out [--card-layer:var(--card)] [--glass-layer:var(--card-layer)] has-[a:focus-visible,a:hover]:-translate-y-1 has-[a:focus-visible,a:hover]:border-card-line-hover has-[a:focus-visible,a:hover]:[box-shadow:var(--card-shadow-hover)] has-[a:focus-visible,a:hover]:[--card-layer:var(--card-hover)] has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-focus has-[a:focus-visible]:[box-shadow:var(--card-shadow-hover),0_0_0_2px_var(--focus-halo)]"
 >
-  <!-- Icon container -->
-  <div class="relative mb-4">
-    <img
-      class="h-16 w-auto object-cover transition-all duration-300 group-hover:scale-110"
-      loading="lazy"
-      [alt]="app().name + ' icon'"
-      [src]="iconUrl()"
-    />
+  <div class="flex items-start gap-3">
+    <span
+      class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-[image:var(--icon-tile)] shadow-[var(--icon-shadow)] transition-transform duration-300 ease-out group-has-[a:focus-visible,a:hover]/card:scale-[1.08]"
+    >
+      <img
+        loading="lazy"
+        [alt]="app().name + ' icon'"
+        [class]="
+          app().icon.type === 'initials' ? 'size-full object-cover' : 'size-8 object-contain'
+        "
+        [src]="iconUrl()"
+      />
+    </span>
+
+    <div class="min-w-0 flex-1 pt-0.5">
+      <a
+        class="text-base leading-snug font-semibold wrap-break-word after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:[box-shadow:none]! focus-visible:outline-none!"
+        [attr.aria-describedby]="describedBy()"
+        [attr.aria-label]="linkLabel()"
+        [attr.href]="app().url"
+        [attr.rel]="app().openNewTab ? 'noopener noreferrer' : null"
+        [attr.target]="app().openNewTab ? '_blank' : null"
+        (click)="onLinkClick()"
+        >{{ app().name }}</a
+      >
+    </div>
+
     @if (status(); as status) {
-      <!-- Decorative: the up/down state is announced through the button's aria-label (see
-           cardLabel). The glyph (check / cross) is the non-colour cue for WCAG 1.4.1; the badge
-           stays a circle in both states. -->
+      <!-- Decorative: the state is carried by the link's name (see linkLabel); the text is the
+           non-colour cue (WCAG 1.4.1). -->
       <span
         aria-hidden="true"
+        class="inline-flex h-[22px] shrink-0 items-center gap-1.5 rounded-md px-2 font-mono text-[11px] font-medium tracking-[0.08em]"
         [attr.data-status]="status.status"
-        class="absolute -top-2 -right-6 grid size-4 place-items-center rounded-full text-white ring-2 ring-white/70 transition-all duration-300"
-        [class.bg-emerald-500]="status.status === 'up'"
-        [class.bg-red-500]="status.status === 'down'"
+        [class.bg-down-bg]="status.status === 'down'"
+        [class.bg-up-bg]="status.status === 'up'"
+        [class.text-down]="status.status === 'down'"
+        [class.text-up]="status.status === 'up'"
       >
-        <ng-icon class="text-[0.7rem]" [name]="statusIcon()" />
+        <span class="size-1.5 rounded-full bg-current"></span>
+        {{ status.status === 'up' ? 'UP' : 'DOWN' }}
       </span>
     }
   </div>
 
-  <!-- App info -->
-  <div class="flex flex-col items-center text-center flex-1">
-    <p
-      class="font-semibold text-neutral-800 dark:text-white text-lg mb-2 group-hover:text-neutral-800/90 dark:group-hover:text-white/90 transition-all duration-300"
-    >
-      {{ app().name }}
+  @if (showDescriptions()) {
+    <p class="line-clamp-2 text-sm text-muted" [id]="descriptionId">
+      {{ app().description }}
     </p>
+  }
 
-    @if (showDescriptions()) {
-      <p
-        class="text-sm text-neutral-800/70 dark:text-white/70 line-clamp-2 group-hover:text-neutral-800/80 dark:group-hover:text-white/80 transition-all duration-300"
-      >
-        {{ app().description }}
-      </p>
-    }
-
-    @if (showLabels() && app().tags.length > 0) {
-      <div class="flex flex-wrap gap-1 mt-3 justify-center">
-        @for (tag of app().tags; track tag) {
-          <span
-            class="px-2 py-1 text-xs bg-white/10 rounded-full text-neutral-800/60 dark:text-white/60 group-hover:bg-white/20 transition-all duration-300"
-          >
-            {{ tag }}
-          </span>
-        }
-      </div>
-    }
-  </div>
-
-  <!-- Focus indicator -->
-  <div
-    class="absolute inset-0 rounded-3xl ring-2 ring-white/0 focus-visible:ring-white/50 transition-all duration-300 pointer-events-none"
-  ></div>
-</button>
+  @if (showTags()) {
+    <ul class="mt-auto flex flex-wrap gap-1.5" [id]="tagsId">
+      @for (tag of app().tags; track tag) {
+        <li
+          class="inline-flex h-6 items-center rounded-md border border-line px-2 font-mono text-xs text-muted"
+        >
+          {{ tag }}
+        </li>
+      }
+    </ul>
+  }
+</div>

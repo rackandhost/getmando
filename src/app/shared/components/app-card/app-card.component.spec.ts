@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { signal } from '@angular/core';
 
@@ -33,6 +33,14 @@ describe('AppCardComponent', () => {
     tags: ['video', 'streaming'],
     favorite: false,
     healthCheck: false,
+  };
+
+  const monitored = { ...appFixture, healthCheck: true };
+  const up: Record<string, AppStatus> = {
+    plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' },
+  };
+  const down: Record<string, AppStatus> = {
+    plex: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' },
   };
 
   const setup = async (
@@ -71,228 +79,277 @@ describe('AppCardComponent', () => {
     return view;
   };
 
+  /** The status pill is the one `aria-hidden` element that carries `UP` or `DOWN`. */
+  const pill = (container: HTMLElement): HTMLElement | null =>
+    container.querySelector('[aria-hidden="true"][data-status]');
+
+  /** jsdom cannot navigate; keep link activations from logging "not implemented". */
+  const swallowNavigation = () => {
+    const prevent = (event: Event) => event.preventDefault();
+    document.addEventListener('click', prevent);
+    return () => document.removeEventListener('click', prevent);
+  };
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('should render app content using the configured icon and metadata', async () => {
-    await setup();
+  describe('content', () => {
+    it('shows the icon tile, name, description and tags with the configured icon', async () => {
+      await setup();
 
-    expect(iconServiceMock.getIconUrl).toHaveBeenCalledWith(appFixture);
-    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
-    expect(screen.getByText('Plex')).toBeInTheDocument();
-    expect(screen.getByText('Media server')).toBeInTheDocument();
-    expect(screen.getByText('video')).toBeInTheDocument();
-    expect(screen.getByText('streaming')).toBeInTheDocument();
-    expect(screen.getByAltText('Plex icon')).toHaveAttribute(
-      'src',
-      'https://example.com/icons/plex.png',
-    );
-  });
-
-  it('should have no accessibility violations', async () => {
-    const view = await setup();
-
-    await expectNoAxeViolations(view.container);
-  });
-
-  const badgeEl = (container: HTMLElement): HTMLElement | null =>
-    container.querySelector('span[aria-hidden="true"][data-status]');
-
-  it('should render a green check badge and name the state for a monitored app that is up', async () => {
-    const view = await setup(
-      { ...appFixture, healthCheck: true },
-      DEFAULT_DASHBOARD_CONFIG.settings,
-      { plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' } },
-    );
-
-    // Screen readers get the state through the button name, not the decorative badge.
-    expect(screen.getByRole('button', { name: 'Open Plex, currently up' })).toBeInTheDocument();
-
-    const badge = badgeEl(view.container);
-    expect(badge?.dataset['status']).toBe('up');
-    expect(badge?.className).toContain('bg-emerald-500');
-    expect(badge?.className).toContain('rounded-full'); // always a circle
-    expect(badge?.className).not.toContain('bg-red-500');
-    expect(badge?.querySelector('svg')).toBeTruthy(); // glyph present = non-colour cue
-    await expectNoAxeViolations(view.container);
-  });
-
-  it('should render a red cross badge and name the state for a monitored app that is down', async () => {
-    const view = await setup(
-      { ...appFixture, healthCheck: true },
-      DEFAULT_DASHBOARD_CONFIG.settings,
-      { plex: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' } },
-    );
-
-    expect(screen.getByRole('button', { name: 'Open Plex, currently down' })).toBeInTheDocument();
-
-    const badge = badgeEl(view.container);
-    expect(badge?.dataset['status']).toBe('down');
-    expect(badge?.className).toContain('bg-red-500');
-    expect(badge?.className).toContain('rounded-full'); // always a circle
-    expect(badge?.className).not.toContain('bg-emerald-500');
-    expect(badge?.querySelector('svg')).toBeTruthy();
-    await expectNoAxeViolations(view.container);
-  });
-
-  it('uses a different glyph for up and down, not colour alone (WCAG 1.4.1)', async () => {
-    const view = await setup(
-      { ...appFixture, healthCheck: true },
-      DEFAULT_DASHBOARD_CONFIG.settings,
-      { plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' } },
-    );
-    const upGlyph = badgeEl(view.container)?.querySelector('svg')?.innerHTML ?? '';
-
-    statusesState.set({ plex: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' } });
-
-    let downGlyph = '';
-    await waitFor(() => {
-      expect(badgeEl(view.container)?.dataset['status']).toBe('down');
-      downGlyph = badgeEl(view.container)?.querySelector('svg')?.innerHTML ?? '';
-      expect(downGlyph).not.toBe('');
+      expect(iconServiceMock.getIconUrl).toHaveBeenCalledWith(appFixture);
+      expect(screen.getByAltText('Plex icon')).toHaveAttribute(
+        'src',
+        'https://example.com/icons/plex.png',
+      );
+      expect(screen.getByRole('link', { name: 'Plex' })).toBeInTheDocument();
+      expect(screen.getByText('Media server')).toBeInTheDocument();
+      expect(screen.getByText('video')).toBeInTheDocument();
+      expect(screen.getByText('streaming')).toBeInTheDocument();
     });
 
-    expect(upGlyph).not.toBe('');
-    expect(upGlyph).not.toBe(downGlyph);
-  });
+    it('keeps the icon, name, description and tags in that order', async () => {
+      await setup();
 
-  it('should render no badge when healthCheck is disabled', async () => {
-    const view = await setup(appFixture, DEFAULT_DASHBOARD_CONFIG.settings, {
-      plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' },
+      const order = [
+        screen.getByAltText('Plex icon'),
+        screen.getByRole('link', { name: 'Plex' }),
+        screen.getByText('Media server'),
+        screen.getByText('video'),
+      ];
+
+      order.slice(1).forEach((element, index) => {
+        expect(
+          order[index].compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      });
     });
 
-    expect(badgeEl(view.container)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
-  });
+    it('gives the generated initials icon an alt text', async () => {
+      await setup({ ...appFixture, icon: { type: 'initials', value: 'PL' } });
 
-  it('should render no badge while the app has not been checked yet', async () => {
-    const view = await setup(
-      { ...appFixture, healthCheck: true },
-      DEFAULT_DASHBOARD_CONFIG.settings,
-      {
-        other: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' },
-      },
-    );
-
-    expect(badgeEl(view.container)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Open Plex' })).toBeInTheDocument();
-  });
-
-  it('should render the badge once a status arrives after render', async () => {
-    const view = await setup({ ...appFixture, healthCheck: true });
-
-    expect(badgeEl(view.container)).toBeNull();
-
-    statusesState.set({ plex: { status: 'up', checkedAt: '2026-01-01T00:00:00.000Z' } });
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Open Plex, currently up' })).toBeInTheDocument();
-      expect(badgeEl(view.container)?.dataset['status']).toBe('up');
-    });
-  });
-
-  it('should not render the description when showDescriptions is disabled', async () => {
-    await setup(appFixture, {
-      ...DEFAULT_DASHBOARD_CONFIG.settings,
-      showDescriptions: false,
+      expect(screen.getByAltText('Plex icon')).toBeInTheDocument();
     });
 
-    expect(screen.queryByText('Media server')).not.toBeInTheDocument();
-  });
+    it('should not render the description when showDescriptions is disabled', async () => {
+      await setup(appFixture, { ...DEFAULT_DASHBOARD_CONFIG.settings, showDescriptions: false });
 
-  it('should not render tags when showLabels is disabled', async () => {
-    await setup(appFixture, {
-      ...DEFAULT_DASHBOARD_CONFIG.settings,
-      showLabels: false,
-    });
-
-    expect(screen.queryByText('video')).not.toBeInTheDocument();
-    expect(screen.queryByText('streaming')).not.toBeInTheDocument();
-  });
-
-  it('should update description and tag visibility when settings change after render', async () => {
-    await setup();
-
-    expect(screen.getByText('Media server')).toBeInTheDocument();
-    expect(screen.getByText('video')).toBeInTheDocument();
-
-    settingsState.set({
-      ...DEFAULT_DASHBOARD_CONFIG.settings,
-      showDescriptions: false,
-      showLabels: false,
-    });
-
-    await waitFor(() => {
       expect(screen.queryByText('Media server')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Plex' })).not.toHaveAccessibleDescription(
+        /Media server/,
+      );
+    });
+
+    it('should not render tags when showLabels is disabled', async () => {
+      await setup(appFixture, { ...DEFAULT_DASHBOARD_CONFIG.settings, showLabels: false });
+
       expect(screen.queryByText('video')).not.toBeInTheDocument();
       expect(screen.queryByText('streaming')).not.toBeInTheDocument();
     });
-  });
 
-  it('should open the app in a new tab and emit appClick on click', async () => {
-    const user = userEvent.setup();
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const view = await setup();
-    const appClickSpy = vi.fn();
+    it('should not render a tag list for an app without tags', async () => {
+      await setup({ ...appFixture, tags: [] });
 
-    view.fixture.componentInstance.appClick.subscribe(appClickSpy);
-
-    await user.click(screen.getByRole('button', { name: 'Open Plex' }));
-
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
-    expect(appClickSpy).toHaveBeenCalledWith(appFixture);
-  });
-
-  it('should open the app in the current tab when openNewTab is disabled', async () => {
-    const user = userEvent.setup();
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-
-    await setup({
-      ...appFixture,
-      openNewTab: false,
+      expect(screen.queryByRole('list')).not.toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: 'Open Plex' }));
+    it('should update description and tag visibility when settings change after render', async () => {
+      const view = await setup();
 
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_self');
+      expect(screen.getByText('Media server')).toBeInTheDocument();
+      expect(screen.getByText('video')).toBeInTheDocument();
+
+      settingsState.set({
+        ...DEFAULT_DASHBOARD_CONFIG.settings,
+        showDescriptions: false,
+        showLabels: false,
+      });
+      await view.fixture.whenStable();
+
+      expect(screen.queryByText('Media server')).not.toBeInTheDocument();
+      expect(screen.queryByText('video')).not.toBeInTheDocument();
+    });
   });
 
-  it('should support keyboard activation', async () => {
-    const user = userEvent.setup();
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const view = await setup();
-    const appClickSpy = vi.fn();
+  describe('link', () => {
+    it('holds only the app name and has a real href', async () => {
+      await setup();
 
-    view.fixture.componentInstance.appClick.subscribe(appClickSpy);
+      const link = screen.getByRole('link', { name: 'Plex' });
 
-    const appCard = screen.getByRole('button', { name: 'Open Plex' });
-    appCard.focus();
+      expect(link).toHaveTextContent(/^Plex$/);
+      expect(link).toHaveAttribute('href', 'https://plex.example.com');
+    });
 
-    await user.keyboard('{Enter}');
+    it('opens in a new tab safely when openNewTab is true', async () => {
+      await setup();
 
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
-    expect(windowOpenSpy).toHaveBeenCalledTimes(1);
-    expect(appClickSpy).toHaveBeenCalledWith(appFixture);
-    expect(appClickSpy).toHaveBeenCalledTimes(1);
+      const link = screen.getByRole('link', { name: 'Plex' });
+
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('stays in the current tab, with no target or rel, when openNewTab is false', async () => {
+      await setup({ ...appFixture, openNewTab: false });
+
+      const link = screen.getByRole('link', { name: 'Plex' });
+
+      expect(link).not.toHaveAttribute('target');
+      expect(link).not.toHaveAttribute('rel');
+    });
+
+    it('emits appClick once per activation, without opening anything itself', async () => {
+      const user = userEvent.setup();
+      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const stop = swallowNavigation();
+      const view = await setup();
+      const appClickSpy = vi.fn();
+      view.fixture.componentInstance.appClick.subscribe(appClickSpy);
+
+      await user.click(screen.getByRole('link', { name: 'Plex' }));
+      stop();
+
+      expect(appClickSpy).toHaveBeenCalledExactlyOnceWith(appFixture);
+      expect(windowOpenSpy).not.toHaveBeenCalled();
+    });
+
+    it('is activated with Enter, emitting appClick once', async () => {
+      const user = userEvent.setup();
+      const stop = swallowNavigation();
+      const view = await setup();
+      const appClickSpy = vi.fn();
+      view.fixture.componentInstance.appClick.subscribe(appClickSpy);
+
+      screen.getByRole('link', { name: 'Plex' }).focus();
+      await user.keyboard('{Enter}');
+      stop();
+
+      expect(appClickSpy).toHaveBeenCalledExactlyOnceWith(appFixture);
+    });
+
+    it('is the only tab stop of the card', async () => {
+      const user = userEvent.setup();
+      await setup();
+
+      await user.tab();
+      expect(screen.getByRole('link', { name: 'Plex' })).toHaveFocus();
+
+      await user.tab();
+      expect(document.body).toHaveFocus();
+    });
   });
 
-  it('should support keyboard activation with Space', async () => {
-    const user = userEvent.setup();
-    const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-    const view = await setup();
-    const appClickSpy = vi.fn();
+  describe('accessible name and description', () => {
+    it.each([
+      ['an unmonitored app', appFixture, {}, 'Plex'],
+      ['a monitored app that is up', monitored, up, 'Plex, online'],
+      ['a monitored app that is down', monitored, down, 'Plex, offline'],
+      ['a monitored app without a result yet', monitored, {}, 'Plex'],
+    ])('names the link for %s', async (_, app, statuses, name) => {
+      await setup(app, DEFAULT_DASHBOARD_CONFIG.settings, statuses);
 
-    view.fixture.componentInstance.appClick.subscribe(appClickSpy);
+      expect(screen.getByRole('link', { name })).toBeInTheDocument();
+    });
 
-    const appCard = screen.getByRole('button', { name: 'Open Plex' });
-    appCard.focus();
+    it('never uses the old "Open <name>, currently up|down" pattern', async () => {
+      await setup(monitored, DEFAULT_DASHBOARD_CONFIG.settings, up);
 
-    await user.keyboard(' ');
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^Open /i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /currently/i })).not.toBeInTheDocument();
+    });
 
-    expect(windowOpenSpy).toHaveBeenCalledWith('https://plex.example.com', '_blank');
-    expect(windowOpenSpy).toHaveBeenCalledTimes(1);
-    expect(appClickSpy).toHaveBeenCalledWith(appFixture);
-    expect(appClickSpy).toHaveBeenCalledTimes(1);
+    it.each([
+      ['unmonitored', appFixture, {}],
+      ['up', monitored, up],
+      ['down', monitored, down],
+    ])(
+      'keeps the visible text in the accessible name (label in name) when %s',
+      async (_, app, statuses) => {
+        await setup(app, DEFAULT_DASHBOARD_CONFIG.settings, statuses);
+
+        const link = screen.getByRole('link');
+
+        expect(link.getAttribute('aria-label') ?? link.textContent).toContain(
+          link.textContent?.trim() ?? '',
+        );
+      },
+    );
+
+    it('announces the description and the tags as the link description', async () => {
+      await setup();
+
+      expect(screen.getByRole('link', { name: 'Plex' })).toHaveAccessibleDescription(
+        /Media server.*video.*streaming/s,
+      );
+    });
+
+    it('describes the link by whichever of description and tags are shown', async () => {
+      await setup(appFixture, { ...DEFAULT_DASHBOARD_CONFIG.settings, showLabels: false });
+
+      const link = screen.getByRole('link', { name: 'Plex' });
+
+      expect(link).toHaveAccessibleDescription('Media server');
+    });
+
+    it('should have no accessibility violations', async () => {
+      const view = await setup();
+
+      await expectNoAxeViolations(view.container);
+    });
+
+    it('should have no accessibility violations when monitored', async () => {
+      const view = await setup(monitored, DEFAULT_DASHBOARD_CONFIG.settings, down);
+
+      await expectNoAxeViolations(view.container);
+    });
+  });
+
+  describe('status pill', () => {
+    it('shows UP for a monitored app that is up, hidden from assistive technology', async () => {
+      const view = await setup(monitored, DEFAULT_DASHBOARD_CONFIG.settings, up);
+
+      const statusPill = pill(view.container);
+
+      expect(statusPill).toHaveTextContent('UP');
+      expect(statusPill).toHaveAttribute('aria-hidden', 'true');
+      expect(statusPill?.dataset['status']).toBe('up');
+    });
+
+    it('shows DOWN for a monitored app that is down', async () => {
+      const view = await setup(monitored, DEFAULT_DASHBOARD_CONFIG.settings, down);
+
+      const statusPill = pill(view.container);
+
+      expect(statusPill).toHaveTextContent('DOWN');
+      expect(statusPill).toHaveAttribute('aria-hidden', 'true');
+      expect(statusPill?.dataset['status']).toBe('down');
+    });
+
+    it('should render no pill when healthCheck is disabled, even with a stored result', async () => {
+      const view = await setup(appFixture, DEFAULT_DASHBOARD_CONFIG.settings, up);
+
+      expect(pill(view.container)).toBeNull();
+    });
+
+    it('should render no pill while the app has not been checked yet', async () => {
+      const view = await setup(monitored, DEFAULT_DASHBOARD_CONFIG.settings, {});
+
+      expect(pill(view.container)).toBeNull();
+    });
+
+    it('should render the pill, and rename the link, once a status arrives after render', async () => {
+      const view = await setup(monitored, DEFAULT_DASHBOARD_CONFIG.settings, {});
+
+      expect(pill(view.container)).toBeNull();
+
+      statusesState.set(up);
+      await view.fixture.whenStable();
+
+      expect(pill(view.container)).toHaveTextContent('UP');
+      expect(screen.getByRole('link', { name: 'Plex, online' })).toBeInTheDocument();
+    });
   });
 });

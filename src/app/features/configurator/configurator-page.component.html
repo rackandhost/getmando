@@ -1,295 +1,309 @@
-<main class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
-  <div class="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6 sm:pt-10 lg:px-8">
-    <div
-      class="mb-8 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:p-8"
-    >
-      <p
-        class="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-neutral-700 dark:text-white/70"
-      >
-        Dashboard setup
-      </p>
-      <h1 class="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">
-        Configuration editor
-      </h1>
-      <p class="mt-3 max-w-2xl text-base leading-7 text-neutral-700 dark:text-white/75">
-        Build a dashboard configuration locally. Your changes remain in this browser until you
-        export them.
-      </p>
-    </div>
+<div
+  #dockEl
+  #dock="appStickyDock"
+  class="sticky top-0 z-30 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative"
+  [appStickyDock]="probe"
+>
+  <app-header [compact]="dock.mode() === 'scrolled'" [verticalPadding]="headerPadding" />
+</div>
 
-    <section
-      aria-labelledby="entry-heading"
-      class="mb-8 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:p-8"
+<main class="min-w-0 flex-1">
+  <div class="glass-card mt-10 mb-7 flex max-w-[760px] flex-col gap-2.5 rounded-3xl px-8 py-7">
+    <p class="font-mono text-xs font-medium tracking-[0.14em] text-accent">DASHBOARD SETUP</p>
+    <h1
+      class="text-[40px] leading-[1.1] font-semibold tracking-[-0.02em] wrap-anywhere text-text max-[330px]:text-[30px]"
     >
-      <div class="mb-6 border-b border-white/15 pb-5">
-        <h2 id="entry-heading" class="text-2xl font-semibold text-neutral-900 dark:text-white">
-          Choose a starting point
-        </h2>
-        <p class="mt-2 text-sm leading-6 text-neutral-700 dark:text-white/70">
-          Start from an empty draft, reuse the mounted dashboard YAML when available, or import a
-          local YAML file.
-        </p>
-      </div>
-      <div class="flex flex-wrap items-end gap-3">
-        <button
-          class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-          type="button"
-          (click)="startEmpty()"
-        >
-          Start empty
-        </button>
-        @if (canLoadMountedConfig()) {
-          <button
-            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            type="button"
-            (click)="loadMountedConfig()"
-          >
-            Load mounted YAML
-          </button>
+      Configuration editor
+    </h1>
+    <p class="text-[15px] leading-[1.55] text-muted">
+      Build a dashboard configuration locally. Your changes remain in this browser until you export
+      them.
+    </p>
+  </div>
+
+  <div
+    class="flex items-start gap-8 pb-16 max-[901px]:flex-col max-[901px]:items-stretch max-[901px]:gap-5"
+  >
+    <nav
+      #navEl
+      aria-label="Configurator sections"
+      class="glass-chrome sticky top-[104px] z-[5] w-60 shrink-0 self-start rounded-[18px] px-2.5 py-3 max-[901px]:top-24 max-[901px]:z-20 max-[901px]:w-full max-[901px]:rounded-2xl max-[901px]:p-1.5"
+    >
+      <!-- Up to 900 px this list is the chip bar: one row, native sideways scroll without a scrollbar, edge fades on the overflowing side. -->
+      <ol
+        appHorizontalNav
+        [appChipAutocenter]="activeId()"
+        class="m-0 flex list-none flex-col gap-0.5 border-l border-line p-0 [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[901px]:flex-row max-[901px]:gap-1 max-[901px]:overflow-x-auto max-[901px]:overscroll-x-contain max-[901px]:border-l-0 [&::-webkit-scrollbar]:hidden"
+      >
+        @for (item of sections; track item.id) {
+          <li class="max-[901px]:shrink-0" [attr.data-chip]="item.id">
+            <a
+              class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm whitespace-nowrap text-muted transition-colors duration-200 hover:text-text aria-[current=true]:border-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-text max-[901px]:mx-0 max-[901px]:gap-2 max-[901px]:rounded-[10px] max-[901px]:border-l-0 max-[901px]:px-3"
+              [attr.aria-current]="activeId() === item.id ? 'true' : null"
+              [href]="anchorHref(item.elementId)"
+              (click)="goToSection(item.elementId, $event)"
+            >
+              <span class="font-mono text-xs">{{ item.number }}</span>
+              {{ item.label }}
+            </a>
+          </li>
         }
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Import local YAML
-          <input
-            class="mt-2 block w-full max-w-sm rounded-xl border border-white/25 bg-white/15 px-3 py-2.5 text-sm text-neutral-900 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            type="file"
-            accept=".yaml,.yml,application/yaml,text/yaml,text/x-yaml"
-            (change)="importLocalYaml($event)"
-          />
-        </label>
-      </div>
-    </section>
+      </ol>
+    </nav>
 
-    @if (validationErrors().length > 0) {
-      <section
-        aria-labelledby="validation-summary-heading"
-        class="mb-8 rounded-2xl border border-red-500/50 bg-red-500/10 p-5 text-neutral-900 shadow-lg shadow-red-950/10 dark:text-white"
-        role="alert"
-        tabindex="-1"
+    <div
+      class="flex min-w-0 flex-1 flex-col gap-5"
+      [style.--section-margin]="sectionMargin() + 'px'"
+    >
+      <app-config-section
+        description="Start from an empty draft, reuse the mounted dashboard YAML when available, or import a local YAML file."
+        number="01"
+        section="start"
+        title="Choose a starting point"
       >
-        <h2 id="validation-summary-heading" class="text-lg font-semibold">
-          Fix the following errors
-        </h2>
-        <ul class="mt-3 list-inside list-disc space-y-2">
-          @for (error of validationErrors(); track error.path.join('.')) {
-            <li>
-              <a
-                class="font-medium text-red-800 underline decoration-red-700/60 underline-offset-4 transition-colors hover:text-red-950 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-700 dark:text-red-100 dark:hover:text-white dark:focus-visible:outline-red-200"
-                [href]="'#' + fieldId(error.path)"
-                (click)="jumpToField(error.path, $event)"
-                >{{ error.message }}</a
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3">
+          <button
+            aria-describedby="start-empty-caption"
+            aria-labelledby="start-empty-title"
+            class="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-line-strong bg-surface-2 p-[18px] text-left text-text transition-colors duration-200 aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent/10"
+            type="button"
+            [attr.aria-pressed]="startingPoint() === 'empty'"
+            (click)="startEmpty()"
+          >
+            <ng-icon aria-hidden="true" class="text-xl" name="heroDocument" />
+            <span id="start-empty-title" class="text-[15px] font-semibold">Start empty</span>
+            <span id="start-empty-caption" class="text-[13px] text-muted">A blank draft</span>
+          </button>
+
+          @if (canLoadMountedConfig()) {
+            <button
+              aria-describedby="start-mounted-caption"
+              aria-labelledby="start-mounted-title"
+              class="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-line-strong bg-surface-2 p-[18px] text-left text-text transition-colors duration-200 aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent/10"
+              type="button"
+              [attr.aria-pressed]="startingPoint() === 'mounted'"
+              (click)="loadMountedConfig()"
+            >
+              <ng-icon aria-hidden="true" class="text-xl" name="heroServerStack" />
+              <span id="start-mounted-title" class="text-[15px] font-semibold"
+                >Load mounted YAML</span
               >
-            </li>
+              <span id="start-mounted-caption" class="font-mono text-xs break-all text-muted">{{
+                mountedPath
+              }}</span>
+            </button>
           }
-        </ul>
-      </section>
-    }
 
-    <section
-      aria-labelledby="metadata-heading"
-      class="mb-8 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:p-8"
-    >
-      <div class="mb-6 border-b border-white/15 pb-5">
-        <h2 id="metadata-heading" class="text-2xl font-semibold text-neutral-900 dark:text-white">
-          Metadata
-        </h2>
-        <p class="mt-2 text-sm leading-6 text-neutral-700 dark:text-white/70">
-          Set the dashboard identity.
-        </p>
-      </div>
-      <div class="grid gap-6 md:grid-cols-2">
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Dashboard title
-          <input
-            id="field-metadata-title"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            [attr.aria-describedby]="describedBy(['metadata', 'title'])"
-            [attr.aria-invalid]="errorFor(['metadata', 'title']) ? 'true' : null"
-            [value]="draft().metadata.title"
-            (input)="updateMetadata('title', $event)"
-          />
-          @if (errorFor(['metadata', 'title']); as error) {
-            <p
-              id="error-metadata-title"
-              class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
-            >
-              {{ error }}
-            </p>
-          }
-        </label>
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Dashboard description
-          <input
-            id="field-metadata-description"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            [attr.aria-describedby]="describedBy(['metadata', 'description'])"
-            [attr.aria-invalid]="errorFor(['metadata', 'description']) ? 'true' : null"
-            [value]="draft().metadata.description"
-            (input)="updateMetadata('description', $event)"
-          />
-          @if (errorFor(['metadata', 'description']); as error) {
-            <p
-              id="error-metadata-description"
-              class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
-            >
-              {{ error }}
-            </p>
-          }
-        </label>
-      </div>
-    </section>
-
-    <section
-      aria-labelledby="settings-heading"
-      class="mb-8 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:p-8"
-    >
-      <div class="mb-6 border-b border-white/15 pb-5">
-        <h2 id="settings-heading" class="text-2xl font-semibold text-neutral-900 dark:text-white">
-          Settings
-        </h2>
-        <p class="mt-2 text-sm leading-6 text-neutral-700 dark:text-white/70">
-          Configure theme, date display, layout, search, and dashboard display options.
-        </p>
-      </div>
-
-      <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Theme
-          <select
-            id="field-settings-theme"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            [value]="draft().settings.theme"
-            (change)="updateSettingText('theme', $event)"
+          <label
+            class="relative flex min-h-28 cursor-pointer flex-col items-start gap-2 rounded-xl border border-dashed border-line-strong p-[18px] text-text transition-colors duration-200 has-[input:focus-visible]:shadow-[0_0_0_2px_var(--focus-halo)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus data-[selected=true]:border-accent data-[selected=true]:bg-accent/10"
+            [attr.data-selected]="startingPoint() === 'import'"
           >
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="auto">Auto</option>
-          </select>
-        </label>
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Date format
-          <input
-            id="field-settings-dateFormat"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            [value]="draft().settings.dateFormat"
-            (input)="updateSettingText('dateFormat', $event)"
-          />
-        </label>
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Date position
-          <select
-            id="field-settings-datePosition"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            [value]="draft().settings.datePosition"
-            (change)="updateSettingText('datePosition', $event)"
-          >
-            <option value="top">Top</option>
-            <option value="bottom">Bottom</option>
-          </select>
-        </label>
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Items per row
-          <input
-            id="field-settings-itemsPerRow"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            type="number"
-            min="1"
-            max="10"
-            [attr.aria-describedby]="describedBy(['settings', 'itemsPerRow'])"
-            [attr.aria-invalid]="errorFor(['settings', 'itemsPerRow']) ? 'true' : null"
-            [value]="draft().settings.itemsPerRow"
-            (input)="updateSettingNumber('itemsPerRow', $event)"
-          />
-          @if (errorFor(['settings', 'itemsPerRow']); as error) {
-            <p
-              id="error-settings-itemsPerRow"
-              class="mt-2 text-sm font-medium text-red-700 dark:text-red-200"
+            <ng-icon aria-hidden="true" class="text-xl" name="heroArrowUpTray" />
+            <span id="start-import-title" class="text-[15px] font-semibold">Import local YAML</span>
+            <span id="start-import-caption" class="text-[13px] text-muted"
+              >Choose a .yaml file</span
             >
-              {{ error }}
-            </p>
-          }
-        </label>
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Light background image
-          <input
-            id="field-settings-lightBackgroundImage"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            placeholder="Leave blank to use the built-in default"
-            [value]="draft().settings.lightBackgroundImage"
-            (input)="updateSettingText('lightBackgroundImage', $event)"
-          />
-        </label>
-        <label class="block text-sm font-medium text-neutral-900 dark:text-white">
-          Dark background image
-          <input
-            id="field-settings-darkBackgroundImage"
-            class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-            placeholder="Leave blank to use the built-in default"
-            [value]="draft().settings.darkBackgroundImage"
-            (input)="updateSettingText('darkBackgroundImage', $event)"
-          />
-        </label>
-      </div>
-
-      <fieldset class="mt-6 rounded-2xl border border-white/20 bg-white/5 p-4">
-        <legend class="px-1 text-sm font-semibold text-neutral-900 dark:text-white">
-          Display options
-        </legend>
-        <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          @for (option of displayOptions; track option.field) {
-            <label
-              class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-            >
-              <input
-                class="peer sr-only"
-                type="checkbox"
-                [id]="'field-settings-' + option.field"
-                [checked]="isSettingEnabled(option.field)"
-                (change)="updateSettingBoolean(option.field, $event)"
-              />
-              <span
-                aria-hidden="true"
-                class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-              ></span>
-              {{ option.label }}
-            </label>
-          }
+            @if (startingPoint() === 'import') {
+              <span id="start-import-state" class="sr-only">Selected</span>
+            }
+            <input
+              accept=".yaml,.yml,application/yaml,text/yaml,text/x-yaml"
+              class="sr-only"
+              type="file"
+              aria-labelledby="start-import-title"
+              [attr.aria-describedby]="
+                startingPoint() === 'import'
+                  ? 'start-import-caption start-import-state'
+                  : 'start-import-caption'
+              "
+              (change)="importLocalYaml($event)"
+            />
+          </label>
         </div>
-      </fieldset>
 
-      <fieldset
-        id="field-settings-searchEngines"
-        class="mt-6 rounded-2xl border border-white/20 bg-white/5 p-4"
-        tabindex="-1"
+        @if (validationErrors().length > 0) {
+          <div
+            #errorSummary
+            class="mt-5 rounded-xl border border-down/50 bg-down-bg px-[18px] py-4"
+            role="alert"
+          >
+            <h3 class="text-sm font-semibold text-down">Fix the following errors</h3>
+            <ul class="mt-2 list-disc pl-[18px] font-mono text-[13px] leading-[1.7] text-text">
+              @for (error of validationErrors(); track error.path.join('.')) {
+                <li>
+                  @if (error.path.length > 0) {
+                    <code>{{ formatPath(error.path) }}</code> —
+                  }
+                  <a
+                    class="underline underline-offset-4"
+                    [href]="anchorHref(fieldId(error.path))"
+                    (click)="jumpToField(error.path, $event)"
+                    >{{ error.message }}</a
+                  >
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </app-config-section>
+
+      <app-config-section
+        description="Set the dashboard identity."
+        number="02"
+        section="metadata"
+        title="Metadata"
       >
-        <legend class="px-1 text-sm font-semibold text-neutral-900 dark:text-white">
-          Search engines
-        </legend>
-        <div class="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          @for (engine of searchEngineOptions; track engine) {
-            <label
-              class="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-neutral-900 transition hover:bg-white/10 dark:text-white"
-            >
-              <input
-                class="peer sr-only"
-                type="checkbox"
-                [id]="'field-settings-searchEngines-' + engine"
-                [checked]="hasSearchEngine(engine)"
-                (change)="updateSearchEngines(engine, $event)"
-              />
-              <span
-                aria-hidden="true"
-                class="relative h-6 w-11 rounded-full border border-white/25 bg-neutral-950/10 transition after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:shadow after:transition peer-checked:border-sky-400/60 peer-checked:bg-sky-500/80 peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-sky-500 dark:bg-white/10"
-              ></span>
-              {{ engine }}
-            </label>
-          }
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+            Dashboard title
+            <input
+              id="field-metadata-title"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              [attr.aria-describedby]="describedBy(['metadata', 'title'])"
+              [attr.aria-invalid]="errorFor(['metadata', 'title']) ? 'true' : null"
+              [value]="draft().metadata.title"
+              (input)="updateMetadata('title', $event)"
+            />
+            @if (errorFor(['metadata', 'title']); as error) {
+              <p id="error-metadata-title" class="text-[13px] font-medium text-down">
+                {{ error }}
+              </p>
+            }
+          </label>
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+            Dashboard description
+            <input
+              id="field-metadata-description"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              [attr.aria-describedby]="describedBy(['metadata', 'description'])"
+              [attr.aria-invalid]="errorFor(['metadata', 'description']) ? 'true' : null"
+              [value]="draft().metadata.description"
+              (input)="updateMetadata('description', $event)"
+            />
+            @if (errorFor(['metadata', 'description']); as error) {
+              <p id="error-metadata-description" class="text-[13px] font-medium text-down">
+                {{ error }}
+              </p>
+            }
+          </label>
         </div>
-      </fieldset>
-    </section>
+      </app-config-section>
 
-    <div class="flex flex-col gap-10 sm:gap-12">
+      <app-config-section
+        description="Configure theme, date display, layout, search, and dashboard display options."
+        number="03"
+        section="settings"
+        title="Settings"
+      >
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
+          <app-segmented
+            controlId="field-settings-theme"
+            label="Theme"
+            [options]="themeOptions"
+            [value]="draft().settings.theme"
+            (valueChange)="setSettingChoice('theme', $event)"
+          />
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+            Date format
+            <input
+              id="field-settings-dateFormat"
+              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              [value]="draft().settings.dateFormat"
+              (input)="updateSettingText('dateFormat', $event)"
+            />
+          </label>
+          <app-segmented
+            controlId="field-settings-datePosition"
+            label="Date position"
+            [options]="datePositionOptions"
+            [value]="draft().settings.datePosition"
+            (valueChange)="setSettingChoice('datePosition', $event)"
+          />
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+            Items per row
+            <input
+              id="field-settings-itemsPerRow"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              type="number"
+              min="1"
+              max="10"
+              [attr.aria-describedby]="describedBy(['settings', 'itemsPerRow'])"
+              [attr.aria-invalid]="errorFor(['settings', 'itemsPerRow']) ? 'true' : null"
+              [value]="draft().settings.itemsPerRow"
+              (input)="updateSettingNumber('itemsPerRow', $event)"
+            />
+            @if (errorFor(['settings', 'itemsPerRow']); as error) {
+              <p id="error-settings-itemsPerRow" class="text-[13px] font-medium text-down">
+                {{ error }}
+              </p>
+            }
+          </label>
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+            Light background image
+            <input
+              id="field-settings-lightBackgroundImage"
+              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              placeholder="Leave blank to use the built-in default"
+              [value]="draft().settings.lightBackgroundImage"
+              (input)="updateSettingText('lightBackgroundImage', $event)"
+            />
+          </label>
+          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+            Dark background image
+            <input
+              id="field-settings-darkBackgroundImage"
+              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              placeholder="Leave blank to use the built-in default"
+              [value]="draft().settings.darkBackgroundImage"
+              (input)="updateSettingText('darkBackgroundImage', $event)"
+            />
+          </label>
+        </div>
+
+        <fieldset class="mt-7 min-w-0 border-t border-line pt-6">
+          <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
+            Display options
+          </legend>
+          <div
+            class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-2.5"
+          >
+            @for (option of displayOptions; track option.field) {
+              <app-switch
+                [checked]="isSettingEnabled(option.field)"
+                [controlId]="'field-settings-' + option.field"
+                [label]="option.label"
+                (checkedChange)="setSettingBoolean(option.field, $event)"
+              />
+            }
+          </div>
+        </fieldset>
+
+        <fieldset
+          id="field-settings-searchEngines"
+          class="mt-7 min-w-0 border-t border-line pt-6"
+          tabindex="-1"
+        >
+          <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
+            Search engines
+          </legend>
+          <div
+            class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-2.5"
+          >
+            @for (engine of searchEngineOptions; track engine) {
+              <app-switch
+                [checked]="hasSearchEngine(engine)"
+                [controlId]="'field-settings-searchEngines-' + engine"
+                [label]="searchEngineLabels[engine]"
+                (checkedChange)="setSearchEngine(engine, $event)"
+              />
+            }
+          </div>
+        </fieldset>
+      </app-config-section>
+
       <app-collection-editor
         collection="categories"
+        sectionNumber="04"
         [items]="draft().categories"
         [fieldErrorIds]="collectionErrorIds('categories')"
         [fieldErrors]="collectionErrors('categories')"
@@ -300,6 +314,7 @@
       />
       <app-collection-editor
         collection="applications"
+        sectionNumber="05"
         [items]="draft().applications"
         [categoryOptions]="draft().categories"
         [fieldErrorIds]="collectionErrorIds('applications')"
@@ -311,6 +326,7 @@
       />
       <app-collection-editor
         collection="bookmarks"
+        sectionNumber="06"
         [items]="draft().bookmarks"
         [fieldErrorIds]="collectionErrorIds('bookmarks')"
         [fieldErrors]="collectionErrors('bookmarks')"
@@ -319,57 +335,48 @@
         (removeItem)="store.removeBookmark($event)"
         (moveItem)="store.moveBookmark($event.from, $event.to)"
       />
-    </div>
 
-    <section
-      aria-labelledby="export-heading"
-      class="mt-10 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl sm:p-8"
-    >
-      <div class="flex flex-col gap-5">
-        <div>
-          <h2 id="export-heading" class="text-2xl font-semibold text-neutral-900 dark:text-white">
-            Export configuration
-          </h2>
-          <p class="mt-2 max-w-2xl text-sm leading-6 text-neutral-700 dark:text-white/70">
-            Copy and download validate your draft, then create normalized YAML locally. Save also
-            writes it to the mounted dashboard.yaml, if the write API is enabled.
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-3">
-          <button
-            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white"
-            type="button"
-            (click)="copyYaml()"
-          >
+      <app-config-section
+        description="Copy and download validate your draft, then create normalized YAML locally. Save also writes it to the mounted dashboard.yaml, if the write API is enabled."
+        number="07"
+        section="export"
+        title="Export configuration"
+        narrowDescription
+      >
+        <div class="flex flex-wrap gap-2.5">
+          <button [class]="secondaryActionClass" type="button" (click)="copyYaml()">
+            <ng-icon aria-hidden="true" class="text-base" name="heroClipboardDocument" />
             Copy YAML
           </button>
-          <button
-            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/20 transition-all duration-300 hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            (click)="downloadYaml()"
-          >
+          <button [class]="secondaryActionClass" type="button" (click)="downloadYaml()">
+            <ng-icon aria-hidden="true" class="text-base" name="heroArrowDownTray" />
             Download YAML
           </button>
           <button
-            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/20 transition-all duration-300 hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            [attr.aria-describedby]="writeEnabled() ? null : 'save-unavailable-help'"
+            [class]="primaryActionClass + ' px-5'"
             type="button"
-            [disabled]="isSavingToServer()"
+            [disabled]="isSavingToServer() || !writeEnabled()"
             (click)="saveToServer()"
           >
+            <ng-icon aria-hidden="true" class="text-base" name="heroCheck" />
             Save
           </button>
         </div>
-      </div>
 
-      @if (showTokenPrompt()) {
-        <div
-          class="mt-6 flex flex-col gap-4 border-t border-white/15 pt-6 sm:flex-row sm:items-end sm:justify-between"
-        >
-          <div class="sm:max-w-sm sm:flex-1">
-            <label
-              for="field-config-write-token"
-              class="block text-sm font-medium text-neutral-900 dark:text-white"
-            >
+        @if (!writeEnabled()) {
+          <p id="save-unavailable-help" class="mt-3 max-w-[640px] text-[13px] text-muted">
+            Save is off: there is no
+            <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the server. Set it and
+            restart to save from here; Copy and Download still work.
+          </p>
+        }
+
+        @if (showTokenPrompt()) {
+          <div
+            class="mt-6 flex max-w-[520px] flex-col gap-2.5 rounded-xl border border-line bg-field p-5"
+          >
+            <label for="field-config-write-token" class="text-[13px] font-medium text-text">
               Write token
             </label>
             <input
@@ -377,36 +384,34 @@
               type="password"
               autocomplete="off"
               aria-describedby="field-config-write-token-help"
-              class="mt-2 w-full rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-neutral-900 shadow-inner shadow-black/5 transition hover:border-white/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
               [value]="pendingToken()"
               (input)="updatePendingToken($event)"
             />
-            <p
-              id="field-config-write-token-help"
-              class="mt-2 text-xs leading-5 text-neutral-700 dark:text-white/60"
-            >
-              Same value as CONFIG_WRITE_TOKEN on the server. Stored only in this browser.
+            <p id="field-config-write-token-help" class="text-[13px] text-muted">
+              Same value as <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the
+              server. Stored only in this browser.
             </p>
+            <div class="mt-1.5 flex flex-wrap gap-2.5">
+              <button
+                [class]="primaryActionClass + ' px-[18px]'"
+                type="button"
+                [disabled]="isSavingToServer()"
+                (click)="confirmToken()"
+              >
+                Save token & save
+              </button>
+              <button
+                class="flex h-11 items-center rounded-[10px] border border-line-strong px-4 text-sm font-medium text-text transition-colors duration-200 hover:bg-surface-2"
+                type="button"
+                (click)="cancelTokenPrompt()"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-          <div class="flex shrink-0 gap-3">
-            <button
-              class="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/20 transition-all duration-300 hover:bg-emerald-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              [disabled]="isSavingToServer()"
-              (click)="confirmToken()"
-            >
-              Save token & save
-            </button>
-            <button
-              class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-neutral-900 shadow-lg shadow-black/5 backdrop-blur-md transition-all duration-300 hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:text-white"
-              type="button"
-              (click)="cancelTokenPrompt()"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      }
-    </section>
+        }
+      </app-config-section>
+    </div>
   </div>
 </main>

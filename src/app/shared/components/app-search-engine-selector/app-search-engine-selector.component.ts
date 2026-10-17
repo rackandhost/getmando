@@ -1,8 +1,12 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
+  inject,
+  Injector,
   input,
   output,
   signal,
@@ -10,7 +14,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroChevronDown, heroMagnifyingGlass } from '@ng-icons/heroicons/outline';
+import { heroCheck, heroChevronDown, heroMagnifyingGlass } from '@ng-icons/heroicons/outline';
 import {
   simpleDuckduckgo,
   simpleGoogle,
@@ -29,6 +33,7 @@ import { SearchEngine } from '../../../core/models/dashboard.models';
   },
   viewProviders: [
     provideIcons({
+      heroCheck,
       heroChevronDown,
       heroMagnifyingGlass,
       simpleDuckduckgo,
@@ -49,6 +54,12 @@ export class AppSearchEngineSelectorComponent {
     this.engines().filter((engine): engine is SearchEngine => engine !== undefined),
   );
   protected readonly activeIndex = signal(0);
+  protected readonly scopeLabel = computed(() => this.selectedEngine()?.name ?? 'Apps');
+  private readonly injector = inject(Injector);
+
+  /** Lets the search bar know the menu is open, so a compact bar stays expanded while it is. */
+  readonly openChange = output<boolean>();
+  private readonly reportOpen = effect(() => this.openChange.emit(this.isOpen()));
 
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly options = viewChildren<ElementRef<HTMLElement>>('option');
@@ -86,6 +97,12 @@ export class AppSearchEngineSelectorComponent {
   }
 
   protected onTriggerKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.isOpen()) {
+      event.preventDefault();
+      this.close();
+      return;
+    }
+
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
 
     event.preventDefault();
@@ -125,7 +142,7 @@ export class AppSearchEngineSelectorComponent {
   private open(index = this.selectedOptionIndex()): void {
     this.activeIndex.set(index);
     this.isOpen.set(true);
-    queueMicrotask(() => this.focusOption(index));
+    afterNextRender(() => this.focusOption(index), { injector: this.injector });
   }
 
   private moveFocus(offset: number): void {

@@ -1,0 +1,124 @@
+/*
+ * Base layer of the UI redesign (design.md § 3, § 4.1, § 5): page background and scrim, scroll
+ * stability, focus ring and reduced motion. Colours come from tokens.css.
+ */
+
+html {
+  /* D15: a scrollbar appearing or disappearing must not change vw-driven sizes. */
+  scrollbar-gutter: stable;
+}
+
+/*
+ * The configurator moves between its sections, fields and error summary with scrollIntoView; like the
+ * prototype it does so smoothly. Only while that page is mounted (the dashboard has none), and never
+ * under reduced motion.
+ */
+html:has(app-configurator-page) {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(app-configurator-page) {
+    scroll-behavior: auto;
+  }
+}
+
+/* D15: scroll anchoring must not move scrollTop behind the scroll-state logic's back. */
+@utility overflow-anchor-none {
+  overflow-anchor: none;
+}
+
+body {
+  min-height: 100vh;
+  color: rgb(255 255 255);
+  /* Shown when no background image is configured or it fails to load. */
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  position: relative;
+}
+
+#app-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: saturate(0.85);
+}
+
+/* Tinted scrim over the image: rgba(13,15,17,.6) dark, rgba(243,241,236,.2) light. Not user-configurable. */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--scrim);
+  z-index: -1;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Tailwind v4 leaves <button> at the default arrow: enabled buttons get the hand. In the base layer so
+   utilities (disabled:cursor-not-allowed, cursor-default) still win. Mouse-only affordance, not a11y. */
+@layer base {
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Two-tone focus ring on every focusable element: visible on any backdrop in both themes (D12). */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-halo);
+}
+
+/*
+ * Focus inside a sticky dock must not scroll the page (the dock is sticky, so its controls are always in view).
+ * While a dock is sticky the document's scroll-padding-top equals its height (D9, see StickyDockDirective) so
+ * controls *below* it are never left underneath; that same padding makes the browser treat the dock's own
+ * controls as hidden and scroll up to "reveal" them. Two measures cover the two ways it does that:
+ *  - a negative scroll-margin-top of the dock's height on everything inside it, which takes effect before the
+ *    element gets focus (the browser scrolls before it dispatches focusin);
+ *  - the directive dropping the padding on focusin, which is in time for revealing a text caret (the search
+ *    input), a step that ignores scroll-margin.
+ */
+[data-dock='top'] *,
+[data-dock='scrolled'] * {
+  scroll-margin-top: calc(-1 * var(--dock-height, 0px));
+}
+
+/* Accessibility - Reduced motion: state changes apply instantly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### New Features
+
+- **Interface redesign**: the dashboard and the configurator have a new look built on shared design tokens and glass surfaces that keep an opaque floor under the glass, so text stays legible over any background image in both themes. The dashboard has a one-row clock and a sticky dock (clock, search, categories) that compacts into a band while you scroll; on phones the search and tabs stick on their own. The dock only compacts when the page has enough rows to keep scrolling and the window is tall enough (720 px; 500 px on the phone layout and the configurator), so it never loops between its two states. The configurator has a section navigation (a column on desktop, a chip bar up to 900 px), inline row editors, an error summary whose entries jump to the field, and no horizontal overflow down to 195 px. Nunito and IBM Plex Mono are now served by the app instead of Google Fonts. No change to `dashboard.yaml`.
+- **Status badge is a text pill**: the health badge of an application card is now a pill with a status dot and the label `UP` or `DOWN` instead of a ✓ / ✕ circle. The label, not only the colour, carries the state, and the card's accessible name reads `<name>, online` or `<name>, offline`. Nothing changes in `healthCheck` or in `GET /api/status`.
+- **Write capability endpoint**: the sidecar exposes a public, read-only `GET /api/capabilities` that answers `{ "write": boolean }`. The configurator disables Save when the server reports that writing is off (no `CONFIG_WRITE_TOKEN`); if the endpoint cannot be reached Save stays enabled, as before. The endpoint never returns the token.
+
+### Bug Fixes
+
+- **Accessibility findings of the previous UI**: the toast host no longer carries an ARIA attribute that its role prohibits, and each application card's accessible name now contains its visible text. Lighthouse accessibility goes from 96 to 100 on desktop and mobile.
+
+### Testing & Quality
+
+- **Performance**: Lighthouse performance median 86 on desktop (84 before) and 61 on mobile (62 before); the initial bundle is 770.9 kB against 743.4 kB on `develop` (the 500 kB warning budget was already exceeded). With a hardware GPU the dashboard keeps its frame rate while scrolling at 4× CPU throttle; with a software rasteriser (no GPU) the sticky band's blur over many cards can drop desktop frames.
+
+### Documentation
+
+- **Specs moved to their own repository**: the `openspec/` directory now lives in
+  [getmando-specs](https://github.com/rackandhost/getmando-specs) instead of this repository, so
+  specifications evolve in their own history while this repository stays code-only. README.md and
+  ARCHITECTURE.md point there now. Historical entries below keep their original `openspec/...`
+  paths: they refer to where those files lived at the time.
+
 ## v2.1.1
 
 ### Bug Fixes

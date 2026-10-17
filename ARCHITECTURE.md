@@ -16,16 +16,19 @@ For a first contribution:
 
 1. Read [README.md](README.md) for setup and user-facing configuration.
 2. Read [AGENTS.md](AGENTS.md) for project coding, state, accessibility, and error conventions.
-3. Start the app with `npm install` and `npm start`. Use `npm run dev` to also run the write
+3. For any non-trivial change, read the applicable capability spec in the separate
+   [getmando-specs](https://github.com/rackandhost/getmando-specs) repository (see Repository
+   Shape below).
+4. Start the app with `npm install` and `npm start`. Use `npm run dev` to also run the write
    sidecar (needed only for the configurator's Save action).
-4. Follow startup from [src/main.ts](src/main.ts) to
+5. Follow startup from [src/main.ts](src/main.ts) to
    [src/app/app.config.ts](src/app/app.config.ts), then to
    [dashboard.initializer.ts](src/app/core/initializers/dashboard.initializer.ts).
-5. For UI work, begin at
+6. For UI work, begin at
    [dashboard.component.ts](src/app/views/dashboard/dashboard.component.ts) or
    [configurator-page.component.ts](src/app/features/configurator/configurator-page.component.ts)
    and move into the relevant shared component.
-6. Run `npm test`, `npm run lint`, `npm run format:check`, and `npm run build` before review. For
+7. Run `npm test`, `npm run lint`, `npm run format:check`, and `npm run build` before review. For
    sidecar changes also run `npm --prefix server run typecheck` and `npm --prefix server test`.
 
 ## Stack
@@ -63,11 +66,15 @@ src/
       errors/             last-resort global error handling
       initializers/       startup orchestration
       models/             Zod schemas, inferred types, defaults, shared validation
+      scroll/             ScrollStateService, its pure core and the browser metrics token
       services/           configuration, state, domain operations, and diagnostics
     features/
       configurator/       browser-based YAML editor, loaded as a lazy route
-    shared/components/    reusable or feature-level presentation components
+    shared/
+      components/         reusable or feature-level presentation components
+      directives/         sticky dock and horizontal-nav directives
     views/dashboard/      dashboard page composition
+  styles/                 design tokens, glass surface recipes, base layer, self-hosted fonts
   testing/                shared test helpers and tooling regression tests
 public/
   config/                 runtime YAML and user-facing example
@@ -75,7 +82,7 @@ public/
 server/                   config-write-api sidecar (own package.json and tests)
   src/
     index.ts              environment parsing, status poller start, listen
-    app.ts                Fastify instance: authenticated POST /api/config, public GET /api/status
+    app.ts                Fastify instance: authenticated POST /api/config, public GET /api/status and GET /api/capabilities
     write-config.ts       atomic file write with .bak rotation
     status-poller.ts      periodic checks of healthCheck apps, in-memory status cache
     status-checker.ts     one reachability check (any HTTP response is up)
@@ -85,6 +92,11 @@ Root build and delivery files are [angular.json](angular.json), [proxy.conf.json
 [Dockerfile](Dockerfile), [entrypoint.sh](entrypoint.sh), and [nginx.conf](nginx.conf). Kubernetes
 deployment manifests (the Kustomize base) live in [deploy/kubernetes](deploy/kubernetes). CI
 workflows live in [.github/workflows](.github/workflows).
+
+The project's specifications live in a separate repository,
+[getmando-specs](https://github.com/rackandhost/getmando-specs) (`openspec/` layout: `specs/` for
+shipped capabilities, `changes/` for active proposals), normally opened beside this repository
+through the `getmando.code-workspace` multi-root workspace.
 
 ### Dependency Rules
 
@@ -110,9 +122,11 @@ workflows live in [.github/workflows](.github/workflows).
 [app.routes.ts](src/app/app.routes.ts) declares two routes. `''` renders `DashboardComponent`
 directly. `configure` lazy-loads `CONFIGURATOR_ROUTES`, which provides `ConfiguratorStore` and
 renders `ConfiguratorPageComponent`. [AppShellComponent](src/app/shared/components/app-shell/app-shell.component.ts)
-— a fixed header, a scrollable `<router-outlet>`, and a fixed footer — wraps both routes.
-`AppHeaderComponent` derives one navigation control from the active URL that toggles between the
-dashboard and the configurator.
+is a centred page container (max 1360 px) shared by both routes: the window scrolls, the routed page
+renders its own `AppHeaderComponent` and sticky chrome, and the shell appends the footer in normal
+flow. `AppHeaderComponent` derives one navigation control from the active URL that toggles between
+the dashboard and the configurator; each page decides how its header compacts (see Scroll State
+and Sticky Chrome).
 
 ## Startup and Configuration
 
@@ -226,12 +240,15 @@ Output paths:
   missing token opens an inline prompt; the token is kept in `localStorage` under
   `config-write-token` and cleared on a `401`. On success the store is marked clean and
   `YamlLoaderService.refreshMountedConfig()` re-fetches the YAML and installs it into live
-  `AppService` state, so the dashboard reflects the save without a reload.
+  `AppService` state, so the dashboard reflects the save without a reload. The editor asks
+  `ConfigWriteService.isWriteEnabled()` (`GET /api/capabilities`) and disables Save, with the reason
+  next to it, only when the sidecar answers `{write: false}`; an unreachable sidecar or an
+  unexpected answer leaves Save available, and Save then reports the real error.
 
 ## Config Write Sidecar
 
 `server/` is a standalone Fastify service, bundled into the production image and started beside
-nginx. It exposes two routes; `POST /api/config` writes the configuration:
+nginx. It exposes three routes; `POST /api/config` writes the configuration:
 
 1. An `onRequest` hook compares the `x-config-token` header to `CONFIG_WRITE_TOKEN` before Fastify
    parses the body; a mismatch returns `401` and the payload is never read.
@@ -252,8 +269,10 @@ starts the sidecar in the background then execs nginx, with `tini` as PID 1. Loc
 ([scripts/dev.sh](scripts/dev.sh)) runs both processes and [proxy.conf.json](proxy.conf.json)
 forwards `/api` from the dev server to the sidecar.
 
-Without `CONFIG_WRITE_TOKEN`, or with the config mounted read-only, the dashboard still serves
-normally — only Save fails, Copy/Download remain available, and status checks keep working.
+Without `CONFIG_WRITE_TOKEN` the editor disables Save (the sidecar's `GET /api/capabilities` reports
+`{write: false}`, a boolean that never carries the token) while the dashboard still serves normally,
+Copy/Download remain available, and status checks keep working. With the config mounted read-only
+Save stays enabled and fails when used.
 
 ## App Status Checks
 
@@ -311,6 +330,8 @@ Examples:
   the `configure` route.
 - `AppStatusService` owns the statuses signal keyed by application id and its polling lifecycle (see
   App Status Checks).
+- `ScrollStateService` owns one scroll state (`static`, `top` or `scrolled`) per sticky chrome (see
+  Scroll State and Sticky Chrome).
 
 Use RxJS for HTTP, browser event streams, debounce, or multi-source asynchronous orchestration. Do
 not introduce `BehaviorSubject` as a general store or wrap synchronous signal state in observables.
@@ -335,6 +356,56 @@ settings and resolved theme.
 Storage failures are non-fatal. A read failure logs and warns, then falls back to configured theme.
 A write failure logs and warns, while preserving the user's selection for the current session. The
 YAML setting itself is not written to browser storage.
+
+## Design Tokens and Glass Surfaces
+
+The look comes from three CSS files under [src/styles](src/styles), imported by `styles.css`:
+
+- [tokens.css](src/styles/tokens.css) declares every colour, radius, shadow, glass blur and
+  legibility floor twice: the light set on `:root` and the dark set under the `dark` class that
+  `ThemeService` puts on `<html>`. A token exists in both sets or in neither.
+- [surfaces.css](src/styles/surfaces.css) holds the recipes `glass-chrome`, `glass-clock`,
+  `glass-card` and `glass-field`. A component takes a recipe class and adds only its own radius and
+  layout. Each glass surface paints an opaque `--surface` floor of token-defined opacity under a
+  translucent glass layer, so text keeps its contrast over any user-configured background photo;
+  without `backdrop-filter` support the opaque fallback is painted instead.
+- [base.css](src/styles/base.css) holds the page background and scrim, the two-tone focus ring,
+  the reduced-motion rules, `scrollbar-gutter: stable` and the smooth scrolling that applies only
+  while the configurator is mounted. [fonts.css](src/styles/fonts.css) declares the self-hosted
+  Nunito and IBM Plex Mono Latin subsets.
+
+[design-tokens.spec.ts](src/styles/design-tokens.spec.ts) measures every text / surface pair of both
+themes, with and without `backdrop-filter`, through `src/testing/token-audit.ts`. Changing a token
+or a recipe is verified there before any browser check.
+
+## Scroll State and Sticky Chrome
+
+The dashboard dock (clock, search and categories), the mobile dock and the configurator header are
+sticky chromes that compact once the page scrolls. They share one decision-maker,
+[ScrollStateService](src/app/core/scroll/scroll-state.service.ts), instead of each listening to
+scroll on its own.
+
+- A chrome registers a `ChromeProbe` (`id`, `compactDelta`: the height it loses when compact, and
+  `minViewportHeight`) through
+  [StickyDockDirective](src/app/shared/directives/sticky-dock.directive.ts) and receives a signal
+  `static | top | scrolled`. The directive exposes it as `data-dock` and exposes the live height as
+  `--dock-height`; templates and styles key off those.
+- [scroll-state.ts](src/app/core/scroll/scroll-state.ts) is the pure core, with no Angular and no
+  DOM. `Top → Scrolled` above 40 px of scroll, back at 4 px. A chrome is *eligible* to compact only
+  if the scroll left after compaction reaches 80 px (off again below 56 px), measured against the
+  document height *as it would be in the Top layout*; flipping modes therefore cannot change the
+  condition that triggered it. A viewport shorter than the probe's `minViewportHeight` keeps the
+  chrome `static`.
+- The browser only notifies. [metrics-source.ts](src/app/core/scroll/metrics-source.ts) wraps
+  scroll, resize, size observers, frames and the clock behind the `METRICS_SOURCE` token; every
+  decision is taken in an animation frame from fresh measurements. Tests replace the token with a
+  fake document and clock.
+- A change leaves the chrome 400 ms to finish animating (none under reduced motion), and more than
+  four changes in two seconds latch it `static` until the layout changes. That breaker is the last
+  defence against a feedback loop, not the normal path.
+- [HorizontalNavDirective](src/app/shared/directives/horizontal-nav.directive.ts) maps the wheel to
+  sideways scrolling and reports which edge of a tab bar still hides content so a fade is drawn
+  there; the configurator's `ChipAutocenterDirective` keeps the active chip centred.
 
 ## Error and Notification Flow
 
@@ -370,10 +441,15 @@ place host behavior in the decorator `host` object.
 
 Templates use native control flow and simple expressions. Prefer semantic HTML and preserve visible
 focus, keyboard operation, accessible names, ARIA relationships, and WCAG AA contrast. Static image
-work should use `NgOptimizedImage` where applicable. The search engine selector is a useful local
-reference for parent-child output, keyboard navigation, and focus restoration;
-`CollectionEditorComponent` is the reference for editing a list of items with add, remove, and
-reorder, per-row field errors, and focus management after add and remove.
+work should use `NgOptimizedImage` where applicable. Surfaces take a recipe class from
+`surfaces.css` and colours from tokens; do not hard-code either in a template. The search engine
+selector is a useful local reference for parent-child output, keyboard navigation, and focus
+restoration; `CollectionEditorComponent` is the reference for editing a list of items with add,
+remove, and reorder, per-row field errors, and focus management after add and remove.
+
+The form controls of the configurator are shared components: `AppSegmentedComponent` (radio group),
+`AppSwitchComponent` (switch) and `AppSelectComponent` (listbox select). `AppClockComponent` renders
+the clock in its full and compact forms.
 
 ## Testing and CI
 
@@ -449,6 +525,8 @@ Kustomize base with `kubectl kustomize` and kubeconform. A separate workflow rea
 | Configurator editing or export | `ConfiguratorStore`, `configurator-page.component`, `YamlCodecService`     | Draft validation, per-field errors, canonical YAML, empty-draft guard  |
 | Config write / Save            | `ConfigWriteService`, `server/src/app.ts`, `write-config.ts`, `nginx.conf` | Token auth, shared-schema rejection, atomic write + `.bak`, proxy path |
 | App status badges              | `AppStatusService`, `app-card`, `status-poller.ts`, `status-checker.ts`    | Opt-in default, any response is up, polls only while monitored         |
+| Sticky dock or header behavior | `ScrollStateService`, `StickyDockDirective`, the page's dock markup        | Pure-core specs, loop-free eligibility, breaker, reduced motion, short viewports |
+| Colours, surfaces, blur        | `tokens.css`, `surfaces.css`, `design-tokens.spec.ts`                      | Contrast audit in both themes, with and without `backdrop-filter`      |
 | Theme or backgrounds           | `ThemeService`, `SettingsService`, dashboard view                          | Precedence, storage failures, auto media changes, both backgrounds     |
 | Search or categories           | `SearchService`, `CategoryService`, `AppService`                           | Local UI state, computed filtering, keyboard behavior                  |
 | Notifications or errors        | Producer, `NotificationService`, `GlobalErrorHandler`                      | One notification owner, safe copy, diagnostics, root toast             |

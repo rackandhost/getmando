@@ -1,33 +1,47 @@
-<header class="p-6 md:p-8">
-  <div class="flex flex-row items-center justify-between gap-4">
-    <div class="flex gap-2">
-      <img alt="getMando" class="w-16 h-16" src="img/mando.png" />
+<header
+  class="border-b border-line transition-[padding] duration-300"
+  [attr.data-compact]="compact()"
+  [style.padding-top.px]="paddingY()"
+  [style.padding-bottom.px]="paddingY()"
+>
+  <div class="flex items-center justify-between gap-4">
+    <div
+      class="glass-chrome flex min-w-0 items-center gap-[14px] rounded-[18px] py-1.5 pl-1.5 pr-4 text-text"
+    >
+      <img alt="getMando" class="size-11 shrink-0 rounded-xl object-cover" src="img/mando.png" />
 
-      <div>
-        <h1 class="text-2xl md:text-3xl font-bold text-neutral-800 dark:text-white mb-1">
+      <div class="min-w-0">
+        <h1 class="truncate text-lg leading-tight font-semibold tracking-[-0.18px]">
           {{ metadata()?.title || 'Dashboard' }}
         </h1>
 
-        <p class="text-base text-neutral-800/70 dark:text-white/70">
+        <p class="truncate text-[13px] leading-tight text-muted">
           {{ metadata()?.description || 'Your selfhosted applications' }}
         </p>
       </div>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2">
       <!-- Configurator navigation -->
       <a
         [attr.aria-label]="navLabel()"
-        class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-neutral-800 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-95 dark:text-white"
+        class="glass-chrome flex h-11 items-center justify-center gap-2 rounded-xl text-text transition-transform active:scale-95"
+        [class]="
+          isConfiguratorRoute() ? 'min-w-11 px-3.5 max-[601px]:w-11 max-[601px]:px-0' : 'w-11'
+        "
         [routerLink]="navTarget()"
       >
         <ng-icon aria-hidden="true" class="text-xl" [name]="navIcon()" />
+        @if (isConfiguratorRoute()) {
+          <!-- Visually hidden on phones; the link keeps its accessible name through aria-label. -->
+          <span class="text-sm font-medium max-[601px]:sr-only">{{ navLabel() }}</span>
+        }
       </a>
 
       <!-- Theme toggle button -->
       <button
         aria-label="Toggle theme"
-        class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-neutral-800 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/20 active:scale-95 dark:text-white"
+        class="glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95"
         type="button"
         (click)="onToggleTheme()"
       >
