@@ -436,7 +436,7 @@ describe('CollectionEditorComponent', () => {
         inputs: { collection: 'applications', items: apps, categoryOptions: categories, ...inputs },
       });
 
-    it('summarises an application: index, name, URL in mono, category tag and flags', async () => {
+    it('summarises an application: index, name, URL in mono, category id tag and flags', async () => {
       await renderApps({
         categoryOptions: [
           { id: 'media', name: 'Media' },
@@ -447,7 +447,7 @@ describe('CollectionEditorComponent', () => {
       const plex = within(summaryOf('Plex'));
       expect(plex.getByText('01')).toBeInTheDocument();
       expect(plex.getByText('https://plex.example.test')).toHaveClass('font-mono');
-      expect(plex.getByText('Media', { selector: 'span' })).toBeInTheDocument();
+      expect(plex.getByText('media', { selector: 'span' })).toHaveClass('font-mono');
       expect(plex.getByText('health · new tab')).toBeInTheDocument();
       expect(within(summaryOf('Grafana')).queryByText(/new tab|health/)).not.toBeInTheDocument();
       expect(within(summaryOf('Docs')).getByText('new tab')).toBeInTheDocument();
@@ -495,6 +495,19 @@ describe('CollectionEditorComponent', () => {
 
         expect(iconOf('Docs')).toHaveAttribute('src', 'icon://name/wiki/Docs');
       });
+    });
+
+    it.each([
+      ['categories', categories, '2 categories'],
+      ['applications', apps, '3 applications'],
+      ['bookmarks', [apps[0]], '1 bookmark'],
+      ['bookmarks', [], '0 bookmarks'],
+    ] as const)('says how many %s it holds under its title', async (collection, items, text) => {
+      await render(CollectionEditorComponent, {
+        inputs: { collection, items: [...items], categoryOptions: categories },
+      });
+
+      expect(screen.getByText(text)).toBeInTheDocument();
     });
 
     it('shows a category as its id with no tag and no flags', async () => {

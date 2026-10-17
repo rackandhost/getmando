@@ -1,5 +1,5 @@
 <button
-  class="group flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface-2 px-3.5 py-2 text-left text-sm font-medium text-text"
+  class="group flex min-h-[52px] w-full items-center justify-between gap-3 rounded-[10px] border border-line bg-surface-2 px-3.5 text-left text-sm text-text"
   role="switch"
   type="button"
   [attr.aria-checked]="checked()"
@@ -12,10 +12,10 @@
   <!-- Track 44 × 26: the thumb's position, not only the accent fill, tells on from off. -->
   <span
     aria-hidden="true"
-    class="relative h-[26px] w-11 shrink-0 rounded-full border border-field-border bg-field transition-colors duration-200 group-data-[checked=true]:border-accent group-data-[checked=true]:bg-accent"
+    class="relative h-[26px] w-11 shrink-0 rounded-full border border-field-border bg-line-strong transition-colors duration-200 group-data-[checked=true]:border-accent group-data-[checked=true]:bg-accent"
   >
     <span
-      class="absolute top-[2px] left-[2px] size-5 rounded-full bg-muted transition-[translate,background-color] duration-200 group-data-[checked=true]:translate-x-[18px] group-data-[checked=true]:bg-accent-ink"
+      class="absolute top-[2px] left-[2px] size-5 rounded-full bg-[linear-gradient(180deg,#fff_0%,#e4e2dc_100%)] shadow-[0_1px_3px_rgba(0,0,0,0.4)] transition-[translate] duration-200 group-data-[checked=true]:translate-x-[18px]"
     ></span>
   </span>
 </button>

@@ -15,9 +15,9 @@ import {
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
-  heroArrowDown,
-  heroArrowUp,
-  heroPencilSquare,
+  heroChevronDown,
+  heroChevronUp,
+  heroPencil,
   heroPlus,
   heroTrash,
 } from '@ng-icons/heroicons/outline';
@@ -72,7 +72,7 @@ export type CollectionEditEvent =
   imports: [NgIcon, AppSelectComponent, AppSwitchComponent, ConfigSectionComponent],
   templateUrl: 'collection-editor.component.html',
   viewProviders: [
-    provideIcons({ heroArrowDown, heroArrowUp, heroPencilSquare, heroPlus, heroTrash }),
+    provideIcons({ heroChevronDown, heroChevronUp, heroPencil, heroPlus, heroTrash }),
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
@@ -107,9 +107,11 @@ export class CollectionEditorComponent {
   protected readonly textareaClass =
     'glass-field min-h-11 w-full rounded-[10px] px-3 py-2.5 text-sm font-normal text-text';
   protected readonly errorClass = 'text-[13px] font-medium text-down';
+  /** Ghost icon buttons of a row (mockup): 40 px, radius 8, no border, muted until hovered. */
   protected readonly actionClass =
-    'inline-flex size-9 items-center justify-center rounded-[10px] border border-line-strong text-text transition-colors hover:bg-line disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:size-11';
-  protected readonly dangerActionClass = this.actionClass.replace('text-text', 'text-down');
+    'grid size-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:size-11';
+  protected readonly dangerActionClass =
+    'grid size-10 place-items-center rounded-lg text-down transition-colors hover:bg-down-bg pointer-coarse:size-11';
   protected readonly selectButtonClass =
     'glass-field h-11 rounded-[10px] pl-3.5 pr-4 text-sm font-normal text-text';
   protected readonly iconTypeOptions: readonly SelectOption[] = [
@@ -135,6 +137,12 @@ export class CollectionEditorComponent {
 
   protected addLabel(): string {
     return `Add ${this.collectionLabel()}`;
+  }
+
+  /** `4 categories`, `1 bookmark`: what the section shows under its title. */
+  protected countLabel(): string {
+    const count = this.items().length;
+    return `${count} ${count === 1 ? this.collectionLabel() : this.collection()}`;
   }
 
   protected errorId(index: number, field: EditableField | IconField): string | undefined {
@@ -215,6 +223,12 @@ export class CollectionEditorComponent {
 
   protected iconValue(index: number): string {
     return this.itemIcon(this.items()[index]).value;
+  }
+
+  /** What the field is called on screen: `Icon URL`, `Icon name` or `Icon initials`. */
+  protected iconValueText(index: number): string {
+    const type = this.iconType(index);
+    return `Icon ${type === 'url' ? 'URL' : type}`;
   }
 
   protected iconValueLabel(index: number): string {
@@ -331,11 +345,9 @@ export class CollectionEditorComponent {
     return this.collection() === 'categories' ? item.id : item.url || item.id;
   }
 
-  protected categoryName(item: EditableItem): string {
-    if (this.collection() !== 'applications' || !item.category) return '';
-    return (
-      this.categoryOptions().find((option) => option.id === item.category)?.name ?? item.category
-    );
+  /** The tag of an application's row is its category's id (mockup `config-3`), the same text as the category row shows. */
+  protected categoryTag(item: EditableItem): string {
+    return this.collection() === 'applications' ? (item.category ?? '') : '';
   }
 
   /** `health · new tab`, `new tab`, or nothing. */
@@ -362,7 +374,7 @@ export class CollectionEditorComponent {
   /** Generated initials fill the tile; real icons sit inside it, as on the dashboard cards. */
   protected iconImageClass(item: EditableItem): string {
     const generated = this.itemIcon(item).type === 'initials' || this.itemIcon(item).value === '';
-    return generated ? 'size-full object-cover' : 'size-7 object-contain';
+    return generated ? 'size-full object-cover' : 'size-6 object-contain';
   }
 
   protected collectionLabel(): string {

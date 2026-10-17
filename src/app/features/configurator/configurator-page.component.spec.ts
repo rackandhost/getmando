@@ -1028,7 +1028,7 @@ describe('ConfiguratorPageComponent', () => {
         'Show seconds',
         'Show date',
         'Allow bookmarks',
-        'Show all category',
+        'Show “Apps” category',
         'Show descriptions',
         'Show labels',
         'Google',

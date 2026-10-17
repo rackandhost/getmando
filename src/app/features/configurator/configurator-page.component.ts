@@ -10,7 +10,14 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroArrowUpTray, heroDocument, heroServerStack } from '@ng-icons/heroicons/outline';
+import {
+  heroArrowDownTray,
+  heroArrowUpTray,
+  heroCheck,
+  heroClipboardDocument,
+  heroDocument,
+  heroServerStack,
+} from '@ng-icons/heroicons/outline';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -98,7 +105,16 @@ const SECTIONS = [
     HorizontalNavDirective,
     StickyDockDirective,
   ],
-  viewProviders: [provideIcons({ heroArrowUpTray, heroDocument, heroServerStack })],
+  viewProviders: [
+    provideIcons({
+      heroArrowDownTray,
+      heroArrowUpTray,
+      heroCheck,
+      heroClipboardDocument,
+      heroDocument,
+      heroServerStack,
+    }),
+  ],
   templateUrl: 'configurator-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'contents' },
@@ -201,6 +217,11 @@ export class ConfiguratorPageComponent {
   protected readonly validationErrors = this.store.validationErrors;
   protected readonly startingPoint = this.store.source;
   protected readonly mountedPath = this.yamlLoader.mountedPath;
+  /** Export actions (mockup `config-5-export`): 44 px, radius 10; secondary on `--surface-2`, primary on `--accent`. */
+  protected readonly secondaryActionClass =
+    'flex h-11 items-center gap-2 rounded-[10px] border border-line-strong bg-surface-2 px-4 text-sm font-medium text-text transition-colors duration-200 hover:bg-line disabled:cursor-not-allowed disabled:opacity-60';
+  protected readonly primaryActionClass =
+    'flex h-11 items-center gap-2 rounded-[10px] bg-accent text-sm font-semibold text-accent-ink transition-[filter] duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60';
   protected readonly isSavingToServer = signal(false);
   protected readonly showTokenPrompt = signal(false);
   protected readonly pendingToken = signal('');
@@ -217,7 +238,7 @@ export class ConfiguratorPageComponent {
     { field: 'showSeconds', label: 'Show seconds' },
     { field: 'showDate', label: 'Show date' },
     { field: 'allowBookmarks', label: 'Allow bookmarks' },
-    { field: 'showAllCategory', label: 'Show all category' },
+    { field: 'showAllCategory', label: 'Show “Apps” category' },
     { field: 'showDescriptions', label: 'Show descriptions' },
     { field: 'showLabels', label: 'Show labels' },
   ];

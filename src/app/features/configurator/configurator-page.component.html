@@ -258,9 +258,11 @@
           </label>
         </div>
 
-        <fieldset class="mt-6 rounded-[14px] border border-line p-4">
-          <legend class="px-1 text-sm font-semibold text-text">Display options</legend>
-          <div class="mt-3 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
+        <fieldset class="mt-7 border-t border-line pt-6">
+          <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
+            Display options
+          </legend>
+          <div class="clear-both grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2.5">
             @for (option of displayOptions; track option.field) {
               <app-switch
                 [checked]="isSettingEnabled(option.field)"
@@ -274,11 +276,13 @@
 
         <fieldset
           id="field-settings-searchEngines"
-          class="mt-6 rounded-[14px] border border-line p-4"
+          class="mt-7 border-t border-line pt-6"
           tabindex="-1"
         >
-          <legend class="px-1 text-sm font-semibold text-text">Search engines</legend>
-          <div class="mt-3 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+          <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
+            Search engines
+          </legend>
+          <div class="clear-both grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-2.5">
             @for (engine of searchEngineOptions; track engine) {
               <app-switch
                 [checked]="hasSearchEngine(engine)"
@@ -333,55 +337,49 @@
         title="Export configuration"
         narrowDescription
       >
-        <div class="flex flex-wrap gap-3">
-          <button
-            class="glass-chrome inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-text disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            (click)="copyYaml()"
-          >
+        <div class="flex flex-wrap gap-2.5">
+          <button [class]="secondaryActionClass" type="button" (click)="copyYaml()">
+            <ng-icon aria-hidden="true" class="text-base" name="heroClipboardDocument" />
             Copy YAML
           </button>
-          <button
-            class="glass-chrome inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-text disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            (click)="downloadYaml()"
-          >
+          <button [class]="secondaryActionClass" type="button" (click)="downloadYaml()">
+            <ng-icon aria-hidden="true" class="text-base" name="heroArrowDownTray" />
             Download YAML
           </button>
           <button
-            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-ink transition-[filter] duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            [class]="primaryActionClass + ' px-5'"
             type="button"
             [disabled]="isSavingToServer()"
             (click)="saveToServer()"
           >
+            <ng-icon aria-hidden="true" class="text-base" name="heroCheck" />
             Save
           </button>
         </div>
 
         @if (showTokenPrompt()) {
           <div
-            class="mt-6 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-end sm:justify-between"
+            class="mt-6 flex max-w-[520px] flex-col gap-2.5 rounded-xl border border-line bg-field p-5"
           >
-            <div class="flex flex-col gap-2 sm:max-w-sm sm:flex-1">
-              <label for="field-config-write-token" class="text-[13px] font-medium text-text">
-                Write token
-              </label>
-              <input
-                id="field-config-write-token"
-                type="password"
-                autocomplete="off"
-                aria-describedby="field-config-write-token-help"
-                class="glass-field h-11 w-full rounded-[10px] px-3 font-mono text-sm font-normal text-text"
-                [value]="pendingToken()"
-                (input)="updatePendingToken($event)"
-              />
-              <p id="field-config-write-token-help" class="text-xs leading-5 text-muted">
-                Same value as CONFIG_WRITE_TOKEN on the server. Stored only in this browser.
-              </p>
-            </div>
-            <div class="flex shrink-0 gap-3">
+            <label for="field-config-write-token" class="text-[13px] font-medium text-text">
+              Write token
+            </label>
+            <input
+              id="field-config-write-token"
+              type="password"
+              autocomplete="off"
+              aria-describedby="field-config-write-token-help"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              [value]="pendingToken()"
+              (input)="updatePendingToken($event)"
+            />
+            <p id="field-config-write-token-help" class="text-[13px] text-muted">
+              Same value as <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the
+              server. Stored only in this browser.
+            </p>
+            <div class="mt-1.5 flex flex-wrap gap-2.5">
               <button
-                class="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-ink transition-[filter] duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                [class]="primaryActionClass + ' px-[18px]'"
                 type="button"
                 [disabled]="isSavingToServer()"
                 (click)="confirmToken()"
@@ -389,7 +387,7 @@
                 Save token & save
               </button>
               <button
-                class="glass-chrome inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-text"
+                class="flex h-11 items-center rounded-[10px] border border-line-strong px-4 text-sm font-medium text-text transition-colors duration-200 hover:bg-surface-2"
                 type="button"
                 (click)="cancelTokenPrompt()"
               >
