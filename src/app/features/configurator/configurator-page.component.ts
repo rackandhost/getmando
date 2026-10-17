@@ -61,6 +61,13 @@ import {
   type ConfiguratorSection,
 } from './configurator-chrome';
 
+/** Where the user is: the section the navigation marks, its distance from the top of the viewport, and whether the page was scrolled to its end. */
+interface PlaceInView {
+  readonly elementId: string;
+  readonly top: number;
+  readonly atBottom: boolean;
+}
+
 type BooleanSetting = Extract<
   keyof DashboardSettings,
   | 'showSeconds'
@@ -185,8 +192,7 @@ export class ConfiguratorPageComponent {
     const narrow = chrome.narrow();
     const stack = chrome.stackHeight();
     this.sectionMargin.set(chrome.sectionMargin());
-    const atBottom =
-      this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
+    const atBottom = this.isAtBottom();
 
     const active = activeSection(positions, activeThreshold(stack, narrow), atBottom);
     if (active) this.activeId.set(active);
@@ -513,13 +519,59 @@ export class ConfiguratorPageComponent {
 
   /**
    * Re-fetches the just-saved YAML and pushes it into the live dashboard state, so the running
-   * app reflects the save immediately instead of only after a manual reload (F5).
+   * app reflects the save immediately instead of only after a manual reload (F5). When that changes the
+   * layout the page draws its sections again inside the other chrome, so where the user was and the Save
+   * button they pressed are put back once it has.
    */
   private async refreshLiveConfig(): Promise<void> {
     const result = await firstValueFrom(this.yamlLoader.refreshMountedConfig());
-    if (result.status === 'valid') {
+    if (result.status !== 'valid') return;
+
+    if (result.config.settings.layout === this.layout()) {
       this.appService.initializeConfig(result.config);
+      return;
     }
+
+    const place = this.placeInView();
+    this.appService.initializeConfig(result.config);
+    afterNextRender(() => this.restorePlace(place), { injector: this.injector });
+  }
+
+  /** Whether the page is scrolled to its very end. */
+  private isAtBottom(): boolean {
+    return this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
+  }
+
+  /** The section the navigation marks as current, how far below the top of the viewport it is, and whether the page is at its end. */
+  private placeInView(): PlaceInView | undefined {
+    const elementId = SECTIONS.find((section) => section.id === this.activeId())?.elementId;
+    const element = elementId ? this.document.getElementById(elementId) : null;
+    if (!elementId || !element) return undefined;
+
+    return { elementId, top: element.getBoundingClientRect().top, atBottom: this.isAtBottom() };
+  }
+
+  /**
+   * Puts the user back where they were, instantly (a swap is not a movement to animate): at the end of the
+   * page if they were there, otherwise the section as far from the top as before. If the new arrangement
+   * sticks something over that spot (the header band after the rail, say) the section is brought below it,
+   * as a click on its navigation item would. Then focuses Save without scrolling again.
+   */
+  private restorePlace(place: PlaceInView | undefined): void {
+    const view = this.document.defaultView;
+    const element = place ? this.document.getElementById(place.elementId) : null;
+
+    if (place?.atBottom) {
+      view?.scrollTo({ top: this.source.docHeight(), behavior: 'instant' });
+    } else if (place && element) {
+      view?.scrollBy({ top: element.getBoundingClientRect().top - place.top, behavior: 'instant' });
+
+      if (element.getBoundingClientRect().top < (this.chrome()?.stackHeight() ?? 0)) {
+        element.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    }
+
+    this.document.getElementById('configurator-save')?.focus({ preventScroll: true });
   }
 
   /** The validated draft, or `undefined` after bringing the error summary into view. */

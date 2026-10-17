@@ -1108,6 +1108,7 @@ describe('ConfiguratorPageComponent', () => {
         render(ConfiguratorPageComponent, {
           providers: [
             ...defaultProviders(),
+            ...exportProviders(),
             { provide: METRICS_SOURCE, useValue: source },
             {
               provide: ScrollStateService,
@@ -1177,6 +1178,138 @@ describe('ConfiguratorPageComponent', () => {
         await waitFor(() => expect(rail()).toBeInTheDocument());
         expect(screen.queryByRole('banner')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Dashboard title')).toHaveValue(draft().metadata.title);
+      });
+
+      describe('when a save changes the layout', () => {
+        let layout: WritableSignal<DashboardLayout>;
+        /** Where the Settings section is: 100 px from the top (inside the 140 px floor) before the swap, 60 px after it. */
+        const tops = { settings: 100 };
+        const save = () => screen.getByRole('button', { name: 'Save' });
+
+        beforeEach(() => {
+          layout = signal<DashboardLayout>('horizontal');
+          tops.settings = 100;
+          store.toDashboardConfig.mockReturnValue(draft());
+          configWrite.hasToken.mockReturnValue(true);
+          configWrite.save.mockReturnValue(of({ status: 'saved' }));
+          yamlLoader.refreshMountedConfig.mockReturnValue(
+            of({
+              status: 'valid',
+              config: { ...draft(), settings: { ...draft().settings, layout: 'vertical' } },
+            }),
+          );
+          appService.initializeConfig.mockImplementation(() => {
+            tops.settings = 60;
+            layout.set('vertical');
+          });
+          vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+          // The elements the swap creates have no stubbed box: they sit where the new arrangement puts them.
+          vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+            this: Element,
+          ) {
+            return { top: this.id === 'section-settings' ? tops.settings : 5000 } as DOMRect;
+          });
+        });
+
+        afterEach(() => {
+          appService.initializeConfig.mockReset();
+          Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+        });
+
+        /** The user is `scrollY` px down when Save is pressed: 900 puts Settings in view, 2100 is the bottom of the page. */
+        const saveFromSettings = async (scrollY = 900, active = '03 Settings') => {
+          const user = userEvent.setup();
+          await renderWith(layout);
+          flushFrames();
+          placeSections({ start: -900, metadata: -500, settings: 100, categories: 800 });
+          scrollTo(scrollY);
+          await waitFor(() => expect(currentItems()).toEqual([active]));
+          await user.click(save());
+          await waitFor(() => expect(rail()).toBeInTheDocument());
+        };
+
+        it('scrolls by the distance the section in view moved, so it stays where it was', async () => {
+          await saveFromSettings();
+
+          await waitFor(() =>
+            expect(window.scrollBy).toHaveBeenCalledExactlyOnceWith({
+              top: 60 - 100,
+              behavior: 'instant',
+            }),
+          );
+        });
+
+        it('puts focus on the Save button of the new arrangement', async () => {
+          await saveFromSettings();
+
+          await waitFor(() => expect(save()).toHaveFocus());
+          expect(save()).toHaveAttribute('id', 'configurator-save');
+        });
+
+        it('keeps the same section as the active item of the new navigation', async () => {
+          await saveFromSettings();
+
+          await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+        });
+
+        it('shows only the saved notification and leaves the draft and its validation alone', async () => {
+          const before = { draft: draft(), errors: validationErrors() };
+          await saveFromSettings();
+          await waitFor(() => expect(save()).toHaveFocus());
+
+          expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+            'Configuration saved to the server.',
+          );
+          expect(notifications.error).not.toHaveBeenCalled();
+          expect(draft()).toBe(before.draft);
+          expect(validationErrors()).toBe(before.errors);
+          expect(store.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('brings the section below what the new arrangement sticks over its old spot', async () => {
+          const scrollIntoView = vi.fn();
+          Object.defineProperty(Element.prototype, 'scrollIntoView', {
+            configurable: true,
+            value: scrollIntoView,
+          });
+          resizeTo(390);
+          // The new bar is stuck over the top 300 px; the section was 100 px from the top.
+          document.documentElement.style.scrollPaddingTop = '300px';
+          await saveFromSettings();
+
+          await waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+          expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('section-settings'));
+          expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
+        });
+
+        it('stays at the bottom of the page when Save was pressed there, so the last section stays the active one', async () => {
+          vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+          metrics.docHeight = 3000;
+          await saveFromSettings(2100, '07 Export');
+
+          await waitFor(() =>
+            expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({
+              top: 3000,
+              behavior: 'instant',
+            }),
+          );
+          expect(window.scrollBy).not.toHaveBeenCalled();
+          await waitFor(() => expect(save()).toHaveFocus());
+        });
+
+        it('leaves the scroll and the focus alone when the saved layout is the one already active', async () => {
+          const user = userEvent.setup();
+          appService.initializeConfig.mockImplementation(() => undefined);
+          yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'valid', config: draft() }));
+          await renderWith(layout);
+
+          await user.click(save());
+
+          await waitFor(() => expect(appService.initializeConfig).toHaveBeenCalledOnce());
+          expect(window.scrollBy).not.toHaveBeenCalled();
+          expect(save()).toHaveFocus();
+          expect(rail()).not.toBeInTheDocument();
+        });
       });
 
       it('keeps the 140 px floor of the spy while the rail is a column', async () => {
