@@ -264,10 +264,10 @@
                   [attr.aria-describedby]="describedBy(index, 'id')"
                   [attr.aria-invalid]="errorId(index, 'id') ? 'true' : null"
                   [attr.aria-label]="fieldLabel(item, 'id')"
-                  [class]="monoFieldClass"
+                  [class]="monoFieldClass + ' cursor-not-allowed opacity-70'"
+                  disabled
                   [id]="fieldId(index, 'id')"
                   [value]="item.id"
-                  (input)="editText(index, 'id', $event)"
                 />
                 @if (errorMessage(index, 'id'); as error) {
                   <p [class]="errorClass" [id]="errorId(index, 'id')">{{ error }}</p>

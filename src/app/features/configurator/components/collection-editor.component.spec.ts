@@ -156,31 +156,26 @@ describe('CollectionEditorComponent', () => {
     ['categories', [{ id: 'media', name: 'Media' }], 'Category ID for Media'],
     ['applications', [{ id: 'plex', name: 'Plex', category: 'media' }], 'Application ID for Plex'],
     ['bookmarks', [{ id: 'docs', name: 'Docs' }], 'Bookmark ID for Docs'],
-  ] as const)('preserves keyboard focus while editing %s IDs', async (collection, items, label) => {
-    const user = userEvent.setup();
-    const edited = vi.fn((event: CollectionEditEvent) => {
-      if (event.field !== 'id') return;
+  ] as const)(
+    'shows the %s ID but does not let the user edit it',
+    async (collection, items, label) => {
+      const user = userEvent.setup();
+      const edited = vi.fn();
+      await render(CollectionEditorComponent, {
+        inputs: { collection, items },
+        on: { editItem: edited },
+      });
 
-      view.fixture.componentRef.setInput(
-        'items',
-        items.map((item, itemIndex) =>
-          itemIndex === event.index ? { ...item, id: event.value } : item,
-        ),
-      );
-      view.fixture.detectChanges();
-    });
-    const view = await render(CollectionEditorComponent, {
-      inputs: { collection, items },
-      on: { editItem: edited },
-    });
+      const field = screen.getByLabelText(label);
+      expect(field).toHaveValue(items[0].id);
+      expect(field).toBeDisabled();
 
-    const field = screen.getByLabelText(label);
-    await user.click(field);
-    await user.type(field, '-updated');
+      await user.type(field, '-updated');
 
-    expect(screen.getByLabelText(/ID for/)).toHaveValue(`${items[0].id}-updated`);
-    expect(screen.getByLabelText(/ID for/)).toHaveFocus();
-  });
+      expect(field).toHaveValue(items[0].id);
+      expect(edited).not.toHaveBeenCalled();
+    },
+  );
 
   it('selects an application category from the current draft categories', async () => {
     const user = userEvent.setup();
