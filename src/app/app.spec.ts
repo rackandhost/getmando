@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
@@ -25,7 +25,10 @@ describe('App', () => {
     provideRouter([]),
     { provide: AppService, useValue: { appVersion: '1.1.0-test' } },
     { provide: MetadataService, useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) } },
-    { provide: SettingsService, useValue: { settings: settingsState } },
+    {
+      provide: SettingsService,
+      useValue: { settings: settingsState, layout: computed(() => settingsState().layout) },
+    },
     {
       provide: ThemeService,
       useValue: {

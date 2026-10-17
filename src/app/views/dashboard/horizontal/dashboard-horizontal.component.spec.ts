@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/angular';
-import { signal, type WritableSignal } from '@angular/core';
+import { computed, signal, type WritableSignal } from '@angular/core';
 
 import { DashboardHorizontalComponent } from './dashboard-horizontal.component';
 
@@ -99,6 +99,7 @@ describe('DashboardHorizontalComponent', () => {
         provide: SettingsService,
         useValue: {
           settings: settingsState,
+          layout: computed(() => settingsState().layout),
         },
       },
       {
