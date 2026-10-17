@@ -1,0 +1,81 @@
+<!-- Rail and main side by side from 1024 px, stacked below it. The DOM order is the visual order at every
+     width: the actions appear twice, after the brand (compact) and after the categories (wide), and the
+     one that is not drawn is display: none. -->
+<div
+  class="flex flex-1 items-start gap-5 max-[1023px]:flex-col max-[1023px]:items-stretch max-[1023px]:gap-3"
+>
+  <app-rail label="Dashboard">
+    <app-rail-brand />
+
+    <app-rail-actions mode="compact" />
+
+    <div class="max-[1023px]:flex max-[1023px]:basis-full max-[1023px]:justify-center">
+      <app-rail-clock />
+    </div>
+
+    <app-finder class="block max-[1023px]:basis-full" data-rail-anchor variant="rail" />
+
+    <app-rail-categories />
+
+    <app-rail-actions mode="wide" />
+  </app-rail>
+
+  <main class="flex min-w-0 flex-1 flex-col gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2
+        class="glass-chrome rounded-xl px-3.5 py-1.5 text-[22px] leading-tight font-bold text-text"
+      >
+        {{ heading() }}
+      </h2>
+
+      @if (count(); as total) {
+        <p class="glass-chrome rounded-xl px-3.5 py-1.5 font-mono text-xs text-muted">
+          {{ total }}
+        </p>
+      }
+    </div>
+
+    <div class="pb-6">
+      @if (filteredApps(); as apps) {
+        @if (apps.length > 0) {
+          <ul
+            aria-label="Applications"
+            class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,270px),1fr))] gap-4"
+          >
+            @for (app of apps; track app.id) {
+              <li class="min-h-[150px]">
+                <app-card [app]="app" />
+              </li>
+            }
+          </ul>
+        } @else {
+          <!-- Empty state -->
+          <section
+            class="flex flex-col items-start gap-2.5 rounded-[14px] border border-dashed border-line-strong bg-surface px-8 py-12"
+          >
+            <ng-icon
+              aria-hidden="true"
+              class="text-[28px] [--ng-icon__color:var(--muted)]"
+              name="heroMagnifyingGlassMinus"
+            />
+            <h2 class="text-lg font-semibold text-text">No applications found</h2>
+            <p class="text-sm text-muted">
+              @if (searchQuery()) {
+                Try adjusting your search query or select a different category.
+              } @else {
+                Add some applications to your dashboard.yaml configuration.
+              }
+            </p>
+          </section>
+        }
+      } @else {
+        <app-loading />
+      }
+    </div>
+  </main>
+</div>
+
+<!-- The wide rail carries the version and the credit; when it is a bar, the footer content closes the page. -->
+<div class="min-[1024px]:hidden">
+  <app-footer />
+</div>
