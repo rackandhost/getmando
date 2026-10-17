@@ -1,0 +1,56 @@
+<div
+  #dockEl
+  #dock="appStickyDock"
+  class="sticky top-0 z-30 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative"
+  [appStickyDock]="probe"
+>
+  <app-header [compact]="dock.mode() === 'scrolled'" [verticalPadding]="headerPadding" />
+</div>
+
+<main class="min-w-0 flex-1">
+  <div class="glass-card mt-10 mb-7 flex max-w-[760px] flex-col gap-2.5 rounded-3xl px-8 py-7">
+    <p class="font-mono text-xs font-medium tracking-[0.14em] text-accent">DASHBOARD SETUP</p>
+    <h1
+      class="text-[40px] leading-[1.1] font-semibold tracking-[-0.02em] wrap-anywhere text-text max-[330px]:text-[30px]"
+    >
+      Configuration editor
+    </h1>
+    <p class="text-[15px] leading-[1.55] text-muted">
+      Build a dashboard configuration locally. Your changes remain in this browser until you export
+      them.
+    </p>
+  </div>
+
+  <div
+    class="flex items-start gap-8 pb-16 max-[901px]:flex-col max-[901px]:items-stretch max-[901px]:gap-5"
+  >
+    <nav
+      #navEl
+      aria-label="Configurator sections"
+      class="glass-chrome sticky top-[104px] z-[5] w-60 shrink-0 self-start rounded-[18px] px-2.5 py-3 max-[901px]:top-24 max-[901px]:z-20 max-[901px]:w-full max-[901px]:rounded-2xl max-[901px]:p-1.5"
+    >
+      <!-- Up to 900 px this list is the chip bar: one row, native sideways scroll without a scrollbar, edge fades on the overflowing side. -->
+      <ol
+        appHorizontalNav
+        [appChipAutocenter]="activeId()"
+        class="m-0 flex list-none flex-col gap-0.5 border-l border-line p-0 [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[901px]:flex-row max-[901px]:gap-1 max-[901px]:overflow-x-auto max-[901px]:overscroll-x-contain max-[901px]:border-l-0 [&::-webkit-scrollbar]:hidden"
+      >
+        @for (item of sections(); track item.id) {
+          <li class="max-[901px]:shrink-0" [attr.data-chip]="item.id">
+            <a
+              class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm whitespace-nowrap text-muted transition-colors duration-200 hover:text-text aria-[current=true]:border-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-text max-[901px]:mx-0 max-[901px]:gap-2 max-[901px]:rounded-[10px] max-[901px]:border-l-0 max-[901px]:px-3"
+              [attr.aria-current]="activeId() === item.id ? 'true' : null"
+              [href]="item.href"
+              (click)="sectionSelected.emit({ elementId: item.elementId, event: $event })"
+            >
+              <span class="font-mono text-xs">{{ item.number }}</span>
+              {{ item.label }}
+            </a>
+          </li>
+        }
+      </ol>
+    </nav>
+
+    <ng-container [ngTemplateOutlet]="body()" />
+  </div>
+</main>

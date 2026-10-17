@@ -38,16 +38,11 @@ import { NotificationService } from '../../core/services/notification.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
-import type { ChromeProbe } from '../../core/scroll/scroll-state.service';
-import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
 import {
   AppSegmentedComponent,
   type SegmentedOption,
 } from '../../shared/components/app-segmented/app-segmented.component';
 import { AppSwitchComponent } from '../../shared/components/app-switch/app-switch.component';
-import { ChipAutocenterDirective } from '../../shared/directives/chip-autocenter.directive';
-import { HorizontalNavDirective } from '../../shared/directives/horizontal-nav.directive';
-import { StickyDockDirective } from '../../shared/directives/sticky-dock.directive';
 
 import {
   CollectionEditEvent,
@@ -57,6 +52,12 @@ import { activeSection, activeThreshold } from './active-section';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 import { LayoutPickerComponent } from './components/layout-picker.component';
+import { ConfiguratorHorizontalChromeComponent } from './chrome/configurator-horizontal-chrome.component';
+import {
+  ConfiguratorChrome,
+  SECTION_CLEARANCE,
+  type ConfiguratorSection,
+} from './configurator-chrome';
 
 type BooleanSetting = Extract<
   keyof DashboardSettings,
@@ -67,19 +68,6 @@ type BooleanSetting = Extract<
   | 'showDescriptions'
   | 'showLabels'
 >;
-
-/** Header padding in px at the top of the page and once scrolled (design.md § 4.1, "Configurator"). */
-const HEADER_PADDING = { full: 24, compact: 14 } as const;
-/** Below this viewport height the header stays Static, as the mobile dock does (design.md § 4.1). */
-const HEADER_MIN_VIEWPORT_HEIGHT = 500;
-
-/** Up to this viewport width (px) the layout is one column and the side navigation is a chip bar. */
-const NARROW_MAX_WIDTH = 900;
-/** Where the chip bar sticks (below the scrolled header), and the air a chip leaves above its section. */
-const CHIP_BAR_TOP = 96;
-const CHIP_BAR_CLEARANCE = 16;
-/** Air the sections keep under the sticky header on a wide page. */
-const SECTION_CLEARANCE = 20;
 
 const SECTIONS = [
   { id: 'start', label: 'Starting point' },
@@ -99,15 +87,12 @@ const SECTIONS = [
   selector: 'app-configurator-page',
   imports: [
     NgIcon,
-    AppHeaderComponent,
     CollectionEditorComponent,
     AppSegmentedComponent,
     LayoutPickerComponent,
     AppSwitchComponent,
     ConfigSectionComponent,
-    ChipAutocenterDirective,
-    HorizontalNavDirective,
-    StickyDockDirective,
+    ConfiguratorHorizontalChromeComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -138,21 +123,17 @@ export class ConfiguratorPageComponent {
     initialValue: true,
   });
 
-  protected readonly sections = SECTIONS;
-  protected readonly headerPadding = HEADER_PADDING;
-
-  /** The sticky header follows the shared scroll state; padding 24 → 14 on both sides loses 20 px. */
-  protected readonly probe: ChromeProbe = {
-    id: 'configurator-header',
-    compactDelta: () => 2 * (HEADER_PADDING.full - HEADER_PADDING.compact),
-    minViewportHeight: HEADER_MIN_VIEWPORT_HEIGHT,
-  };
+  /** The sections as the navigation lists them, each with a link that stays on this page. */
+  protected readonly sectionLinks: readonly ConfiguratorSection[] = SECTIONS.map((section) => ({
+    ...section,
+    href: this.anchorHref(section.elementId),
+  }));
 
   private readonly source = inject(METRICS_SOURCE);
   private readonly injector = inject(Injector);
   private readonly errorSummary = viewChild<ElementRef<HTMLElement>>('errorSummary');
-  private readonly dock = viewChild<ElementRef<HTMLElement>>('dockEl');
-  private readonly nav = viewChild<ElementRef<HTMLElement>>('navEl');
+  /** The arrangement around the page (header and side navigation, or the rail); it answers the scroll-spy's metrics. */
+  private readonly chrome = viewChild(ConfiguratorChrome);
   /** Space (px) the sections keep under the sticky stack when scrolled to; bound to `--section-margin`. */
   protected readonly sectionMargin = signal(SECTION_CLEARANCE);
   private cancelFrame: Cancel | null = null;
@@ -188,40 +169,21 @@ export class ConfiguratorPageComponent {
   }
 
   private updateActiveSection(): void {
+    const chrome = this.chrome();
+    if (!chrome) return;
+
     const positions = SECTIONS.flatMap(({ id, elementId }) => {
       const element = this.document.getElementById(elementId);
       return element ? [{ id, top: element.getBoundingClientRect().top }] : [];
     });
-    const narrow = (this.document.defaultView?.innerWidth ?? Infinity) <= NARROW_MAX_WIDTH;
-    const bar = narrow ? this.nav()?.nativeElement.getBoundingClientRect() : undefined;
-    const stack = this.stackHeight(bar);
-    this.sectionMargin.set(this.marginFor(bar));
+    const narrow = chrome.narrow();
+    const stack = chrome.stackHeight();
+    this.sectionMargin.set(chrome.sectionMargin());
     const atBottom =
       this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
 
     const active = activeSection(positions, activeThreshold(stack, narrow), atBottom);
     if (active) this.activeId.set(active);
-  }
-
-  /**
-   * Height of what still covers the top of the viewport: the header while it is sticky (none once it has
-   * scrolled away) and, on a narrow page, the chip bar once it is stuck under it.
-   */
-  private stackHeight(bar: DOMRect | undefined): number {
-    const header = Math.max(0, this.dock()?.nativeElement.getBoundingClientRect().bottom ?? 0);
-    if (bar && bar.top <= CHIP_BAR_TOP + 1) return Math.max(header, bar.bottom);
-    return header;
-  }
-
-  /**
-   * `scroll-margin-top` of the sections. The header's height already is the document's `scroll-padding-top`;
-   * on a narrow page the margin adds what the chip bar covers beyond it, so a chip lands its section clear of the bar.
-   */
-  private marginFor(bar: DOMRect | undefined): number {
-    if (!bar) return SECTION_CLEARANCE;
-
-    const padding = parseFloat(this.document.documentElement.style.scrollPaddingTop) || 0;
-    return Math.max(SECTION_CLEARANCE, CHIP_BAR_TOP + bar.height + CHIP_BAR_CLEARANCE - padding);
   }
 
   protected readonly draft = this.store.draft;
