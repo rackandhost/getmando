@@ -352,10 +352,23 @@ export class ConfiguratorPageComponent {
     return this.errorFor(path) ? this.errorId(path) : undefined;
   }
 
-  /** Native `#id` anchor navigation only scrolls the document, not this page's own scroll region. */
+  /** The page's own path in front of an anchor: a bare `#id` resolves against `<base href>` and points at the app root. */
+  protected anchorHref(elementId: string): string {
+    return `${this.document.location.pathname}#${elementId}`;
+  }
+
+  /**
+   * Native `#id` anchor navigation only scrolls the document, not this page's own scroll region. A field
+   * that is not rendered (an empty collection has no rows) takes the user to its section instead of
+   * letting the click navigate.
+   */
   protected jumpToField(path: readonly string[], event: Event): void {
-    const target = document.getElementById(this.fieldId(path));
-    if (!target) return;
+    const target = this.document.getElementById(this.fieldId(path));
+    if (!target) {
+      if (path[0]) this.goToSection(`section-${path[0]}`, event);
+      else event.preventDefault();
+      return;
+    }
 
     event.preventDefault();
     target.scrollIntoView({ block: 'center' });

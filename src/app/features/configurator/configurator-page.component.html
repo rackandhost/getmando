@@ -38,7 +38,7 @@
             <a
               class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm whitespace-nowrap text-muted transition-colors duration-200 hover:text-text aria-[current=true]:border-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-text max-[901px]:mx-0 max-[901px]:gap-2 max-[901px]:rounded-[10px] max-[901px]:border-l-0 max-[901px]:px-3"
               [attr.aria-current]="activeId() === item.id ? 'true' : null"
-              [href]="'#' + item.elementId"
+              [href]="anchorHref(item.elementId)"
               (click)="goToSection(item.elementId, $event)"
             >
               <span class="font-mono text-xs">{{ item.number }}</span>
@@ -130,7 +130,7 @@
                   }
                   <a
                     class="underline underline-offset-4"
-                    [href]="'#' + fieldId(error.path)"
+                    [href]="anchorHref(fieldId(error.path))"
                     (click)="jumpToField(error.path, $event)"
                     >{{ error.message }}</a
                   >

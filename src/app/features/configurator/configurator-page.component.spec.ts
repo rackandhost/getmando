@@ -523,7 +523,7 @@ describe('ConfiguratorPageComponent', () => {
     );
     expect(screen.getByRole('link', { name: 'Icon value cannot be empty.' })).toHaveAttribute(
       'href',
-      '#field-applications-0-icon-value',
+      `${window.location.pathname}#field-applications-0-icon-value`,
     );
   });
 
@@ -543,7 +543,7 @@ describe('ConfiguratorPageComponent', () => {
     ).toHaveAttribute('id', 'error-settings-itemsPerRow');
     expect(
       screen.getByRole('link', { name: 'Items per row must be between 1 and 10.' }),
-    ).toHaveAttribute('href', '#field-settings-itemsPerRow');
+    ).toHaveAttribute('href', `${window.location.pathname}#field-settings-itemsPerRow`);
   });
 
   it('renders labeled settings fields and associates an actionable error summary with invalid fields', async () => {
@@ -561,7 +561,49 @@ describe('ConfiguratorPageComponent', () => {
     );
     expect(
       screen.getByRole('link', { name: "Category 'missing' does not exist." }),
-    ).toHaveAttribute('href', '#field-applications-0-category');
+    ).toHaveAttribute('href', `${window.location.pathname}#field-applications-0-category`);
+  });
+
+  describe('error summary links', () => {
+    const scrollIntoView = vi.fn();
+
+    beforeEach(() => {
+      scrollIntoView.mockClear();
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value: scrollIntoView,
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+      window.history.pushState({}, '', '/');
+    });
+
+    it('keep the configurator path in front of the anchor, so they never resolve against the app root', async () => {
+      window.history.pushState({}, '', '/configure');
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      expect(
+        screen.getByRole('link', { name: "Category 'missing' does not exist." }),
+      ).toHaveAttribute('href', '/configure#field-applications-0-category');
+    });
+
+    it('take the user to the section of an error whose field does not exist, without leaving the page', async () => {
+      const user = userEvent.setup();
+      validationErrors.set([
+        { path: ['categories'], message: 'At least one category is required.' },
+      ]);
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      const address = window.location.href;
+
+      await user.click(screen.getByRole('link', { name: 'At least one category is required.' }));
+
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('section-categories'));
+      expect(screen.getByRole('heading', { name: 'Categories' })).toHaveFocus();
+      expect(window.location.href).toBe(address);
+    });
   });
 
   it('keeps the editor keyboard-accessible and free of detectable AXE violations', async () => {
@@ -645,7 +687,7 @@ describe('ConfiguratorPageComponent', () => {
       within(nav)
         .getAllByRole('link')
         .forEach((link, index) => {
-          const section = document.getElementById(link.getAttribute('href')?.slice(1) ?? '');
+          const section = document.getElementById(link.getAttribute('href')?.split('#')[1] ?? '');
           expect(section, SECTION_NAV[index]).toBeInstanceOf(HTMLElement);
           if (!section) return;
 
@@ -659,6 +701,22 @@ describe('ConfiguratorPageComponent', () => {
           }
           previous = section;
         });
+    });
+
+    it('points the section links at the configurator page itself, not at the app root', async () => {
+      window.history.pushState({}, '', '/configure');
+      try {
+        await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+        const nav = screen.getByRole('navigation', { name: 'Configurator sections' });
+        expect(
+          within(nav)
+            .getAllByRole('link')
+            .map((link) => link.getAttribute('href')),
+        ).toEqual(SECTION_IDS.map((id) => `/configure#section-${id}`));
+      } finally {
+        window.history.pushState({}, '', '/');
+      }
     });
 
     describe('navigating to a section', () => {
