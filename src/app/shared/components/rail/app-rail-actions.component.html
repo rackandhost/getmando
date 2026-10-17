@@ -1,0 +1,38 @@
+@if (mode() === 'wide') {
+  <div class="flex items-center justify-between gap-3">
+    <a class="min-w-0 truncate underline" href="https://getmando.rackandhost.com" target="_blank"
+      >Mando v{{ appVersion }}</a
+    >
+
+    <div class="flex shrink-0 items-center gap-2">
+      <ng-container [ngTemplateOutlet]="buttons" />
+    </div>
+  </div>
+
+  <p>
+    Created with <span aria-label="love" role="img">♡</span> by
+    <a class="underline" href="https://rackandhost.com" target="_blank">Rack&Host</a>
+    {{ year }}
+  </p>
+} @else {
+  <ng-container [ngTemplateOutlet]="buttons" />
+}
+
+<ng-template #buttons>
+  <a
+    class="glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95"
+    [attr.aria-label]="nav.label()"
+    [routerLink]="nav.target()"
+  >
+    <ng-icon aria-hidden="true" class="text-xl" [name]="nav.icon()" />
+  </a>
+
+  <button
+    aria-label="Toggle theme"
+    class="glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95"
+    type="button"
+    (click)="toggleTheme()"
+  >
+    <ng-icon aria-hidden="true" class="text-xl" [name]="themeIcon()" />
+  </button>
+</ng-template>
