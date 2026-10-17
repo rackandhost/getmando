@@ -45,6 +45,7 @@ import {
   type SegmentedOption,
 } from '../../shared/components/app-segmented/app-segmented.component';
 import { AppSwitchComponent } from '../../shared/components/app-switch/app-switch.component';
+import { ChipAutocenterDirective } from '../../shared/directives/chip-autocenter.directive';
 import { HorizontalNavDirective } from '../../shared/directives/horizontal-nav.directive';
 import { StickyDockDirective } from '../../shared/directives/sticky-dock.directive';
 
@@ -53,7 +54,6 @@ import {
   CollectionEditorComponent,
 } from './components/collection-editor.component';
 import { activeSection, activeThreshold } from './active-section';
-import { ChipAutocenterDirective } from './chip-autocenter.directive';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 
