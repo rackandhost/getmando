@@ -445,12 +445,13 @@ describe('DashboardComponent', () => {
     const probe = (id = 'dashboard-dock') => probes[id] as ChromeProbe | undefined;
 
     const stubMatchMedia = (matches: boolean) => {
-      window.matchMedia = vi.fn((query: string) => ({
+      const value = vi.fn((query: string) => ({
         matches,
         media: query,
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
-      })) as unknown as typeof window.matchMedia;
+      }));
+      Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value });
     };
 
     const renderDock = (settings = DEFAULT_DASHBOARD_CONFIG.settings) =>
@@ -458,15 +459,21 @@ describe('DashboardComponent', () => {
 
     const dock = () => document.querySelector<HTMLElement>('[data-dock]') as HTMLElement;
 
+    const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+
     beforeEach(() => {
       Object.keys(modes).forEach((id) => delete modes[id]);
       Object.keys(probes).forEach((id) => delete probes[id]);
       scrollState.register.mockClear();
       dispose.mockClear();
+      // The desktop layout is the default of the component; tests that need the phone layout stub it again.
+      stubMatchMedia(true);
     });
 
     afterEach(() => {
-      Reflect.deleteProperty(window, 'matchMedia');
+      // test-setup.ts installs one matchMedia for the whole run: put it back, never delete it, so the
+      // specs that run after this file do not find the API missing.
+      if (originalMatchMedia) Object.defineProperty(window, 'matchMedia', originalMatchMedia);
       document.documentElement.style.removeProperty('--dock-compact-height');
     });
 
