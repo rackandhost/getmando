@@ -30,87 +30,109 @@
           [attr.data-open]="isOpen(index)"
         >
           <!-- Row: what the item is at a glance, and what can be done with it. -->
-          <div class="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-3 py-2">
-            <span aria-hidden="true" class="w-6 shrink-0 font-mono text-xs text-muted">{{
-              rowNumber(index)
-            }}</span>
+          <div class="@container">
+            <div class="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-1 py-2">
+              <!-- Identity: number, icon, name and category stay together and truncate before they wrap. -->
+              <div
+                class="flex min-w-0 flex-1 basis-[340px] items-center gap-x-4 max-[601px]:gap-x-3"
+              >
+                <span aria-hidden="true" class="w-6 shrink-0 font-mono text-xs text-muted">{{
+                  rowNumber(index)
+                }}</span>
 
-            @if (supportsIcon()) {
-              <span
-                aria-hidden="true"
-                class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] border border-line bg-[image:var(--icon-tile)]"
-              >
-                <img alt="" loading="lazy" [class]="iconImageClass(item)" [src]="iconUrl(item)" />
-              </span>
-            }
+                @if (supportsIcon()) {
+                  <span
+                    aria-hidden="true"
+                    class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] border border-line bg-[image:var(--icon-tile)]"
+                  >
+                    <img
+                      alt=""
+                      loading="lazy"
+                      [class]="iconImageClass(item)"
+                      [src]="iconUrl(item)"
+                    />
+                  </span>
+                }
 
-            <div class="min-w-0 flex-1 basis-[200px]">
-              <p class="truncate text-[15px] font-medium text-text">{{ itemLabel(item) }}</p>
-              @if (collection() !== 'categories') {
-                <p class="mt-0.5 truncate font-mono text-xs text-muted">
-                  {{ secondaryText(item) }}
-                </p>
-              }
-            </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-[15px] font-medium text-text">{{ itemLabel(item) }}</p>
+                  @if (collection() !== 'categories') {
+                    <p class="mt-0.5 truncate font-mono text-xs text-muted">
+                      {{ secondaryText(item) }}
+                    </p>
+                  }
+                </div>
 
-            @if (collection() === 'categories') {
-              <span class="font-mono text-xs text-muted">{{ secondaryText(item) }}</span>
-            }
-            @if (categoryTag(item); as category) {
-              <span
-                class="inline-flex h-6 items-center rounded-md border border-line-strong px-[9px] font-mono text-xs text-text"
-                >{{ category }}</span
-              >
-            }
-            @if (collection() !== 'categories') {
-              <span class="w-[110px] font-mono text-xs text-muted">{{ flagsSummary(item) }}</span>
-            }
+                @if (collection() === 'categories') {
+                  <span class="shrink-0 font-mono text-xs text-muted">{{
+                    secondaryText(item)
+                  }}</span>
+                }
+                @if (collection() !== 'categories') {
+                  <span
+                    class="hidden w-[120px] shrink-0 text-right font-mono text-xs whitespace-nowrap text-muted @min-[680px]:block"
+                    >{{ flagsSummary(item) }}</span
+                  >
+                }
+                @if (categoryTag(item); as category) {
+                  <span
+                    class="flex min-w-0 shrink justify-end @min-[680px]:w-36 @min-[680px]:shrink-0"
+                  >
+                    <span
+                      class="inline-block h-6 max-w-full truncate rounded-md border border-line-strong px-[9px] font-mono text-xs leading-[22px] text-text"
+                      >{{ category }}</span
+                    >
+                  </span>
+                }
+              </div>
 
-            <div class="flex shrink-0 gap-0.5">
-              <button
-                #moveUpButton
-                type="button"
-                [attr.aria-label]="'Move ' + itemLabel(item) + ' up'"
-                [class]="actionClass"
-                [disabled]="index === 0"
-                [title]="'Move ' + itemLabel(item) + ' up'"
-                (click)="move(index, index - 1)"
-              >
-                <ng-icon aria-hidden="true" class="text-base" name="heroChevronUp" />
-              </button>
-              <button
-                #moveDownButton
-                type="button"
-                [attr.aria-label]="'Move ' + itemLabel(item) + ' down'"
-                [class]="actionClass"
-                [disabled]="index === items().length - 1"
-                [title]="'Move ' + itemLabel(item) + ' down'"
-                (click)="move(index, index + 1)"
-              >
-                <ng-icon aria-hidden="true" class="text-base" name="heroChevronDown" />
-              </button>
-              <button
-                #editButton
-                type="button"
-                [attr.aria-controls]="editorId(index)"
-                [attr.aria-expanded]="isOpen(index)"
-                [attr.aria-label]="'Edit ' + itemLabel(item)"
-                [class]="actionClass + ' aria-expanded:bg-accent/14 aria-expanded:text-accent'"
-                [title]="'Edit ' + itemLabel(item)"
-                (click)="toggle(index)"
-              >
-                <ng-icon aria-hidden="true" class="text-base" name="heroPencil" />
-              </button>
-              <button
-                #removeButton
-                type="button"
-                [attr.aria-label]="'Remove ' + itemLabel(item)"
-                [class]="dangerActionClass"
-                [title]="'Remove ' + itemLabel(item)"
-                (click)="remove(index)"
-              >
-                <ng-icon aria-hidden="true" class="text-base" name="heroTrash" />
-              </button>
+              <!-- Actions: the only part that moves to its own line when the row is too narrow. -->
+              <div class="ml-auto flex shrink-0 gap-0.5">
+                <button
+                  #moveUpButton
+                  type="button"
+                  [attr.aria-label]="'Move ' + itemLabel(item) + ' up'"
+                  [class]="actionClass"
+                  [disabled]="index === 0"
+                  [title]="'Move ' + itemLabel(item) + ' up'"
+                  (click)="move(index, index - 1)"
+                >
+                  <ng-icon aria-hidden="true" class="text-base" name="heroChevronUp" />
+                </button>
+                <button
+                  #moveDownButton
+                  type="button"
+                  [attr.aria-label]="'Move ' + itemLabel(item) + ' down'"
+                  [class]="actionClass"
+                  [disabled]="index === items().length - 1"
+                  [title]="'Move ' + itemLabel(item) + ' down'"
+                  (click)="move(index, index + 1)"
+                >
+                  <ng-icon aria-hidden="true" class="text-base" name="heroChevronDown" />
+                </button>
+                <button
+                  #editButton
+                  type="button"
+                  [attr.aria-controls]="editorId(index)"
+                  [attr.aria-expanded]="isOpen(index)"
+                  [attr.aria-label]="'Edit ' + itemLabel(item)"
+                  [class]="actionClass + ' aria-expanded:bg-accent/14 aria-expanded:text-accent'"
+                  [title]="'Edit ' + itemLabel(item)"
+                  (click)="toggle(index)"
+                >
+                  <ng-icon aria-hidden="true" class="text-base" name="heroPencil" />
+                </button>
+                <button
+                  #removeButton
+                  type="button"
+                  [attr.aria-label]="'Remove ' + itemLabel(item)"
+                  [class]="dangerActionClass"
+                  [title]="'Remove ' + itemLabel(item)"
+                  (click)="remove(index)"
+                >
+                  <ng-icon aria-hidden="true" class="text-base" name="heroTrash" />
+                </button>
+              </div>
             </div>
           </div>
 
