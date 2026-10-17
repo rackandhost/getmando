@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { render, screen } from '@testing-library/angular';
+import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { AppService } from '../../../core/services/app.service';
@@ -102,6 +102,20 @@ describe('AppRailActionsComponent', () => {
         vi.useRealTimers();
       }
     });
+
+    it('names the way back with the text "Dashboard" beside the arrow, on the configurator only', async () => {
+      await setup('wide', '/configure');
+
+      const back = screen.getByRole('link', { name: 'Back to dashboard' });
+      expect(back).toHaveTextContent('Dashboard');
+      expect(within(back).getByText('Dashboard')).toBeVisible();
+    });
+
+    it('keeps the configurator link on the dashboard icon-only', async () => {
+      await setup('wide');
+
+      expect(screen.getByRole('link', { name: 'Open configurator' })).not.toHaveTextContent(/\S/);
+    });
   });
 
   describe('compact position', () => {
@@ -112,6 +126,12 @@ describe('AppRailActionsComponent', () => {
       expect(screen.queryByRole('link', { name: /^Mando v/ })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Rack&Host' })).not.toBeInTheDocument();
       expect(container).not.toHaveTextContent('Created with');
+    });
+
+    it('leaves the way back icon-only: the text is for the wide rail', async () => {
+      await setup('compact', '/configure');
+
+      expect(screen.getByRole('link', { name: 'Back to dashboard' })).not.toHaveTextContent(/\S/);
     });
   });
 });

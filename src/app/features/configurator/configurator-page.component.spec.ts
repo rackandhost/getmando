@@ -915,13 +915,13 @@ describe('ConfiguratorPageComponent', () => {
   describe('scroll-spy navigation', () => {
     const frames: (() => void)[] = [];
     const scrollListeners = new Set<() => void>();
-    const metrics = { scrollY: 0, docHeight: 3000, viewportHeight: 900 };
+    const metrics = { scrollY: 0, docHeight: 3000, viewportHeight: 900, now: 0 };
     const source: MetricsSource = {
       scrollY: () => metrics.scrollY,
       docHeight: () => metrics.docHeight,
       viewportHeight: () => metrics.viewportHeight,
       prefersReducedMotion: () => false,
-      now: () => 0,
+      now: () => metrics.now,
       onScroll: (listener) => {
         scrollListeners.add(listener);
         return () => scrollListeners.delete(listener);
@@ -939,7 +939,7 @@ describe('ConfiguratorPageComponent', () => {
     beforeEach(() => {
       frames.length = 0;
       scrollListeners.clear();
-      Object.assign(metrics, { scrollY: 0, docHeight: 3000, viewportHeight: 900 });
+      Object.assign(metrics, { scrollY: 0, docHeight: 3000, viewportHeight: 900, now: 0 });
     });
 
     const renderSpied = () =>
@@ -1214,6 +1214,7 @@ describe('ConfiguratorPageComponent', () => {
         afterEach(() => {
           appService.initializeConfig.mockReset();
           Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+          document.documentElement.style.removeProperty('scroll-padding-top');
         });
 
         /** The user is `scrollY` px down when Save is pressed: 900 puts Settings in view, 2100 is the bottom of the page. */
@@ -1266,20 +1267,82 @@ describe('ConfiguratorPageComponent', () => {
           expect(store.updateSettings).not.toHaveBeenCalled();
         });
 
-        it('brings the section below what the new arrangement sticks over its old spot', async () => {
+        /** Replaces `scrollIntoView`, which jsdom lacks, with a recorder. */
+        const stubScrollIntoView = () => {
           const scrollIntoView = vi.fn();
           Object.defineProperty(Element.prototype, 'scrollIntoView', {
             configurable: true,
             value: scrollIntoView,
           });
+          return scrollIntoView;
+        };
+        /** Lets the animation frames the page asks for run, as the browser would, until `expectation` holds. */
+        const settle = (expectation: () => void) =>
+          waitFor(() => {
+            flushFrames();
+            expectation();
+          });
+
+        it('brings the section below what the new arrangement sticks over its old spot', async () => {
+          const scrollIntoView = stubScrollIntoView();
           resizeTo(390);
           // The new bar is stuck over the top 300 px; the section was 100 px from the top.
           document.documentElement.style.scrollPaddingTop = '300px';
           await saveFromSettings();
 
-          await waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+          await settle(() => expect(scrollIntoView).toHaveBeenCalledOnce());
           expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('section-settings'));
           expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
+        });
+
+        it('waits for the new arrangement to settle: what it sticks arrives frames after it renders', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          await saveFromSettings();
+          await settle(() => expect(window.scrollBy).toHaveBeenCalled());
+          expect(scrollIntoView).not.toHaveBeenCalled();
+
+          // The bar was not stuck yet when the section was put back; it is now, over the top 300 px.
+          document.documentElement.style.scrollPaddingTop = '300px';
+
+          await settle(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+          expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('section-settings'));
+        });
+
+        it('does not pull the user back when they scroll while the new arrangement settles', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          await saveFromSettings();
+          await settle(() => expect(window.scrollBy).toHaveBeenCalled());
+
+          metrics.scrollY += 40;
+          document.documentElement.style.scrollPaddingTop = '300px';
+          for (let frame = 0; frame < 10; frame++) flushFrames();
+
+          expect(scrollIntoView).not.toHaveBeenCalled();
+        });
+
+        it('stops waiting after a second even if the new arrangement keeps moving', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          await saveFromSettings();
+          await settle(() => expect(window.scrollBy).toHaveBeenCalled());
+
+          // A header that compacts a pixel per frame never holds still.
+          let padding = 100;
+          const move = () => {
+            document.documentElement.style.scrollPaddingTop = `${(padding += 1)}px`;
+            flushFrames();
+          };
+          for (let frame = 0; frame < 20; frame++) move();
+          expect(scrollIntoView).not.toHaveBeenCalled();
+
+          metrics.now = 1100;
+          move();
+
+          expect(scrollIntoView).toHaveBeenCalledOnce();
+          flushFrames();
+          expect(scrollIntoView).toHaveBeenCalledOnce();
         });
 
         it('stays at the bottom of the page when Save was pressed there, so the last section stays the active one', async () => {

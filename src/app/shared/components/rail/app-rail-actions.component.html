@@ -19,12 +19,11 @@
 }
 
 <ng-template #buttons>
-  <a
-    class="glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95"
-    [attr.aria-label]="nav.label()"
-    [routerLink]="nav.target()"
-  >
+  <a [class]="linkClass()" [attr.aria-label]="nav.label()" [routerLink]="nav.target()">
     <ng-icon aria-hidden="true" class="text-xl" [name]="nav.icon()" />
+    @if (showsBackText()) {
+      <span class="font-sans text-[13px]">Dashboard</span>
+    }
   </a>
 
   <button

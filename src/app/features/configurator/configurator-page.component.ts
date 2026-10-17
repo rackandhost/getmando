@@ -68,6 +68,11 @@ interface PlaceInView {
   readonly atBottom: boolean;
 }
 
+/** Frames in a row that what the new arrangement sticks over the top must hold still before it counts as settled. */
+const SETTLED_FRAMES = 4;
+/** How long to wait for that: a header that compacts takes about 0.3 s. */
+const SETTLE_TIMEOUT_MS = 1000;
+
 type BooleanSetting = Extract<
   keyof DashboardSettings,
   | 'showSeconds'
@@ -553,9 +558,9 @@ export class ConfiguratorPageComponent {
 
   /**
    * Puts the user back where they were, instantly (a swap is not a movement to animate): at the end of the
-   * page if they were there, otherwise the section as far from the top as before. If the new arrangement
-   * sticks something over that spot (the header band after the rail, say) the section is brought below it,
-   * as a click on its navigation item would. Then focuses Save without scrolling again.
+   * page if they were there, otherwise the section as far from the top as before, which is then kept
+   * below whatever the new arrangement sticks over the top once that has settled. Then focuses Save
+   * without scrolling again.
    */
   private restorePlace(place: PlaceInView | undefined): void {
     const view = this.document.defaultView;
@@ -565,13 +570,41 @@ export class ConfiguratorPageComponent {
       view?.scrollTo({ top: this.source.docHeight(), behavior: 'instant' });
     } else if (place && element) {
       view?.scrollBy({ top: element.getBoundingClientRect().top - place.top, behavior: 'instant' });
-
-      if (element.getBoundingClientRect().top < (this.chrome()?.stackHeight() ?? 0)) {
-        element.scrollIntoView({ block: 'start', behavior: 'instant' });
-      }
+      this.keepBelowStack(place.elementId);
     }
 
     this.document.getElementById('configurator-save')?.focus({ preventScroll: true });
+  }
+
+  /**
+   * A header or bar that has just rendered is not stuck yet, and is not at its final height: it registers
+   * with the scroll state a frame later and then compacts. Waits for what it sticks over the top to hold
+   * still, then brings the section below it if it ended up underneath, as a click on its navigation item
+   * would. Gives up when the user scrolls meanwhile, or after a second.
+   */
+  private keepBelowStack(elementId: string): void {
+    const scrollY = this.source.scrollY();
+    const deadline = this.source.now() + SETTLE_TIMEOUT_MS;
+    let stackHeight = Number.NaN;
+    let stillFrames = 0;
+
+    const check = () => {
+      if (this.source.scrollY() !== scrollY) return;
+
+      const height = this.chrome()?.stackHeight() ?? 0;
+      stillFrames = height === stackHeight ? stillFrames + 1 : 0;
+      stackHeight = height;
+      if (stillFrames < SETTLED_FRAMES && this.source.now() < deadline) {
+        this.source.requestFrame(check);
+        return;
+      }
+
+      const element = this.document.getElementById(elementId);
+      if (element && element.getBoundingClientRect().top < height) {
+        element.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    };
+    this.source.requestFrame(check);
   }
 
   /** The validated draft, or `undefined` after bringing the error summary into view. */

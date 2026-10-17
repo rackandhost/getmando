@@ -15,6 +15,11 @@ const WIDE_HOST =
   'mt-auto flex flex-col gap-3 border-t border-line pt-3.5 font-mono text-[11px] leading-[15px] text-muted max-[1024px]:hidden';
 /** Sits in the first row of the compact rail, after the brand; hidden when the rail is a column. */
 const COMPACT_HOST = 'flex shrink-0 items-center gap-2 min-[1024px]:hidden';
+/** The action buttons are square with an icon only; the way back in the wide rail also reads "Dashboard". */
+const ICON_BUTTON =
+  'glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95';
+const BACK_BUTTON_WITH_TEXT =
+  'glass-chrome flex h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-text transition-transform active:scale-95';
 
 /**
  * The configurator link and the theme toggle of the rail, with the version and the credit in the wide
@@ -41,6 +46,13 @@ export class AppRailActionsComponent {
 
   protected readonly hostClass = computed(() =>
     this.mode() === 'wide' ? WIDE_HOST : COMPACT_HOST,
+  );
+  /** The text only appears beside the arrow of the way back, and only where the rail is a column. */
+  protected readonly showsBackText = computed(
+    () => this.mode() === 'wide' && this.nav.isConfiguratorRoute(),
+  );
+  protected readonly linkClass = computed(() =>
+    this.showsBackText() ? BACK_BUTTON_WITH_TEXT : ICON_BUTTON,
   );
   protected readonly themeIcon = computed(() =>
     this.themeService.isDark() ? 'heroMoon' : 'heroSun',
