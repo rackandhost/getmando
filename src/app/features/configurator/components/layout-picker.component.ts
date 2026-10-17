@@ -29,9 +29,9 @@ let nextId = 0;
 
 /**
  * The Layout control of the Settings section: a disclosure whose summary shows the chosen layout and,
- * opened (the default), a radio group of one preview card per layout. It does not hold the value: the
- * owner passes `value` and updates it from `valueChange`. Opening and closing is local state and never
- * changes the value.
+ * opened (it starts closed, to take the least room), a radio group of one preview card per layout. It
+ * does not hold the value: the owner passes `value` and updates it from `valueChange`. Opening and
+ * closing is local state and never changes the value.
  */
 @Component({
   selector: 'app-layout-picker',
@@ -46,7 +46,7 @@ export class LayoutPickerComponent {
   readonly valueChange = output<DashboardLayout>();
 
   protected readonly layouts = LAYOUTS;
-  protected readonly open = signal(true);
+  protected readonly open = signal(false);
   protected readonly current = computed(
     () => LAYOUTS.find((layout) => layout.value === this.value()) ?? LAYOUTS[0],
   );

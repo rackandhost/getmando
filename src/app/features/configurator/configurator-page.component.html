@@ -229,10 +229,11 @@
               Items per row
               <input
                 id="field-settings-itemsPerRow"
-                class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+                class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text disabled:cursor-not-allowed disabled:opacity-60"
                 type="number"
                 min="1"
                 max="10"
+                [disabled]="draft().settings.layout === 'vertical'"
                 [attr.aria-describedby]="
                   describedBy(['settings', 'itemsPerRow'], 'hint-settings-itemsPerRow')
                 "

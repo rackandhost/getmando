@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { signal, type WritableSignal } from '@angular/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { NEVER, Observable, of } from 'rxjs';
 
-import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../../core/models/dashboard.models';
+import {
+  DashboardConfig,
+  DashboardSettings,
+  DEFAULT_DASHBOARD_CONFIG,
+} from '../../core/models/dashboard.models';
 import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
@@ -1330,12 +1334,20 @@ describe('ConfiguratorPageComponent', () => {
 
   describe('layout control', () => {
     afterEach(() => {
+      store.updateSettings.mockReset();
       draft.set({ ...draft(), settings: { ...draft().settings, layout: 'horizontal' } });
     });
 
-    it.each(['horizontal', 'vertical'] as const)(
-      'says Items per row is used by the horizontal layout only when the draft layout is %s',
-      async (layout) => {
+    /** The panel starts closed, so tests of the cards open it first. */
+    const openLayoutPanel = (user: UserEvent) =>
+      user.click(screen.getByRole('button', { name: /2 layouts/ }));
+
+    it.each([
+      ['horizontal', false],
+      ['vertical', true],
+    ] as const)(
+      'says Items per row is used by the horizontal layout only and disables it only for vertical (%s)',
+      async (layout, disabled) => {
         draft.set({ ...draft(), settings: { ...draft().settings, layout } });
         await render(ConfiguratorPageComponent, { providers: defaultProviders() });
 
@@ -1344,12 +1356,37 @@ describe('ConfiguratorPageComponent', () => {
         expect(screen.getByText('Used by the horizontal layout only.')).toBeVisible();
         expect(field).toHaveAccessibleDescription('Used by the horizontal layout only.');
         expect(field).toHaveValue(draft().settings.itemsPerRow);
+        if (disabled) expect(field).toBeDisabled();
+        else expect(field).toBeEnabled();
       },
     );
 
+    it('enables Items per row again, with the same value, when Horizontal bar is chosen', async () => {
+      const user = userEvent.setup();
+      draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
+      store.updateSettings.mockImplementation((patch: Partial<DashboardSettings>) =>
+        draft.set({ ...draft(), settings: { ...draft().settings, ...patch } }),
+      );
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      const field = screen.getByLabelText('Items per row');
+      const value = draft().settings.itemsPerRow;
+      expect(field).toBeDisabled();
+
+      await openLayoutPanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Horizontal bar' }));
+
+      expect(field).toBeEnabled();
+      expect(field).toHaveValue(value);
+      await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
+      expect(field).toBeDisabled();
+      expect(draft().settings.itemsPerRow).toBe(value);
+    });
+
     it('opens the Settings section, before the theme, reflecting the draft layout', async () => {
+      const user = userEvent.setup();
       draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      await openLayoutPanel(user);
 
       const settings = within(document.getElementById('section-settings') as HTMLElement);
       const layout = settings.getByRole('group', { name: 'Layout' });
@@ -1364,6 +1401,7 @@ describe('ConfiguratorPageComponent', () => {
       const user = userEvent.setup();
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
 
+      await openLayoutPanel(user);
       await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
 
       expect(store.updateSettings).toHaveBeenCalledExactlyOnceWith({ layout: 'vertical' });
@@ -1404,6 +1442,7 @@ describe('ConfiguratorPageComponent', () => {
       });
 
       await user.click(screen.getByRole('button', { name: 'Load mounted YAML' }));
+      await openLayoutPanel(user);
       expect(screen.getByRole('radio', { name: 'Horizontal bar' })).toBeChecked();
       await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
       expect(screen.getByRole('radio', { name: 'Vertical bar' })).toBeChecked();

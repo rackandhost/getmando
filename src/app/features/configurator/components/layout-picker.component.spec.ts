@@ -9,6 +9,7 @@ import { LayoutPickerComponent } from './layout-picker.component';
 describe('LayoutPickerComponent', () => {
   /** Like the page does: the owner holds the value and feeds it back from `valueChange`. */
   const setup = async (value: DashboardLayout = 'horizontal') => {
+    const user = userEvent.setup();
     const valueChange = vi.fn((next: DashboardLayout) => {
       view.fixture.componentRef.setInput('value', next);
       view.fixture.detectChanges();
@@ -17,24 +18,37 @@ describe('LayoutPickerComponent', () => {
       inputs: { value },
       on: { valueChange },
     });
-    return { ...view, valueChange };
+    return { ...view, user, valueChange };
   };
   const summary = () => screen.getByRole('button', { name: /bar.*2 layouts/ });
   const radio = (name: string) => screen.getByRole('radio', { name });
+  /** The panel starts closed: tests of the cards open it first. */
+  const setupOpen = async (value: DashboardLayout = 'horizontal') => {
+    const view = await setup(value);
+    await view.user.click(summary());
+    return view;
+  };
 
-  it('shows the draft layout in the summary and in the open panel, with its card checked', async () => {
+  it('starts closed: the summary shows the draft layout and no radio is exposed', async () => {
     await setup('horizontal');
 
     expect(summary()).toHaveTextContent('Horizontal bar');
     expect(summary()).toHaveTextContent('Clock, search and categories on top');
     expect(summary()).toHaveTextContent('2 layouts');
+    expect(summary()).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+  });
+
+  it('opens with its card checked', async () => {
+    await setupOpen('horizontal');
+
     expect(summary()).toHaveAttribute('aria-expanded', 'true');
     expect(radio('Horizontal bar')).toBeChecked();
     expect(radio('Vertical bar')).not.toBeChecked();
   });
 
-  it('reflects a vertical draft', async () => {
-    await setup('vertical');
+  it('reflects a vertical draft in the summary and, once open, in the cards', async () => {
+    await setupOpen('vertical');
 
     expect(summary()).toHaveTextContent('Vertical bar');
     expect(radio('Vertical bar')).toBeChecked();
@@ -42,7 +56,7 @@ describe('LayoutPickerComponent', () => {
   });
 
   it('is a group named Layout holding one radio per layout, each described by its description', async () => {
-    await setup('vertical');
+    await setupOpen('vertical');
 
     const group = screen.getByRole('group', { name: 'Layout' });
 
@@ -57,8 +71,7 @@ describe('LayoutPickerComponent', () => {
   });
 
   it('moves the selection and the focus with the arrow keys and announces the new layout', async () => {
-    const user = userEvent.setup();
-    const { valueChange } = await setup('horizontal');
+    const { user, valueChange } = await setupOpen('horizontal');
 
     radio('Horizontal bar').focus();
     await user.keyboard('{ArrowRight}');
@@ -70,48 +83,48 @@ describe('LayoutPickerComponent', () => {
   });
 
   it('chooses a layout with a click on its card', async () => {
-    const user = userEvent.setup();
-    const { valueChange } = await setup('horizontal');
+    const { user, valueChange } = await setupOpen('horizontal');
 
     await user.click(screen.getByText('Sticky sidebar, apps use the full width'));
 
     expect(valueChange).toHaveBeenCalledExactlyOnceWith('vertical');
   });
 
-  it('puts one tab stop on the group and none inside it once it is left', async () => {
-    const user = userEvent.setup();
-    await setup('vertical');
+  it('has one tab stop (the summary) while closed and adds the checked radio once open', async () => {
+    const { user } = await setup('vertical');
 
     await user.tab();
     expect(summary()).toHaveFocus();
+    await user.tab();
+    expect(document.body).toHaveFocus();
+
+    summary().focus();
+    await user.keyboard('{Enter}');
     await user.tab();
     expect(radio('Vertical bar')).toHaveFocus();
     await user.tab();
     expect(document.body).toHaveFocus();
   });
 
-  it('closes and opens with Enter and Space, taking the radios out of the tab order while closed', async () => {
-    const user = userEvent.setup();
-    await setup('vertical');
+  it('opens and closes with Enter and Space, taking the radios out of the tab order while closed', async () => {
+    const { user } = await setup('vertical');
 
     summary().focus();
     await user.keyboard('{Enter}');
+
+    expect(summary()).toHaveAttribute('aria-expanded', 'true');
+    expect(radio('Vertical bar')).toBeChecked();
+
+    await user.keyboard(' ');
 
     expect(summary()).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryAllByRole('radio')).toHaveLength(0);
     await user.tab();
     expect(document.body).toHaveFocus();
-
-    summary().focus();
-    await user.keyboard(' ');
-
-    expect(summary()).toHaveAttribute('aria-expanded', 'true');
-    expect(radio('Vertical bar')).toBeChecked();
   });
 
   it('keeps the chosen layout when it is closed and reopened', async () => {
-    const user = userEvent.setup();
-    await setup('horizontal');
+    const { user } = await setupOpen('horizontal');
 
     await user.click(radio('Vertical bar'));
     await user.click(summary());
@@ -121,7 +134,7 @@ describe('LayoutPickerComponent', () => {
   });
 
   it('marks the selected card with a check mark and hides every schematic from assistive technology', async () => {
-    const { container } = await setup('vertical');
+    const { container } = await setupOpen('vertical');
 
     const check = (name: string) =>
       radio(name).closest('label')?.querySelector('[data-layout-check]');
@@ -133,9 +146,8 @@ describe('LayoutPickerComponent', () => {
     thumbnails.forEach((thumbnail) => expect(thumbnail).toHaveAttribute('aria-hidden', 'true'));
   });
 
-  it('has no detectable accessibility violations open or closed', async () => {
-    const user = userEvent.setup();
-    const { container } = await setup('vertical');
+  it('has no detectable accessibility violations closed or open', async () => {
+    const { user, container } = await setup('vertical');
 
     await expectNoAxeViolations(container);
     await user.click(summary());
