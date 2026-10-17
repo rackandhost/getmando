@@ -16,7 +16,9 @@
       <span class="text-[15px] font-semibold">{{ current().name }}</span>
       <span class="text-[13px] text-muted">{{ current().description }}</span>
     </span>
-    <span class="shrink-0 font-mono text-xs text-muted">{{ layouts.length }} layouts</span>
+    <span class="shrink-0 font-mono text-xs text-muted max-[640px]:hidden"
+      >{{ layouts.length }} layouts</span
+    >
     <ng-icon
       aria-hidden="true"
       class="shrink-0 text-lg text-muted transition-transform duration-200 data-[open=true]:rotate-180 motion-reduce:transition-none"
