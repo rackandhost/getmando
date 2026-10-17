@@ -18,7 +18,10 @@ describe('AppFinderComponent', () => {
     setSearchQuery: vi.fn(),
   };
 
-  const setup = async (searchEngines: SearchEngine[] = [], inputs: { compact?: boolean } = {}) => {
+  const setup = async (
+    searchEngines: SearchEngine[] = [],
+    inputs: { compact?: boolean; variant?: 'bar' | 'rail' } = {},
+  ) => {
     appServiceMock.setSearchQuery.mockReset();
 
     return render(AppFinderComponent, {
@@ -484,6 +487,84 @@ describe('AppFinderComponent', () => {
       view.fixture.componentRef.setInput('compact', false);
       view.fixture.detectChanges();
       expect(bar()).toHaveAttribute('data-size', 'full');
+    });
+  });
+
+  describe('rail variant', () => {
+    const bar = () =>
+      screen
+        .getByRole('searchbox', { name: 'Search applications' })
+        .closest<HTMLElement>('[data-size]') as HTMLElement;
+    const google = DEFAULT_DASHBOARD_SEARCH_ENGINES[0];
+
+    it('is the bar by default', async () => {
+      await setup();
+
+      expect(bar()).toHaveAttribute('data-variant', 'bar');
+    });
+
+    it('has one fixed size: compact, focus, a query and the open menu never change it', async () => {
+      const user = userEvent.setup();
+      await setup([google], { variant: 'rail', compact: true });
+      expect(bar()).toHaveAttribute('data-variant', 'rail');
+      expect(bar()).toHaveAttribute('data-size', 'full');
+      expect(bar()).toHaveAttribute('data-compact', 'false');
+
+      await user.click(screen.getByRole('searchbox', { name: 'Search applications' }));
+      expect(bar()).toHaveAttribute('data-size', 'full');
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(document.body);
+      expect(bar()).toHaveAttribute('data-size', 'full');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+      expect(bar()).toHaveAttribute('data-size', 'full');
+      expect(bar()).toHaveAttribute('data-expanded', 'false');
+    });
+
+    it('shows the clear and submit buttons once there is a query', async () => {
+      const user = userEvent.setup();
+      await setup([], { variant: 'rail' });
+      expect(screen.queryByRole('button', { name: 'Clear search' })).not.toBeInTheDocument();
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+
+      expect(screen.getByRole('button', { name: 'Clear search' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
+      expect(appServiceMock.setSearchQuery).toHaveBeenLastCalledWith('plex');
+    });
+
+    it('selects an engine, updates the placeholder, and Escape closes the menu without changing it', async () => {
+      const user = userEvent.setup();
+      await setup([google], { variant: 'rail' });
+
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+      await user.click(screen.getByRole('option', { name: google.name }));
+      expect(screen.getByRole('searchbox', { name: 'Search applications' })).toHaveAttribute(
+        'placeholder',
+        `Search on ${google.name}…`,
+      );
+
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+      expect(screen.getByRole('listbox', { name: 'Search engines' })).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.getByRole('searchbox', { name: 'Search applications' })).toHaveAttribute(
+        'placeholder',
+        `Search on ${google.name}…`,
+      );
+    });
+
+    it('has no accessibility violations with the engine menu open and a query typed', async () => {
+      const user = userEvent.setup();
+      const view = await setup([google], { variant: 'rail' });
+
+      await user.type(screen.getByRole('searchbox', { name: 'Search applications' }), 'plex');
+      await user.click(screen.getByRole('button', { name: /^Select search engine/ }));
+
+      await expectNoAxeViolations(view.container);
     });
   });
 });
