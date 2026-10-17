@@ -5,6 +5,7 @@ import {
   Category,
   DashboardConfig,
   DashboardConfigSchema,
+  DashboardSettingsSchema,
   DEFAULT_DASHBOARD_CONFIG,
   DashboardMetadata,
   DashboardSettings,
@@ -26,6 +27,7 @@ export interface ConfiguratorDraft {
 const COMBINING_MARKS_PATTERN = /[\u0300-\u036f]/g;
 const UNSUPPORTED_ID_CHARACTERS_PATTERN = /[^a-z0-9\s-]/g;
 const ID_SEPARATORS_PATTERN = /[\s-]+/g;
+const ITEMS_PER_ROW_SCHEMA = DashboardSettingsSchema.shape.itemsPerRow;
 
 export function normalizeNameToId(name: string): string {
   return name
@@ -165,8 +167,31 @@ export class ConfiguratorStore {
     this.updateDraft((draft) => ({ ...draft, metadata: { ...draft.metadata, ...metadata } }));
   }
 
+  /**
+   * Items per row is only used by the horizontal layout, and its field is disabled with the vertical one,
+   * so a value that is not valid cannot be corrected there: choosing the vertical layout replaces it with
+   * the default, which the draft then keeps and exports.
+   */
   updateSettings(settings: Partial<DashboardSettings>): void {
-    this.updateDraft((draft) => ({ ...draft, settings: { ...draft.settings, ...settings } }));
+    const next = { ...this.draftState().settings, ...settings };
+    const useDefault =
+      next.layout === 'vertical' && !ITEMS_PER_ROW_SCHEMA.safeParse(next.itemsPerRow).success;
+    const defaultItemsPerRow = DEFAULT_DASHBOARD_CONFIG.settings.itemsPerRow;
+
+    this.updateDraft((draft) => ({
+      ...draft,
+      settings: {
+        ...draft.settings,
+        ...settings,
+        ...(useDefault ? { itemsPerRow: defaultItemsPerRow } : {}),
+      },
+    }));
+
+    if (useDefault) {
+      this.notifications.info(
+        `Items per row was not valid, so ${defaultItemsPerRow} is used with the vertical layout.`,
+      );
+    }
   }
 
   addCategory(): void {
