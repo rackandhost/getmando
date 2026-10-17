@@ -84,6 +84,10 @@ jobs:
             type=raw,value=${{ steps.vars.outputs.version }}-beta.${{ forgejo.run_number }}
             type=sha,format=long
 
+      # No registry build cache on purpose: `mode=max` also pushes the builder stages, whose layers
+      # (npm dependencies) can exceed 100 MB, and Cloudflare in front of the registry rejects any
+      # single upload above 100 MB with a 413 (seen on the first run). The layers of the final image
+      # are all under 25 MB compressed, so the image itself pushes fine.
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
@@ -92,5 +96,3 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ steps.vars.outputs.image }}:buildcache
-          cache-to: type=registry,ref=${{ steps.vars.outputs.image }}:buildcache,mode=max
