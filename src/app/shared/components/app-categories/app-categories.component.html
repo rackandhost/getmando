@@ -1,19 +1,24 @@
 <nav
-  appHorizontalNav
   aria-label="Categories"
-  class="glass-chrome flex h-[45px] w-full items-stretch gap-7 overflow-x-auto rounded-[var(--bar-radius)] px-[18px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+  class="glass-chrome h-[45px] w-full overflow-hidden rounded-[var(--bar-radius)]"
   [class.cursor-not-allowed]="haveSearch()"
   [style.opacity]="haveSearch() ? 0.45 : null"
 >
-  @for (category of categories(); track category.id) {
-    <button
-      class="relative -mx-1.5 shrink-0 rounded-lg px-1.5 text-[15px] font-medium whitespace-nowrap text-muted transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:text-text aria-pressed:after:bg-accent"
-      type="button"
-      [attr.aria-pressed]="!haveSearch() && selectedCategory() === category.id"
-      [disabled]="haveSearch()"
-      (click)="onCategoryChange(category.id)"
-    >
-      {{ category.name }}
-    </button>
-  }
+  <!-- The bar scrolls sideways when the tabs do not fit; the edge fades sit on this inner scroller so the glass itself stays whole. -->
+  <div
+    appHorizontalNav
+    class="flex h-full items-stretch gap-7 overflow-x-auto px-[18px] [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] [&::-webkit-scrollbar]:hidden"
+  >
+    @for (category of categories(); track category.id) {
+      <button
+        class="relative -mx-1.5 shrink-0 rounded-lg px-1.5 text-[15px] font-medium whitespace-nowrap text-muted transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:text-text aria-pressed:after:bg-accent"
+        type="button"
+        [attr.aria-pressed]="!haveSearch() && selectedCategory() === category.id"
+        [disabled]="haveSearch()"
+        (click)="onCategoryChange(category.id)"
+      >
+        {{ category.name }}
+      </button>
+    }
+  </div>
 </nav>
