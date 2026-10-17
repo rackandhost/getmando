@@ -12,6 +12,10 @@
 
 - **Accessibility findings of the previous UI**: the toast host no longer carries an ARIA attribute that its role prohibits, and each application card's accessible name now contains its visible text. Lighthouse accessibility goes from 96 to 100 on desktop and mobile.
 
+### CI & Tooling
+
+- **Beta images on Forgejo**: a manually dispatched Forgejo workflow (`.forgejo/workflows/beta-publish.yml`) builds `develop` and publishes a multi-arch `beta` image to the Forgejo container registry. The GitHub workflows are untouched: Forgejo ignores `.github/workflows` once `.forgejo/workflows` exists and GitHub ignores `.forgejo`. Betas are tagged `beta`, `v<version>-beta.<run number>`, and `sha-<commit>`, never `latest`.
+
 ### Testing & Quality
 
 - **Performance**: Lighthouse performance median 86 on desktop (84 before) and 61 on mobile (62 before); the initial bundle is 770.9 kB against 743.4 kB on `develop` (the 500 kB warning budget was already exceeded). With a hardware GPU the dashboard keeps its frame rate while scrolling at 4× CPU throttle; with a software rasteriser (no GPU) the sticky band's blur over many cards can drop desktop frames.

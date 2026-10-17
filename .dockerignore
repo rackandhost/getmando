@@ -6,6 +6,7 @@ dist
 coverage
 .git
 .github
+.forgejo
 screenshots
 documentation
 *.md
