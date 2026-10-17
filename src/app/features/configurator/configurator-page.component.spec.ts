@@ -319,6 +319,72 @@ describe('ConfiguratorPageComponent', () => {
     expect(screen.queryByLabelText('Write token')).not.toBeInTheDocument();
   });
 
+  describe('revealing the errors', () => {
+    const scrollIntoView = vi.fn();
+
+    beforeEach(() => {
+      scrollIntoView.mockClear();
+      Object.defineProperty(Element.prototype, 'scrollIntoView', {
+        configurable: true,
+        value: scrollIntoView,
+      });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+    });
+
+    it.each(['Copy YAML', 'Download YAML', 'Save'])(
+      'scrolls the error summary into view when %s finds an invalid draft',
+      async (action) => {
+        const user = userEvent.setup();
+        await render(ConfiguratorPageComponent, {
+          providers: [...defaultProviders(), ...exportProviders()],
+        });
+
+        await user.click(screen.getByRole('button', { name: action }));
+
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+        expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('alert'));
+      },
+    );
+
+    it('scrolls the error summary into view when the server rejects the configuration', async () => {
+      const user = userEvent.setup();
+      store.toDashboardConfig.mockReturnValue(draft());
+      configWrite.hasToken.mockReturnValue(true);
+      configWrite.save.mockReturnValue(
+        of({ status: 'invalid', errors: [{ path: ['metadata', 'title'], message: 'Bad title.' }] }),
+      );
+      await render(ConfiguratorPageComponent, {
+        providers: [...defaultProviders(), ...exportProviders()],
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('alert'));
+    });
+
+    it('does not scroll when the draft is valid and the export goes through', async () => {
+      const user = userEvent.setup();
+      store.toDashboardConfig.mockReturnValue(draft());
+      validationErrors.set([]);
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      });
+      await render(ConfiguratorPageComponent, {
+        providers: [...defaultProviders(), ...exportProviders()],
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(notifications.success).toHaveBeenCalled());
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+  });
+
   it('prompts for a write token before the first server save', async () => {
     const user = userEvent.setup();
     store.validate.mockReturnValue(true);

@@ -120,7 +120,11 @@
         </div>
 
         @if (validationErrors().length > 0) {
-          <div class="mt-5 rounded-xl border border-down/50 bg-down-bg px-[18px] py-4" role="alert">
+          <div
+            #errorSummary
+            class="mt-5 rounded-xl border border-down/50 bg-down-bg px-[18px] py-4"
+            role="alert"
+          >
             <h3 class="text-sm font-semibold text-down">Fix the following errors</h3>
             <ul class="mt-2 list-disc pl-[18px] font-mono text-[13px] leading-[1.7] text-text">
               @for (error of validationErrors(); track error.path.join('.')) {

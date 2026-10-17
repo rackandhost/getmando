@@ -6,6 +6,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  Injector,
   signal,
   viewChild,
 } from '@angular/core';
@@ -140,6 +141,8 @@ export class ConfiguratorPageComponent {
   };
 
   private readonly source = inject(METRICS_SOURCE);
+  private readonly injector = inject(Injector);
+  private readonly errorSummary = viewChild<ElementRef<HTMLElement>>('errorSummary');
   private readonly dock = viewChild<ElementRef<HTMLElement>>('dockEl');
   private readonly nav = viewChild<ElementRef<HTMLElement>>('navEl');
   /** Space (px) the sections keep under the sticky stack when scrolled to; bound to `--section-margin`. */
@@ -470,7 +473,7 @@ export class ConfiguratorPageComponent {
   }
 
   protected async saveToServer(): Promise<void> {
-    const config = this.store.toDashboardConfig();
+    const config = this.exportableConfig();
     if (!config) return;
 
     if (!this.configWrite.hasToken()) {
@@ -489,7 +492,7 @@ export class ConfiguratorPageComponent {
     this.pendingToken.set('');
     this.showTokenPrompt.set(false);
 
-    const config = this.store.toDashboardConfig();
+    const config = this.exportableConfig();
     if (!config) return;
 
     await this.performSave(config);
@@ -518,6 +521,7 @@ export class ConfiguratorPageComponent {
 
     if (result.status === 'invalid') {
       this.store.reportServerValidationErrors(result.errors);
+      this.revealErrors();
       this.notifications.error('The server rejected the configuration. Check the errors below.');
       return;
     }
@@ -540,8 +544,25 @@ export class ConfiguratorPageComponent {
     }
   }
 
-  private serializeExportableDraft(): string | undefined {
+  /** The validated draft, or `undefined` after bringing the error summary into view. */
+  private exportableConfig(): DashboardConfig | undefined {
     const config = this.store.toDashboardConfig();
+    if (!config) this.revealErrors();
+    return config;
+  }
+
+  /**
+   * The summary sits at the top of the page, far from Export and Save: once it has rendered, scroll to it so
+   * a rejected action is not mistaken for one that did nothing.
+   */
+  private revealErrors(): void {
+    afterNextRender(() => this.errorSummary()?.nativeElement.scrollIntoView({ block: 'start' }), {
+      injector: this.injector,
+    });
+  }
+
+  private serializeExportableDraft(): string | undefined {
+    const config = this.exportableConfig();
     return config ? this.yamlCodec.serialize(config) : undefined;
   }
 
