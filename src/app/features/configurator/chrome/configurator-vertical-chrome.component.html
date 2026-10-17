@@ -1,0 +1,70 @@
+<!-- Rail and main side by side from 1024 px, stacked below it. The DOM order is the visual order at every
+     width: the actions appear twice, after the brand (compact) and after the sections (wide), and the one
+     that is not drawn is display: none. -->
+<div
+  class="flex flex-1 items-start gap-5 max-[1024px]:flex-col max-[1024px]:items-stretch max-[1024px]:gap-3"
+>
+  <app-rail label="Configurator">
+    <app-rail-brand [asHeading]="false" />
+
+    <app-rail-actions mode="compact" />
+
+    <div
+      class="glass-card flex flex-col gap-1.5 rounded-2xl px-4 py-3.5 max-[1024px]:basis-full max-[1024px]:py-2.5"
+    >
+      <p
+        class="font-mono text-[11px] leading-[15px] font-medium tracking-[0.14em] text-accent max-[1024px]:hidden"
+      >
+        DASHBOARD SETUP
+      </p>
+      <h1 class="text-[22px] leading-[1.15] font-bold tracking-[-0.01em] wrap-anywhere text-text">
+        Configuration editor
+      </h1>
+      <p class="text-[13px] leading-normal text-muted max-[1024px]:hidden">
+        Build a dashboard configuration locally. Your changes remain in this browser until you
+        export them.
+      </p>
+    </div>
+
+    <!-- The anchor sits 12 px (the rail padding) below the previous block, so once the bar is stuck nothing of that block shows above it. -->
+    <nav
+      #navEl
+      aria-label="Configurator sections"
+      class="flex min-w-0 flex-col gap-2 max-[1024px]:mt-0.5 max-[1024px]:basis-full"
+      data-rail-anchor
+    >
+      <p
+        class="px-1 font-mono text-[11px] leading-[15px] tracking-[0.14em] text-muted uppercase max-[1024px]:hidden"
+      >
+        Sections
+      </p>
+
+      <!-- A column in the wide rail; below 1024 px the chip bar: one row, native sideways scroll without a scrollbar, edge fades on the overflowing side. -->
+      <ol
+        appHorizontalNav
+        [appChipAutocenter]="activeId()"
+        class="m-0 flex list-none flex-col gap-0.5 border-l border-line p-0 max-[1024px]:snap-x max-[1024px]:snap-proximity max-[1024px]:flex-row max-[1024px]:gap-1 max-[1024px]:overflow-x-auto max-[1024px]:overscroll-x-contain max-[1024px]:border-l-0 max-[1024px]:[scrollbar-width:none] max-[1024px]:data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] max-[1024px]:data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] max-[1024px]:data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[1024px]:[&::-webkit-scrollbar]:hidden"
+      >
+        @for (item of sections(); track item.id) {
+          <li class="max-[1024px]:shrink-0 max-[1024px]:snap-start" [attr.data-chip]="item.id">
+            <a
+              class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm whitespace-nowrap text-muted transition-colors duration-200 hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! aria-[current=true]:border-accent aria-[current=true]:bg-accent/8 aria-[current=true]:text-text max-[1024px]:mx-0 max-[1024px]:gap-2 max-[1024px]:rounded-[10px] max-[1024px]:border-l-0 max-[1024px]:px-3"
+              [attr.aria-current]="activeId() === item.id ? 'true' : null"
+              [href]="item.href"
+              (click)="sectionSelected.emit({ elementId: item.elementId, event: $event })"
+            >
+              <span class="font-mono text-xs">{{ item.number }}</span>
+              {{ item.label }}
+            </a>
+          </li>
+        }
+      </ol>
+    </nav>
+
+    <app-rail-actions mode="wide" />
+  </app-rail>
+
+  <main class="flex min-w-0 flex-1 flex-col pb-6">
+    <ng-container [ngTemplateOutlet]="body()" />
+  </main>
+</div>
