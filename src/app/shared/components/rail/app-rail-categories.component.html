@@ -18,7 +18,7 @@
   >
     @for (category of categories(); track category.id) {
       <button
-        class="flex min-h-10 shrink-0 items-center gap-2.5 rounded-[10px] px-3 text-left text-[15px] font-medium text-muted transition-colors before:h-4 before:w-[3px] before:shrink-0 before:rounded-full before:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:bg-accent/10 aria-pressed:font-bold aria-pressed:text-text aria-pressed:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_25%,transparent)] aria-pressed:before:bg-accent max-[1023px]:snap-start"
+        class="flex min-h-10 shrink-0 items-center gap-2.5 rounded-[10px] px-3 text-left text-[15px] font-medium text-muted transition-colors before:h-4 before:w-[3px] before:shrink-0 before:rounded-full before:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:bg-accent/8 aria-pressed:font-bold aria-pressed:text-text aria-pressed:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_25%,transparent)] aria-pressed:before:bg-accent max-[1023px]:snap-start"
         type="button"
         [attr.aria-pressed]="!haveSearch() && selectedCategory() === category.id"
         [attr.data-chip]="category.id"

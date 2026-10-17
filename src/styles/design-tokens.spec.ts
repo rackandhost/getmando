@@ -62,6 +62,50 @@ describe('parseTokens', () => {
   });
 });
 
+/**
+ * The colour tokens (a value with a colour or a gradient or shadow of colours) at the time the vertical
+ * layout was specified. The layout adds none (design-system "The rail reuses the existing surface
+ * families"); adding one is a deliberate change of the design language and edits this list.
+ */
+const COLOUR_TOKENS_BEFORE_LAYOUT_OPTIONS = [
+  '--accent',
+  '--accent-ink',
+  '--band',
+  '--band-shadow',
+  '--bg',
+  '--card',
+  '--card-hover',
+  '--card-line',
+  '--card-line-hover',
+  '--card-shadow',
+  '--card-shadow-hover',
+  '--chrome',
+  '--chrome-line',
+  '--clock-ink',
+  '--down',
+  '--down-bg',
+  '--field',
+  '--field-border',
+  '--focus',
+  '--focus-halo',
+  '--glass-shadow',
+  '--icon-shadow',
+  '--icon-tile',
+  '--line',
+  '--line-strong',
+  '--menu',
+  '--minute-fill',
+  '--muted',
+  '--pill-bg',
+  '--pill-line',
+  '--scrim',
+  '--surface',
+  '--surface-2',
+  '--text',
+  '--up',
+  '--up-bg',
+];
+
 describe('token stylesheet', () => {
   it('defines in the dark set every token the light set defines, so none leaks across themes', () => {
     const { light, dark } = parseTokens(tokensCss);
@@ -80,6 +124,18 @@ describe('token stylesheet', () => {
 
     expect(parseColor(tokens.light[token])).toEqual(parseColor(light));
     expect(parseColor(tokens.dark[token])).toEqual(parseColor(dark));
+  });
+
+  it('keeps the set of colour tokens the design had before the vertical layout: none is added for it', () => {
+    const { light } = parseTokens(tokensCss);
+    const colour = /rgba?\([^)]*\)|#[0-9a-f]{3,8}\b/i;
+
+    expect(
+      Object.entries(light)
+        .filter(([, value]) => colour.test(value))
+        .map(([name]) => name)
+        .sort(),
+    ).toEqual(COLOUR_TOKENS_BEFORE_LAYOUT_OPTIONS);
   });
 });
 
@@ -103,6 +159,19 @@ describe('token contrast audit', () => {
     'focus ring on bar',
     'field border vs card',
     'field border vs field',
+    // The vertical layout's rail (spec design-system "Contrast pairs of the rail")
+    'text on rail',
+    'muted on rail',
+    'brand description on rail',
+    'version and credit on rail',
+    'unselected category on rail',
+    'selected category on its tint',
+    'selected category marker on its tint',
+    'search text on field',
+    'search placeholder on field',
+    'main heading on its pill',
+    'item count on its pill',
+    'setup eyebrow on card tile',
   ];
 
   it('finds no pair below its required ratio in either theme', () => {
@@ -177,6 +246,21 @@ describe('token contrast audit', () => {
     const incomplete = ':root { --bg: #fff; } .dark { --bg: #000; }';
 
     expect(() => measureTokens(incomplete, surfacesCss)).toThrow(/--scrim/);
+  });
+
+  it('audits the rail through the bar recipe: dropping --floor-bar fails the rail pairs, not the card ones', () => {
+    const noBarFloor = withOverrides(tokensCss, '--floor-bar: 0;', '--floor-bar: 0;');
+
+    const failing = auditTokens(noBarFloor, surfacesCss).map((v) => v.pair);
+
+    expect(failing).toEqual(
+      expect.arrayContaining([
+        'muted on rail',
+        'selected category marker on its tint',
+        'item count on its pill',
+      ]),
+    );
+    expect(failing).not.toContain('setup eyebrow on card tile');
   });
 });
 
