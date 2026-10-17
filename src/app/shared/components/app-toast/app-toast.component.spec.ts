@@ -30,23 +30,23 @@ describe('AppToastComponent', () => {
   });
 
   describe('container', () => {
-    it('is a group named Notifications even when empty', async () => {
+    it('is a region landmark named Notifications even when empty', async () => {
       await setup();
 
-      expect(screen.getByRole('group', { name: 'Notifications' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Notifications' })).toBeInTheDocument();
     });
 
-    it('keeps every toast inside that group, in service order', async () => {
+    it('keeps every toast inside that region, in service order', async () => {
       await setup([
         { id: 1, level: 'error', message: 'Failure' },
         { id: 2, level: 'info', message: 'Update' },
       ]);
 
-      const group = screen.getByRole('group', { name: 'Notifications' });
+      const region = screen.getByRole('region', { name: 'Notifications' });
 
-      expect(within(group).getByRole('alert')).toHaveTextContent('Failure');
-      expect(within(group).getByRole('status')).toHaveTextContent('Update');
-      expect(within(group).getAllByRole('button')).toHaveLength(2);
+      expect(within(region).getByRole('alert')).toHaveTextContent('Failure');
+      expect(within(region).getByRole('status')).toHaveTextContent('Update');
+      expect(within(region).getAllByRole('button')).toHaveLength(2);
     });
 
     it('does not put an aria-label on anything without a role that allows it', async () => {
