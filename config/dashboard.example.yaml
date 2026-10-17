@@ -163,6 +163,9 @@ bookmarks:
       - web
 
 settings:
+  # 'horizontal' (default): clock, search and categories in a bar on top.
+  # 'vertical': a sticky sidebar with clock, search and categories; the apps use the full width.
+  layout: 'horizontal'
   dateFormat: 'd MMMM yyyy'
   datePosition: 'bottom'
   showSeconds: false

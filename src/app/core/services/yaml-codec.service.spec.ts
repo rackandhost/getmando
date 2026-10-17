@@ -172,4 +172,39 @@ describe('YamlCodecService', () => {
       'icon:\n      type: url\n      value: https://icons.example.test/plex.svg',
     );
   });
+
+  describe('layout', () => {
+    const configWith = (layout: 'horizontal' | 'vertical') => ({
+      ...DEFAULT_DASHBOARD_CONFIG,
+      categories: [{ id: 'media', name: 'Media' }],
+      applications: [
+        {
+          id: 'plex',
+          name: 'Plex',
+          description: 'Media server',
+          url: 'https://plex.example.test',
+          icon: { type: 'name' as const, value: 'plex' },
+          category: 'media',
+          openNewTab: true,
+          tags: [],
+          favorite: false,
+          healthCheck: false,
+        },
+      ],
+      settings: { ...DEFAULT_DASHBOARD_CONFIG.settings, layout },
+    });
+
+    it('exports the layout right after the theme', () => {
+      const content = service.serialize(configWith('vertical'));
+
+      expect(content).toContain('settings:\n  theme: dark\n  layout: vertical\n  dateFormat:');
+    });
+
+    it.each(['horizontal', 'vertical'] as const)('round-trips the %s layout', (layout) => {
+      const result = service.parse(service.serialize(configWith(layout)));
+
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.config.settings.layout).toBe(layout);
+    });
+  });
 });

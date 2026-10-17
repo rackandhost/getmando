@@ -91,6 +91,7 @@ export const DashboardMetadataSchema = z.object({
  */
 export const DashboardSettingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'auto']).default('dark'),
+  layout: z.enum(['horizontal', 'vertical']).default('horizontal'),
   dateFormat: z.string().default('dd-MM-yyyy'),
   datePosition: z.enum(['top', 'bottom']).default('top'),
   showSeconds: z.boolean().default(false),
@@ -232,6 +233,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
   bookmarks: [],
   settings: {
     theme: 'dark',
+    layout: 'horizontal',
     dateFormat: 'dd-MM-yyyy',
     datePosition: 'top',
     showSeconds: false,
