@@ -1,5 +1,5 @@
 /*
- * Design tokens of the "Consola" redesign (design.md § 3.1, § 3.2, with the accessibility amendments).
+ * Design tokens of the UI redesign (design.md § 3.1, § 3.2, with the accessibility amendments).
  * Light set on :root, dark set under the `dark` class that ThemeService puts on <html>.
  * Every token is declared in both sets. Contrast is enforced by src/styles/design-tokens.spec.ts.
  */

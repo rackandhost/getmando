@@ -27,7 +27,7 @@
 
 ### ✨ Key Features
 
-- **🎨 Inspiring Design** - Minimalist interface with glassmorphism effects
+- **🎨 Inspiring Design** - Minimalist glass interface in light and dark themes: a one-row clock, a search dock that compacts as you scroll, and surfaces that stay legible over any background photo
 - **⚡ Fast & Lightweight** - Built with Angular 21 and TailwindCSS 4 for optimal performance
 - **🔍 Real-time Search** - Instant search through your applications
 - **🏷️ Categories** - Organize your apps into customizable categories
@@ -516,6 +516,15 @@ bookmarks:
 | `searchEngines`        | `array[string]` | `[]`             | See below               | Available search engines                      |
 | `lightBackgroundImage` | `string`        | `background.jpg` | -                       | Custom image or url as light theme background |
 | `darkBackgroundImage`  | `string`        | `background.jpg` | -                       | Custom image or url as dark theme background  |
+
+**Backgrounds and legibility:** every card, bar and panel keeps an opaque floor under its glass, so
+text keeps its contrast over any image you set in `lightBackgroundImage` / `darkBackgroundImage`,
+bright or dark.
+
+**Scrolling:** the search dock (clock, search and categories) and the phone's search and tabs
+compact into a band while you scroll, but only when the page has enough rows to keep scrolling
+afterwards (roughly four rows of apps on a 1440 × 900 window). With fewer apps, or on a window
+shorter than 720 px (500 px on the phone layout and the configurator), they stay where they are.
 
 **Search Engine Options:**
 - `google` - Google Search

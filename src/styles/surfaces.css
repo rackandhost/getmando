@@ -1,5 +1,5 @@
 /*
- * Surface recipes of the "Consola" redesign (design.md § 3.2, spec design-system "Glass surfaces with a
+ * Surface recipes of the UI redesign (design.md § 3.2, spec design-system "Glass surfaces with a
  * legibility floor"). Components take a recipe class and add only their own radius and layout.
  *
  * glass-chrome  header chip, buttons, search bar, tab bar, footer, sticky bands   floor --floor-bar
