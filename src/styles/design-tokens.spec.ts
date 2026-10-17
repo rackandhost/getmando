@@ -172,6 +172,16 @@ describe('token contrast audit', () => {
     'main heading on its pill',
     'item count on its pill',
     'setup eyebrow on card tile',
+    // The Layout control of the configurator (spec yaml-configurator "Layout control accessibility")
+    'muted on layout panel',
+    'text on unselected layout card',
+    'muted on unselected layout card',
+    'text on selected layout card',
+    'muted on selected layout card',
+    'muted on closed layout summary',
+    'unselected layout radio ring',
+    'selected layout border',
+    'layout check mark on its dot',
   ];
 
   it('finds no pair below its required ratio in either theme', () => {

@@ -56,6 +56,7 @@ import {
 import { activeSection, activeThreshold } from './active-section';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
+import { LayoutPickerComponent } from './components/layout-picker.component';
 
 type BooleanSetting = Extract<
   keyof DashboardSettings,
@@ -101,6 +102,7 @@ const SECTIONS = [
     AppHeaderComponent,
     CollectionEditorComponent,
     AppSegmentedComponent,
+    LayoutPickerComponent,
     AppSwitchComponent,
     ConfigSectionComponent,
     ChipAutocenterDirective,
@@ -322,8 +324,8 @@ export class ConfiguratorPageComponent {
     this.store.updateSettings({ [field]: checked } as Partial<DashboardSettings>);
   }
 
-  /** Theme and date position: the value comes from a segmented control, already one of its options. */
-  protected setSettingChoice(field: 'theme' | 'datePosition', value: string): void {
+  /** Theme, date position and layout: the value comes from a choice control, already one of its options. */
+  protected setSettingChoice(field: 'theme' | 'datePosition' | 'layout', value: string): void {
     this.store.updateSettings({ [field]: value } as Partial<DashboardSettings>);
   }
 

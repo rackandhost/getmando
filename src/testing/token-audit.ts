@@ -107,6 +107,9 @@ type Layer = string | { token: string; opacity: number };
  */
 const SELECTED_TINT: Layer = { token: '--accent', opacity: 0.08 };
 
+/** The accent wash of the open Layout panel (`bg-accent/6`) and the card colour on it (`bg-surface-2`). */
+const LAYOUT_PANEL: Layer = { token: '--accent', opacity: 0.06 };
+
 interface Pair {
   name: string;
   surface: SurfaceName;
@@ -197,6 +200,72 @@ const PAIRS: Pair[] = [
   { name: 'main heading on its pill', surface: 'bar', required: 4.5, ink: ['--text'] },
   { name: 'item count on its pill', surface: 'bar', required: 4.5, ink: ['--muted'] },
   { name: 'setup eyebrow on card tile', surface: 'card', required: 4.5, ink: ['--accent'] },
+  // The Layout control of the configurator: a wash on the section card, layout cards on it
+  // (`bg-surface-2`) and, for the selected one, the category tint (`bg-accent/8`) in place of that
+  // colour, not over it. Spec yaml-configurator "Layout control accessibility".
+  {
+    name: 'muted on layout panel',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL],
+    ink: ['--muted'],
+  },
+  {
+    name: 'text on unselected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--text'],
+  },
+  {
+    name: 'muted on unselected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--muted'],
+  },
+  {
+    name: 'text on selected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, SELECTED_TINT],
+    ink: ['--text'],
+  },
+  {
+    name: 'muted on selected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, SELECTED_TINT],
+    ink: ['--muted'],
+  },
+  {
+    name: 'muted on closed layout summary',
+    surface: 'card',
+    required: 4.5,
+    on: ['--surface-2'],
+    ink: ['--muted'],
+  },
+  {
+    name: 'unselected layout radio ring',
+    surface: 'card',
+    required: 3,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--field-border'],
+  },
+  {
+    name: 'selected layout border',
+    surface: 'card',
+    required: 3,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--accent'],
+  },
+  {
+    name: 'layout check mark on its dot',
+    surface: 'card',
+    required: 3,
+    on: ['--accent'],
+    ink: ['--accent-ink'],
+  },
 ];
 
 const BACKDROPS = [parseColor('#000000'), parseColor('#FFFFFF')];

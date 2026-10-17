@@ -1326,6 +1326,78 @@ describe('ConfiguratorPageComponent', () => {
     });
   });
 
+  describe('layout control', () => {
+    afterEach(() => {
+      draft.set({ ...draft(), settings: { ...draft().settings, layout: 'horizontal' } });
+    });
+
+    it('opens the Settings section, before the theme, reflecting the draft layout', async () => {
+      draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      const settings = within(document.getElementById('section-settings') as HTMLElement);
+      const layout = settings.getByRole('group', { name: 'Layout' });
+
+      expect(within(layout).getByRole('radio', { name: 'Vertical bar' })).toBeChecked();
+      expect(
+        layout.compareDocumentPosition(settings.getByRole('radiogroup', { name: 'Theme' })),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('writes only the layout of the draft when a layout is chosen', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
+
+      expect(store.updateSettings).toHaveBeenCalledExactlyOnceWith({ layout: 'vertical' });
+    });
+
+    it('exports layout: vertical after Vertical bar is chosen (data parity)', async () => {
+      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+      await render(ConfiguratorPageComponent, {
+        providers: [
+          { provide: AppService, useValue: appService },
+          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          {
+            provide: MetadataService,
+            useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
+          },
+          {
+            provide: YamlLoaderService,
+            useValue: {
+              mountedPath: '/config/dashboard.yaml',
+              mountedConfigResult: signal<MountedConfigResult>({
+                status: 'valid',
+                config: {
+                  ...draft(),
+                  settings: { ...draft().settings, layout: 'horizontal' },
+                },
+              }),
+              refreshMountedConfig: yamlLoader.refreshMountedConfig,
+            },
+          },
+          { provide: LoggerService, useValue: logger },
+          { provide: NotificationService, useValue: notifications },
+          { provide: ConfigWriteService, useValue: configWrite },
+          ConfiguratorStore,
+          ConfigExportService,
+        ],
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Load mounted YAML' }));
+      expect(screen.getByRole('radio', { name: 'Horizontal bar' })).toBeChecked();
+      await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
+      expect(screen.getByRole('radio', { name: 'Vertical bar' })).toBeChecked();
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('layout: vertical');
+    });
+  });
+
   describe('theme and accessibility matrix', () => {
     const root = document.documentElement;
     const originalWidth = window.innerWidth;

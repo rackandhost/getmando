@@ -196,6 +196,11 @@
         title="Settings"
       >
         <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
+          <app-layout-picker
+            class="col-span-full"
+            [value]="draft().settings.layout"
+            (valueChange)="setSettingChoice('layout', $event)"
+          />
           <app-segmented
             controlId="field-settings-theme"
             label="Theme"
