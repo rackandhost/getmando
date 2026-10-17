@@ -1,10 +1,11 @@
-import { Component, signal, viewChild } from '@angular/core';
+import { Component, signal, viewChild, type Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { render, screen, within, type RenderResult } from '@testing-library/angular';
+import { fireEvent, render, screen, within, type RenderResult } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
 import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models';
+import { createBrowserMetricsSource, METRICS_SOURCE } from '../../../core/scroll/metrics-source';
 import { AppService } from '../../../core/services/app.service';
 import { MetadataService } from '../../../core/services/metadata.service';
 import { ThemeService } from '../../../core/services/theme.service';
@@ -50,7 +51,7 @@ describe('ConfiguratorVerticalChromeComponent', () => {
   });
 
   /** The chrome only exists on the configurator route, which is where its actions link back from. */
-  const setup = async () => {
+  const setup = async (extra: Provider[] = []) => {
     const view = await render(PageHostComponent, {
       providers: [
         provideRouter([{ path: 'configure', children: [] }]),
@@ -60,6 +61,7 @@ describe('ConfiguratorVerticalChromeComponent', () => {
           provide: MetadataService,
           useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
         },
+        ...extra,
       ],
     });
     await TestBed.inject(Router).navigateByUrl('/configure');
@@ -202,6 +204,85 @@ describe('ConfiguratorVerticalChromeComponent', () => {
         expect(chrome(view).stackHeight()).toBe(0);
         expect(chrome(view).sectionMargin()).toBe(16 + 78);
       });
+    });
+  });
+
+  describe('chip bar', () => {
+    const clock = { reducedMotion: false };
+    const metricsSource = {
+      ...createBrowserMetricsSource(document),
+      now: () => 0,
+      prefersReducedMotion: () => clock.reducedMotion,
+    };
+    const scrollTo = vi.fn();
+
+    beforeEach(() => {
+      clock.reducedMotion = false;
+      scrollTo.mockClear();
+    });
+
+    /** jsdom has no layout: a 300 px bar over three 90 px chips spaced 100 px apart, 700 px of content. */
+    const setupBar = async () => {
+      const view = await setup([{ provide: METRICS_SOURCE, useValue: metricsSource }]);
+      const bar = within(nav()).getByRole('list');
+      Object.defineProperty(bar, 'scrollWidth', { configurable: true, value: 700 });
+      Object.defineProperty(bar, 'clientWidth', { configurable: true, value: 300 });
+      bar.scrollTo = scrollTo as unknown as typeof bar.scrollTo;
+      bar.getBoundingClientRect = () => ({ left: 0 }) as DOMRect;
+      within(bar)
+        .getAllByRole('listitem')
+        .forEach((chip, index) => {
+          chip.getBoundingClientRect = () => ({ left: index * 100, width: 90 }) as DOMRect;
+        });
+      const activate = (id: string) => {
+        view.fixture.componentInstance.activeId.set(id);
+        view.fixture.detectChanges();
+      };
+      return { bar, activate };
+    };
+
+    it('does not move the bar when the page first renders', async () => {
+      await setupBar();
+
+      expect(scrollTo).not.toHaveBeenCalled();
+    });
+
+    it('centres the chip of the newly active section once, smoothly, by scrolling only the bar', async () => {
+      const { activate } = await setupBar();
+
+      activate('settings');
+      activate('settings');
+
+      // The third chip starts at 200 and is 90 wide: its middle (245) goes to the middle of the 300 px bar.
+      expect(scrollTo).toHaveBeenCalledExactlyOnceWith({ left: 245 - 150, behavior: 'smooth' });
+    });
+
+    it('centres instantly under reduced motion, and never scrolls past the start of the bar', async () => {
+      clock.reducedMotion = true;
+      const { activate } = await setupBar();
+
+      activate('metadata');
+
+      expect(scrollTo).toHaveBeenCalledExactlyOnceWith({ left: 0, behavior: 'auto' });
+    });
+
+    it('maps the vertical wheel to sideways scrolling of the bar', async () => {
+      const { bar } = await setupBar();
+
+      fireEvent.wheel(bar, { deltaY: 100 });
+
+      expect(bar.scrollLeft).toBe(100);
+    });
+
+    it('fades only the edge that overflows, and both once it has scrolled', async () => {
+      const { bar } = await setupBar();
+
+      fireEvent.scroll(bar);
+      expect(bar).toHaveAttribute('data-fade', 'end');
+
+      bar.scrollLeft = 100;
+      fireEvent.scroll(bar);
+      expect(bar).toHaveAttribute('data-fade', 'both');
     });
   });
 });
