@@ -18,7 +18,7 @@
 
   <input
     aria-label="Search applications"
-    class="h-full min-w-0 flex-1 bg-transparent px-2 text-base text-text placeholder:text-muted focus-visible:[box-shadow:none]! focus-visible:outline-none! [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:appearance-none"
+    class="h-full min-w-0 flex-1 bg-transparent px-2 text-base text-text placeholder:text-muted group-data-[variant=rail]/bar:min-w-[72px] focus-visible:[box-shadow:none]! focus-visible:outline-none! [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:appearance-none"
     type="search"
     (input)="onSearchInput($event)"
     (keyup.enter)="onSearchEnter()"

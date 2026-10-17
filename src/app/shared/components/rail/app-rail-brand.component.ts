@@ -11,10 +11,10 @@ import { MetadataService } from '../../../core/services/metadata.service';
 @Component({
   selector: 'app-rail-brand',
   imports: [NgOptimizedImage],
-  template: `<div class="flex min-w-0 items-center gap-3 text-text max-[1023px]:flex-1">
+  template: `<div class="flex min-w-0 items-center gap-3 text-text max-[1024px]:flex-1">
     <img
       alt="getMando"
-      class="size-10 shrink-0 rounded-[10px] object-cover max-[1023px]:size-9"
+      class="size-10 shrink-0 rounded-[10px] object-cover max-[1024px]:size-9"
       height="40"
       ngSrc="img/mando.png"
       priority
@@ -32,7 +32,7 @@ import { MetadataService } from '../../../core/services/metadata.service';
         </p>
       }
 
-      <p class="truncate text-[13px] leading-tight text-muted max-[1023px]:hidden">
+      <p class="truncate text-[13px] leading-tight text-muted max-[1024px]:hidden">
         {{ metadata()?.description || 'Your selfhosted applications' }}
       </p>
     </div>

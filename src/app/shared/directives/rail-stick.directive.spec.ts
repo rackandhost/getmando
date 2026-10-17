@@ -43,7 +43,7 @@ describe('RailStickDirective', () => {
       (query: string) =>
         ({
           get matches() {
-            return query.includes('max-width:1023px') && compact;
+            return compact;
           },
           media: query,
           addEventListener: (_: string, listener: () => void) => mediaListeners.add(listener),

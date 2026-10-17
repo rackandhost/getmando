@@ -1,11 +1,11 @@
 <nav
   aria-label="Categories"
-  class="flex min-w-0 flex-col gap-2 max-[1023px]:basis-full"
+  class="flex min-w-0 flex-col gap-2 max-[1024px]:basis-full"
   [class.cursor-not-allowed]="haveSearch()"
   [style.opacity]="haveSearch() ? 0.45 : null"
 >
   <p
-    class="px-1 font-mono text-[11px] leading-[15px] tracking-[0.14em] text-muted uppercase max-[1023px]:hidden"
+    class="px-1 font-mono text-[11px] leading-[15px] tracking-[0.14em] text-muted uppercase max-[1024px]:hidden"
   >
     Categories
   </p>
@@ -13,19 +13,19 @@
   <!-- A column in the wide rail; below 1024 px a row that scrolls sideways, with the edge fades on this scroller. -->
   <div
     appHorizontalNav
-    class="flex flex-col gap-0.5 max-[1023px]:snap-x max-[1023px]:snap-proximity max-[1023px]:flex-row max-[1023px]:gap-1 max-[1023px]:overflow-x-auto max-[1023px]:overscroll-x-contain max-[1023px]:[scrollbar-width:none] max-[1023px]:data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] max-[1023px]:data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] max-[1023px]:data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[1023px]:[&::-webkit-scrollbar]:hidden"
+    class="flex flex-col gap-0.5 max-[1024px]:snap-x max-[1024px]:snap-proximity max-[1024px]:flex-row max-[1024px]:gap-1 max-[1024px]:overflow-x-auto max-[1024px]:overscroll-x-contain max-[1024px]:[scrollbar-width:none] max-[1024px]:data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] max-[1024px]:data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] max-[1024px]:data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[1024px]:[&::-webkit-scrollbar]:hidden"
     [appChipAutocenter]="selectedCategory()"
   >
     @for (category of categories(); track category.id) {
       <button
-        class="flex min-h-10 shrink-0 items-center gap-2.5 rounded-[10px] px-3 text-left text-[15px] font-medium text-muted transition-colors before:h-4 before:w-[3px] before:shrink-0 before:rounded-full before:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:bg-accent/8 aria-pressed:font-bold aria-pressed:text-text aria-pressed:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_25%,transparent)] aria-pressed:before:bg-accent max-[1023px]:snap-start"
+        class="flex min-h-10 shrink-0 items-center gap-2.5 rounded-[10px] px-3 text-left text-[15px] font-medium text-muted transition-colors before:h-4 before:w-[3px] before:shrink-0 before:rounded-full before:bg-transparent hover:text-text focus-visible:outline-offset-[-2px]! focus-visible:[box-shadow:inset_0_0_0_4px_var(--focus-halo)]! disabled:cursor-not-allowed disabled:hover:text-muted aria-pressed:bg-accent/8 aria-pressed:font-bold aria-pressed:text-text aria-pressed:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_25%,transparent)] aria-pressed:before:bg-accent max-[1024px]:snap-start"
         type="button"
         [attr.aria-pressed]="!haveSearch() && selectedCategory() === category.id"
         [attr.data-chip]="category.id"
         [disabled]="haveSearch()"
         (click)="onCategoryChange(category.id)"
       >
-        <span class="min-w-0 truncate max-[1023px]:overflow-visible">{{ category.name }}</span>
+        <span class="min-w-0 truncate max-[1024px]:overflow-visible">{{ category.name }}</span>
       </button>
     }
   </div>

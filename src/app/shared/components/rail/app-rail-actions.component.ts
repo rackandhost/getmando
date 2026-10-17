@@ -12,7 +12,7 @@ export type RailActionsMode = 'wide' | 'compact';
 
 /** Pinned to the bottom of the wide rail, below a rule; hidden when the rail turns into a bar. */
 const WIDE_HOST =
-  'mt-auto flex flex-col gap-3 border-t border-line pt-3.5 font-mono text-[11px] leading-[15px] text-muted max-[1023px]:hidden';
+  'mt-auto flex flex-col gap-3 border-t border-line pt-3.5 font-mono text-[11px] leading-[15px] text-muted max-[1024px]:hidden';
 /** Sits in the first row of the compact rail, after the brand; hidden when the rail is a column. */
 const COMPACT_HOST = 'flex shrink-0 items-center gap-2 min-[1024px]:hidden';
 

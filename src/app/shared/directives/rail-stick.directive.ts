@@ -5,8 +5,8 @@ import { METRICS_SOURCE, type Cancel } from '../../core/scroll/metrics-source';
 
 import { railStickOffset, stuckHeight } from './rail-stick';
 
-/** The rail is a sticky bar only on narrow screens that are tall enough to spare the room. */
-const COMPACT_QUERY = '(max-width:1023px) and (min-height:500px)';
+/** The rail is a sticky bar only on narrow screens (below the 1024 px the column needs) that are tall enough. */
+const COMPACT_QUERY = '(width<1024px) and (min-height:500px)';
 /** The rail counts as stuck once it has scrolled this close to its offset (sub-pixel slack). */
 const STUCK_TOLERANCE = 1;
 
