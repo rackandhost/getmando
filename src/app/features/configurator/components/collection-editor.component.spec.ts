@@ -152,6 +152,18 @@ describe('CollectionEditorComponent', () => {
     },
   );
 
+  it.each(['categories', 'applications', 'bookmarks'] as const)(
+    'renders no empty list for an empty %s collection, only the explanation',
+    async (collection) => {
+      await render(CollectionEditorComponent, {
+        inputs: { collection, items: [] },
+      });
+
+      expect(screen.queryByRole('list')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    },
+  );
+
   it.each([
     ['categories', [{ id: 'media', name: 'Media' }], 'Category ID for Media'],
     ['applications', [{ id: 'plex', name: 'Plex', category: 'media' }], 'Application ID for Plex'],

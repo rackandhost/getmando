@@ -21,292 +21,294 @@
     >
       No {{ collection() }} yet. Add a {{ collectionLabel() }} to begin editing this collection.
     </p>
-  }
-
-  <ol class="-mt-1 border-t border-line">
-    @for (item of items(); track $index; let index = $index) {
-      <!-- Closed rows are lines in a list; the row being edited becomes a tinted card around its editor. -->
-      <li
-        class="border-b border-line transition-[background-color,box-shadow,padding,margin] duration-200 data-[open=true]:my-3 data-[open=true]:rounded-[14px] data-[open=true]:border-b-transparent data-[open=true]:bg-accent/6 data-[open=true]:px-5 data-[open=true]:py-3 data-[open=true]:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_28%,transparent)]"
-        [attr.data-open]="isOpen(index)"
-      >
-        <!-- Row: what the item is at a glance, and what can be done with it. -->
-        <div class="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-3 py-2">
-          <span aria-hidden="true" class="w-6 shrink-0 font-mono text-xs text-muted">{{
-            rowNumber(index)
-          }}</span>
-
-          @if (supportsIcon()) {
-            <span
-              aria-hidden="true"
-              class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] border border-line bg-[image:var(--icon-tile)]"
-            >
-              <img alt="" loading="lazy" [class]="iconImageClass(item)" [src]="iconUrl(item)" />
-            </span>
-          }
-
-          <div class="min-w-0 flex-1 basis-[200px]">
-            <p class="truncate text-[15px] font-medium text-text">{{ itemLabel(item) }}</p>
-            @if (collection() !== 'categories') {
-              <p class="mt-0.5 truncate font-mono text-xs text-muted">{{ secondaryText(item) }}</p>
-            }
-          </div>
-
-          @if (collection() === 'categories') {
-            <span class="font-mono text-xs text-muted">{{ secondaryText(item) }}</span>
-          }
-          @if (categoryTag(item); as category) {
-            <span
-              class="inline-flex h-6 items-center rounded-md border border-line-strong px-[9px] font-mono text-xs text-text"
-              >{{ category }}</span
-            >
-          }
-          @if (collection() !== 'categories') {
-            <span class="w-[110px] font-mono text-xs text-muted">{{ flagsSummary(item) }}</span>
-          }
-
-          <div class="flex shrink-0 gap-0.5">
-            <button
-              #moveUpButton
-              type="button"
-              [attr.aria-label]="'Move ' + itemLabel(item) + ' up'"
-              [class]="actionClass"
-              [disabled]="index === 0"
-              [title]="'Move ' + itemLabel(item) + ' up'"
-              (click)="move(index, index - 1)"
-            >
-              <ng-icon aria-hidden="true" class="text-base" name="heroChevronUp" />
-            </button>
-            <button
-              #moveDownButton
-              type="button"
-              [attr.aria-label]="'Move ' + itemLabel(item) + ' down'"
-              [class]="actionClass"
-              [disabled]="index === items().length - 1"
-              [title]="'Move ' + itemLabel(item) + ' down'"
-              (click)="move(index, index + 1)"
-            >
-              <ng-icon aria-hidden="true" class="text-base" name="heroChevronDown" />
-            </button>
-            <button
-              #editButton
-              type="button"
-              [attr.aria-controls]="editorId(index)"
-              [attr.aria-expanded]="isOpen(index)"
-              [attr.aria-label]="'Edit ' + itemLabel(item)"
-              [class]="actionClass + ' aria-expanded:bg-accent/14 aria-expanded:text-accent'"
-              [title]="'Edit ' + itemLabel(item)"
-              (click)="toggle(index)"
-            >
-              <ng-icon aria-hidden="true" class="text-base" name="heroPencil" />
-            </button>
-            <button
-              #removeButton
-              type="button"
-              [attr.aria-label]="'Remove ' + itemLabel(item)"
-              [class]="dangerActionClass"
-              [title]="'Remove ' + itemLabel(item)"
-              (click)="remove(index)"
-            >
-              <ng-icon aria-hidden="true" class="text-base" name="heroTrash" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Editor: the fields of the item, under its row. Escape closes it and returns to Edit. -->
-        <div
-          class="mt-2 border-t border-accent/18 pt-3 pb-4 pl-[52px] max-[601px]:pl-0"
-          [hidden]="!isOpen(index)"
-          [id]="editorId(index)"
-          (keydown.escape)="collapse(index)"
+  } @else {
+    <ol class="-mt-1 border-t border-line">
+      @for (item of items(); track $index; let index = $index) {
+        <!-- Closed rows are lines in a list; the row being edited becomes a tinted card around its editor. -->
+        <li
+          class="border-b border-line transition-[background-color,box-shadow,padding,margin] duration-200 data-[open=true]:my-3 data-[open=true]:rounded-[14px] data-[open=true]:border-b-transparent data-[open=true]:bg-accent/6 data-[open=true]:px-5 data-[open=true]:py-3 data-[open=true]:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_28%,transparent)]"
+          [attr.data-open]="isOpen(index)"
         >
-          <fieldset class="min-w-0">
-            <legend class="sr-only">{{ itemLabel(item) }}</legend>
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-5 gap-y-4">
-              <label [class]="labelClass">
-                Name
-                <input
-                  #nameInput
-                  [attr.aria-describedby]="describedBy(index, 'name')"
-                  [attr.aria-invalid]="errorId(index, 'name') ? 'true' : null"
-                  [attr.aria-label]="fieldLabel(item, 'name')"
-                  [class]="fieldClass"
-                  [id]="fieldId(index, 'name')"
-                  [value]="item.name"
-                  (input)="editText(index, 'name', $event)"
-                />
-                @if (errorMessage(index, 'name'); as error) {
-                  <p [class]="errorClass" [id]="errorId(index, 'name')">{{ error }}</p>
-                }
-              </label>
+          <!-- Row: what the item is at a glance, and what can be done with it. -->
+          <div class="flex min-h-16 flex-wrap items-center gap-x-4 gap-y-3 py-2">
+            <span aria-hidden="true" class="w-6 shrink-0 font-mono text-xs text-muted">{{
+              rowNumber(index)
+            }}</span>
 
+            @if (supportsIcon()) {
+              <span
+                aria-hidden="true"
+                class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[10px] border border-line bg-[image:var(--icon-tile)]"
+              >
+                <img alt="" loading="lazy" [class]="iconImageClass(item)" [src]="iconUrl(item)" />
+              </span>
+            }
+
+            <div class="min-w-0 flex-1 basis-[200px]">
+              <p class="truncate text-[15px] font-medium text-text">{{ itemLabel(item) }}</p>
               @if (collection() !== 'categories') {
-                <label [class]="labelClass">
-                  URL
-                  <input
-                    type="url"
-                    [attr.aria-describedby]="describedBy(index, 'url')"
-                    [attr.aria-invalid]="errorId(index, 'url') ? 'true' : null"
-                    [attr.aria-label]="fieldLabel(item, 'url')"
-                    [class]="monoFieldClass"
-                    [id]="fieldId(index, 'url')"
-                    [value]="item.url ?? ''"
-                    (input)="editText(index, 'url', $event)"
-                  />
-                  @if (errorMessage(index, 'url'); as error) {
-                    <p [class]="errorClass" [id]="errorId(index, 'url')">{{ error }}</p>
-                  }
-                </label>
-                <label [class]="labelClass + ' col-span-full'">
-                  Description
-                  <textarea
-                    rows="1"
-                    [attr.aria-describedby]="describedBy(index, 'description')"
-                    [attr.aria-invalid]="errorId(index, 'description') ? 'true' : null"
-                    [attr.aria-label]="fieldLabel(item, 'description')"
-                    [class]="textareaClass"
-                    [id]="fieldId(index, 'description')"
-                    [value]="item.description ?? ''"
-                    (input)="editText(index, 'description', $event)"
-                  ></textarea>
-                  @if (errorMessage(index, 'description'); as error) {
-                    <p [class]="errorClass" [id]="errorId(index, 'description')">{{ error }}</p>
-                  }
-                </label>
-              }
-
-              @if (supportsIcon()) {
-                <!-- Part of the same grid; the group keeps the icon fields named together. -->
-                <fieldset class="contents">
-                  <legend class="sr-only">Icon for {{ itemLabel(item) }}</legend>
-                  <label [class]="labelClass">
-                    Icon type
-                    <app-select
-                      [buttonClass]="selectButtonClass"
-                      [controlId]="fieldId(index, 'iconType')"
-                      [describedBy]="describedBy(index, 'iconType')"
-                      [invalid]="!!errorId(index, 'iconType')"
-                      [label]="'Icon type for ' + itemLabel(item)"
-                      [options]="iconTypeOptions"
-                      [value]="iconType(index)"
-                      (valueChange)="setIconType(index, $event)"
-                    />
-                    @if (errorMessage(index, 'iconType'); as error) {
-                      <p [class]="errorClass" [id]="errorId(index, 'iconType')">{{ error }}</p>
-                    }
-                  </label>
-                  <label [class]="labelClass">
-                    {{ iconValueText(index) }}
-                    <input
-                      [attr.aria-describedby]="describedBy(index, 'iconValue')"
-                      [attr.aria-invalid]="errorId(index, 'iconValue') ? 'true' : null"
-                      [attr.aria-label]="iconValueLabel(index)"
-                      [class]="monoFieldClass"
-                      [id]="fieldId(index, 'iconValue')"
-                      [type]="iconType(index) === 'url' ? 'url' : 'text'"
-                      [value]="iconValue(index)"
-                      (input)="updateIconValue(index, $event)"
-                    />
-                    <span
-                      class="block text-xs leading-5 font-normal text-muted"
-                      [id]="collectionLabel() + '-icon-' + iconType(index) + '-help-' + index"
-                      >{{ iconHelp(index) }}</span
-                    >
-                    @if (errorMessage(index, 'iconValue'); as error) {
-                      <p [class]="errorClass" [id]="errorId(index, 'iconValue')">{{ error }}</p>
-                    }
-                  </label>
-                </fieldset>
-              }
-
-              @if (collection() === 'applications') {
-                <label [class]="labelClass">
-                  Category
-                  <app-select
-                    placeholder="No categories available"
-                    [buttonClass]="selectButtonClass"
-                    [controlId]="fieldId(index, 'category')"
-                    [describedBy]="describedBy(index, 'category')"
-                    [disabled]="categoryOptions().length === 0"
-                    [invalid]="!!errorId(index, 'category')"
-                    [label]="fieldLabel(item, 'category')"
-                    [options]="categorySelectOptions()"
-                    [value]="item.category ?? ''"
-                    (valueChange)="setText(index, 'category', $event)"
-                  />
-                  @if (errorMessage(index, 'category'); as error) {
-                    <p [class]="errorClass" [id]="errorId(index, 'category')">{{ error }}</p>
-                  }
-                </label>
-              }
-
-              @if (collection() !== 'categories') {
-                <label [class]="labelClass">
-                  Tags
-                  <input
-                    [attr.aria-describedby]="describedBy(index, 'tags')"
-                    [attr.aria-invalid]="errorId(index, 'tags') ? 'true' : null"
-                    [attr.aria-label]="fieldLabel(item, 'tags')"
-                    [class]="monoFieldClass"
-                    [id]="fieldId(index, 'tags')"
-                    [value]="(item.tags ?? []).join(', ')"
-                    (input)="editTags(index, $event)"
-                  />
-                  @if (errorMessage(index, 'tags'); as error) {
-                    <p [class]="errorClass" [id]="errorId(index, 'tags')">{{ error }}</p>
-                  }
-                </label>
-              }
-
-              <label [class]="labelClass">
-                ID
-                <input
-                  [attr.aria-describedby]="describedBy(index, 'id')"
-                  [attr.aria-invalid]="errorId(index, 'id') ? 'true' : null"
-                  [attr.aria-label]="fieldLabel(item, 'id')"
-                  [class]="monoFieldClass + ' cursor-not-allowed opacity-70'"
-                  disabled
-                  [id]="fieldId(index, 'id')"
-                  [value]="item.id"
-                />
-                @if (errorMessage(index, 'id'); as error) {
-                  <p [class]="errorClass" [id]="errorId(index, 'id')">{{ error }}</p>
-                }
-              </label>
-
-              @if (collection() !== 'categories') {
-                <div
-                  class="col-span-full grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3"
-                >
-                  <app-switch
-                    label="Open in new tab"
-                    [accessibleName]="fieldLabel(item, 'openNewTab')"
-                    [checked]="item.openNewTab ?? true"
-                    [controlId]="fieldId(index, 'openNewTab')"
-                    (checkedChange)="setBoolean(index, 'openNewTab', $event)"
-                  />
-                  @if (collection() === 'applications') {
-                    <app-switch
-                      label="Favorite"
-                      [accessibleName]="fieldLabel(item, 'favorite')"
-                      [checked]="item.favorite ?? false"
-                      [controlId]="fieldId(index, 'favorite')"
-                      (checkedChange)="setBoolean(index, 'favorite', $event)"
-                    />
-                    <app-switch
-                      label="Health check"
-                      [accessibleName]="fieldLabel(item, 'healthCheck')"
-                      [checked]="item.healthCheck ?? false"
-                      [controlId]="fieldId(index, 'healthCheck')"
-                      (checkedChange)="setBoolean(index, 'healthCheck', $event)"
-                    />
-                  }
-                </div>
+                <p class="mt-0.5 truncate font-mono text-xs text-muted">
+                  {{ secondaryText(item) }}
+                </p>
               }
             </div>
-          </fieldset>
-        </div>
-      </li>
-    }
-  </ol>
+
+            @if (collection() === 'categories') {
+              <span class="font-mono text-xs text-muted">{{ secondaryText(item) }}</span>
+            }
+            @if (categoryTag(item); as category) {
+              <span
+                class="inline-flex h-6 items-center rounded-md border border-line-strong px-[9px] font-mono text-xs text-text"
+                >{{ category }}</span
+              >
+            }
+            @if (collection() !== 'categories') {
+              <span class="w-[110px] font-mono text-xs text-muted">{{ flagsSummary(item) }}</span>
+            }
+
+            <div class="flex shrink-0 gap-0.5">
+              <button
+                #moveUpButton
+                type="button"
+                [attr.aria-label]="'Move ' + itemLabel(item) + ' up'"
+                [class]="actionClass"
+                [disabled]="index === 0"
+                [title]="'Move ' + itemLabel(item) + ' up'"
+                (click)="move(index, index - 1)"
+              >
+                <ng-icon aria-hidden="true" class="text-base" name="heroChevronUp" />
+              </button>
+              <button
+                #moveDownButton
+                type="button"
+                [attr.aria-label]="'Move ' + itemLabel(item) + ' down'"
+                [class]="actionClass"
+                [disabled]="index === items().length - 1"
+                [title]="'Move ' + itemLabel(item) + ' down'"
+                (click)="move(index, index + 1)"
+              >
+                <ng-icon aria-hidden="true" class="text-base" name="heroChevronDown" />
+              </button>
+              <button
+                #editButton
+                type="button"
+                [attr.aria-controls]="editorId(index)"
+                [attr.aria-expanded]="isOpen(index)"
+                [attr.aria-label]="'Edit ' + itemLabel(item)"
+                [class]="actionClass + ' aria-expanded:bg-accent/14 aria-expanded:text-accent'"
+                [title]="'Edit ' + itemLabel(item)"
+                (click)="toggle(index)"
+              >
+                <ng-icon aria-hidden="true" class="text-base" name="heroPencil" />
+              </button>
+              <button
+                #removeButton
+                type="button"
+                [attr.aria-label]="'Remove ' + itemLabel(item)"
+                [class]="dangerActionClass"
+                [title]="'Remove ' + itemLabel(item)"
+                (click)="remove(index)"
+              >
+                <ng-icon aria-hidden="true" class="text-base" name="heroTrash" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Editor: the fields of the item, under its row. Escape closes it and returns to Edit. -->
+          <div
+            class="mt-2 border-t border-accent/18 pt-3 pb-4 pl-[52px] max-[601px]:pl-0"
+            [hidden]="!isOpen(index)"
+            [id]="editorId(index)"
+            (keydown.escape)="collapse(index)"
+          >
+            <fieldset class="min-w-0">
+              <legend class="sr-only">{{ itemLabel(item) }}</legend>
+              <div class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-x-5 gap-y-4">
+                <label [class]="labelClass">
+                  Name
+                  <input
+                    #nameInput
+                    [attr.aria-describedby]="describedBy(index, 'name')"
+                    [attr.aria-invalid]="errorId(index, 'name') ? 'true' : null"
+                    [attr.aria-label]="fieldLabel(item, 'name')"
+                    [class]="fieldClass"
+                    [id]="fieldId(index, 'name')"
+                    [value]="item.name"
+                    (input)="editText(index, 'name', $event)"
+                  />
+                  @if (errorMessage(index, 'name'); as error) {
+                    <p [class]="errorClass" [id]="errorId(index, 'name')">{{ error }}</p>
+                  }
+                </label>
+
+                @if (collection() !== 'categories') {
+                  <label [class]="labelClass">
+                    URL
+                    <input
+                      type="url"
+                      [attr.aria-describedby]="describedBy(index, 'url')"
+                      [attr.aria-invalid]="errorId(index, 'url') ? 'true' : null"
+                      [attr.aria-label]="fieldLabel(item, 'url')"
+                      [class]="monoFieldClass"
+                      [id]="fieldId(index, 'url')"
+                      [value]="item.url ?? ''"
+                      (input)="editText(index, 'url', $event)"
+                    />
+                    @if (errorMessage(index, 'url'); as error) {
+                      <p [class]="errorClass" [id]="errorId(index, 'url')">{{ error }}</p>
+                    }
+                  </label>
+                  <label [class]="labelClass + ' col-span-full'">
+                    Description
+                    <textarea
+                      rows="1"
+                      [attr.aria-describedby]="describedBy(index, 'description')"
+                      [attr.aria-invalid]="errorId(index, 'description') ? 'true' : null"
+                      [attr.aria-label]="fieldLabel(item, 'description')"
+                      [class]="textareaClass"
+                      [id]="fieldId(index, 'description')"
+                      [value]="item.description ?? ''"
+                      (input)="editText(index, 'description', $event)"
+                    ></textarea>
+                    @if (errorMessage(index, 'description'); as error) {
+                      <p [class]="errorClass" [id]="errorId(index, 'description')">{{ error }}</p>
+                    }
+                  </label>
+                }
+
+                @if (supportsIcon()) {
+                  <!-- Part of the same grid; the group keeps the icon fields named together. -->
+                  <fieldset class="contents">
+                    <legend class="sr-only">Icon for {{ itemLabel(item) }}</legend>
+                    <label [class]="labelClass">
+                      Icon type
+                      <app-select
+                        [buttonClass]="selectButtonClass"
+                        [controlId]="fieldId(index, 'iconType')"
+                        [describedBy]="describedBy(index, 'iconType')"
+                        [invalid]="!!errorId(index, 'iconType')"
+                        [label]="'Icon type for ' + itemLabel(item)"
+                        [options]="iconTypeOptions"
+                        [value]="iconType(index)"
+                        (valueChange)="setIconType(index, $event)"
+                      />
+                      @if (errorMessage(index, 'iconType'); as error) {
+                        <p [class]="errorClass" [id]="errorId(index, 'iconType')">{{ error }}</p>
+                      }
+                    </label>
+                    <label [class]="labelClass">
+                      {{ iconValueText(index) }}
+                      <input
+                        [attr.aria-describedby]="describedBy(index, 'iconValue')"
+                        [attr.aria-invalid]="errorId(index, 'iconValue') ? 'true' : null"
+                        [attr.aria-label]="iconValueLabel(index)"
+                        [class]="monoFieldClass"
+                        [id]="fieldId(index, 'iconValue')"
+                        [type]="iconType(index) === 'url' ? 'url' : 'text'"
+                        [value]="iconValue(index)"
+                        (input)="updateIconValue(index, $event)"
+                      />
+                      <span
+                        class="block text-xs leading-5 font-normal text-muted"
+                        [id]="collectionLabel() + '-icon-' + iconType(index) + '-help-' + index"
+                        >{{ iconHelp(index) }}</span
+                      >
+                      @if (errorMessage(index, 'iconValue'); as error) {
+                        <p [class]="errorClass" [id]="errorId(index, 'iconValue')">{{ error }}</p>
+                      }
+                    </label>
+                  </fieldset>
+                }
+
+                @if (collection() === 'applications') {
+                  <label [class]="labelClass">
+                    Category
+                    <app-select
+                      placeholder="No categories available"
+                      [buttonClass]="selectButtonClass"
+                      [controlId]="fieldId(index, 'category')"
+                      [describedBy]="describedBy(index, 'category')"
+                      [disabled]="categoryOptions().length === 0"
+                      [invalid]="!!errorId(index, 'category')"
+                      [label]="fieldLabel(item, 'category')"
+                      [options]="categorySelectOptions()"
+                      [value]="item.category ?? ''"
+                      (valueChange)="setText(index, 'category', $event)"
+                    />
+                    @if (errorMessage(index, 'category'); as error) {
+                      <p [class]="errorClass" [id]="errorId(index, 'category')">{{ error }}</p>
+                    }
+                  </label>
+                }
+
+                @if (collection() !== 'categories') {
+                  <label [class]="labelClass">
+                    Tags
+                    <input
+                      [attr.aria-describedby]="describedBy(index, 'tags')"
+                      [attr.aria-invalid]="errorId(index, 'tags') ? 'true' : null"
+                      [attr.aria-label]="fieldLabel(item, 'tags')"
+                      [class]="monoFieldClass"
+                      [id]="fieldId(index, 'tags')"
+                      [value]="(item.tags ?? []).join(', ')"
+                      (input)="editTags(index, $event)"
+                    />
+                    @if (errorMessage(index, 'tags'); as error) {
+                      <p [class]="errorClass" [id]="errorId(index, 'tags')">{{ error }}</p>
+                    }
+                  </label>
+                }
+
+                <label [class]="labelClass">
+                  ID
+                  <input
+                    [attr.aria-describedby]="describedBy(index, 'id')"
+                    [attr.aria-invalid]="errorId(index, 'id') ? 'true' : null"
+                    [attr.aria-label]="fieldLabel(item, 'id')"
+                    [class]="monoFieldClass + ' cursor-not-allowed opacity-70'"
+                    disabled
+                    [id]="fieldId(index, 'id')"
+                    [value]="item.id"
+                  />
+                  @if (errorMessage(index, 'id'); as error) {
+                    <p [class]="errorClass" [id]="errorId(index, 'id')">{{ error }}</p>
+                  }
+                </label>
+
+                @if (collection() !== 'categories') {
+                  <div
+                    class="col-span-full grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3"
+                  >
+                    <app-switch
+                      label="Open in new tab"
+                      [accessibleName]="fieldLabel(item, 'openNewTab')"
+                      [checked]="item.openNewTab ?? true"
+                      [controlId]="fieldId(index, 'openNewTab')"
+                      (checkedChange)="setBoolean(index, 'openNewTab', $event)"
+                    />
+                    @if (collection() === 'applications') {
+                      <app-switch
+                        label="Favorite"
+                        [accessibleName]="fieldLabel(item, 'favorite')"
+                        [checked]="item.favorite ?? false"
+                        [controlId]="fieldId(index, 'favorite')"
+                        (checkedChange)="setBoolean(index, 'favorite', $event)"
+                      />
+                      <app-switch
+                        label="Health check"
+                        [accessibleName]="fieldLabel(item, 'healthCheck')"
+                        [checked]="item.healthCheck ?? false"
+                        [controlId]="fieldId(index, 'healthCheck')"
+                        (checkedChange)="setBoolean(index, 'healthCheck', $event)"
+                      />
+                    }
+                  </div>
+                }
+              </div>
+            </fieldset>
+          </div>
+        </li>
+      }
+    </ol>
+  }
 </app-config-section>
