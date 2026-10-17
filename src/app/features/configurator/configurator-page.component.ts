@@ -359,8 +359,10 @@ export class ConfiguratorPageComponent {
     return `field-${path.join('-')}`;
   }
 
-  protected describedBy(path: readonly string[]): string | undefined {
-    return this.errorFor(path) ? this.errorId(path) : undefined;
+  /** The ids that describe a field: its error when it has one, then any `also` ids (a hint). */
+  protected describedBy(path: readonly string[], ...also: string[]): string | undefined {
+    const ids = this.errorFor(path) ? [this.errorId(path), ...also] : also;
+    return ids.length > 0 ? ids.join(' ') : undefined;
   }
 
   /** The page's own path in front of an anchor: a bare `#id` resolves against `<base href>` and points at the app root. */

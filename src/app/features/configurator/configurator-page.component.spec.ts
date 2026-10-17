@@ -640,7 +640,9 @@ describe('ConfiguratorPageComponent', () => {
     });
 
     const field = screen.getByLabelText(/Items per row/);
-    expect(field).toHaveAttribute('aria-describedby', 'error-settings-itemsPerRow');
+    expect(field).toHaveAccessibleDescription(
+      'Items per row must be between 1 and 10. Used by the horizontal layout only.',
+    );
     expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(
       screen.getByText('Items per row must be between 1 and 10.', { selector: 'p' }),
@@ -1330,6 +1332,20 @@ describe('ConfiguratorPageComponent', () => {
     afterEach(() => {
       draft.set({ ...draft(), settings: { ...draft().settings, layout: 'horizontal' } });
     });
+
+    it.each(['horizontal', 'vertical'] as const)(
+      'says Items per row is used by the horizontal layout only when the draft layout is %s',
+      async (layout) => {
+        draft.set({ ...draft(), settings: { ...draft().settings, layout } });
+        await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+        const field = screen.getByLabelText('Items per row');
+
+        expect(screen.getByText('Used by the horizontal layout only.')).toBeVisible();
+        expect(field).toHaveAccessibleDescription('Used by the horizontal layout only.');
+        expect(field).toHaveValue(draft().settings.itemsPerRow);
+      },
+    );
 
     it('opens the Settings section, before the theme, reflecting the draft layout', async () => {
       draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
