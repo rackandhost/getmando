@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { signal, type WritableSignal } from '@angular/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
@@ -9,6 +10,7 @@ import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -1160,5 +1162,74 @@ describe('ConfiguratorPageComponent', () => {
       await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
       expect(writeText.mock.calls[0][0]).toContain('showSeconds: true');
     });
+  });
+
+  describe('theme and accessibility matrix', () => {
+    const root = document.documentElement;
+    const originalWidth = window.innerWidth;
+    const resizeTo = (width: number) =>
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+
+    afterEach(() => {
+      root.classList.remove('dark');
+      root.removeAttribute('data-theme');
+      localStorage.clear();
+      resizeTo(originalWidth);
+    });
+
+    it('toggles the dark class from the header and stores the choice as the dashboard does', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('dashboard-theme', 'dark');
+      await render(ConfiguratorPageComponent, {
+        providers: [
+          ...defaultProviders().filter(({ provide }) => provide !== ThemeService),
+          ThemeService,
+          {
+            provide: SettingsService,
+            useValue: { settings: signal(DEFAULT_DASHBOARD_CONFIG.settings) },
+          },
+          { provide: LoggerService, useValue: logger },
+          { provide: NotificationService, useValue: notifications },
+        ],
+      });
+      expect(root).toHaveClass('dark');
+
+      await user.click(screen.getByRole('button', { name: 'Toggle theme' }));
+
+      expect(root).not.toHaveClass('dark');
+      expect(root).toHaveAttribute('data-theme', 'light');
+      expect(localStorage.getItem('dashboard-theme')).toBe('light');
+
+      // The dashboard reads the same stored preference when it is displayed.
+      root.removeAttribute('data-theme');
+      const dashboardTheme = TestBed.runInInjectionContext(() => new ThemeService());
+      expect(dashboardTheme.themeMode()).toBe('light');
+      expect(root).toHaveAttribute('data-theme', 'light');
+      expect(root).not.toHaveClass('dark');
+    });
+
+    it.each(
+      (['dark', 'light'] as const).flatMap((theme) =>
+        ([1440, 390] as const).flatMap((width) =>
+          (['valid', 'invalid'] as const).map((state) => [theme, width, state] as const),
+        ),
+      ),
+    )(
+      'has no detectable AXE violations in the %s theme at %i px with a %s draft and an open editor',
+      async (theme, width, state) => {
+        const user = userEvent.setup();
+        root.classList.toggle('dark', theme === 'dark');
+        resizeTo(width);
+        if (state === 'valid') validationErrors.set([]);
+        const view = await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+        // An invalid row opens by itself; a valid one needs Edit.
+        const edit = screen.getByRole('button', { name: 'Edit Plex' });
+        if (edit.getAttribute('aria-expanded') === 'false') await user.click(edit);
+        expect(screen.getByLabelText('Application ID for Plex')).toBeVisible();
+
+        await expectNoAxeViolations(view.container);
+      },
+    );
   });
 });
