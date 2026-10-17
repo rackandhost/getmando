@@ -557,9 +557,10 @@ settings:
 
 ### 🟢 App Status Indicator
 
-Applications with `healthCheck: true` show a small badge on their card — a green ✓ when the app is
-reachable, a red ✕ when it is not (a glyph as well as colour, so the state does not rely on colour
-vision). The state is also part of the card's accessible name for screen readers. Checks run
+Applications with `healthCheck: true` show a small pill on their card — a green dot and `UP` when the
+app is reachable, a red dot and `DOWN` when it is not (the text label carries the state, so it does
+not rely on colour vision). The state is also part of the card's accessible name for screen readers
+(for example "Plex, online"). Checks run
 server-side, from the same container as the dashboard (not from each viewer's browser), so the badge
 reflects reachability from the dashboard host's network.
 
