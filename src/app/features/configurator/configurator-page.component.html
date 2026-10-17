@@ -1,9 +1,21 @@
-<app-configurator-horizontal-chrome
-  [activeId]="activeId()"
-  [body]="body"
-  [sections]="sectionLinks"
-  (sectionSelected)="goToSection($event.elementId, $event.event)"
-/>
+@switch (layout()) {
+  @case ('vertical') {
+    <app-configurator-vertical-chrome
+      [activeId]="activeId()"
+      [body]="body"
+      [sections]="sectionLinks"
+      (sectionSelected)="goToSection($event.elementId, $event.event)"
+    />
+  }
+  @default {
+    <app-configurator-horizontal-chrome
+      [activeId]="activeId()"
+      [body]="body"
+      [sections]="sectionLinks"
+      (sectionSelected)="goToSection($event.elementId, $event.event)"
+    />
+  }
+}
 
 <ng-template #body>
   <div class="flex min-w-0 flex-1 flex-col gap-5" [style.--section-margin]="sectionMargin() + 'px'">

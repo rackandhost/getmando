@@ -35,6 +35,7 @@ import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
@@ -53,6 +54,7 @@ import { ConfigSectionComponent, configSectionId } from './components/config-sec
 import { ConfiguratorStore } from './configurator.store';
 import { LayoutPickerComponent } from './components/layout-picker.component';
 import { ConfiguratorHorizontalChromeComponent } from './chrome/configurator-horizontal-chrome.component';
+import { ConfiguratorVerticalChromeComponent } from './chrome/configurator-vertical-chrome.component';
 import {
   ConfiguratorChrome,
   SECTION_CLEARANCE,
@@ -93,6 +95,7 @@ const SECTIONS = [
     AppSwitchComponent,
     ConfigSectionComponent,
     ConfiguratorHorizontalChromeComponent,
+    ConfiguratorVerticalChromeComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -117,6 +120,9 @@ export class ConfiguratorPageComponent {
   private readonly yamlCodec = inject(YamlCodecService);
   private readonly yamlLoader = inject(YamlLoaderService);
   private readonly document = inject(DOCUMENT);
+
+  /** The arrangement follows the active configuration; the draft's layout is only data until it is saved. */
+  protected readonly layout = inject(SettingsService).layout;
 
   /** `false` only when the server says it has no write token; until it answers (or if it cannot), Save stays available. */
   protected readonly writeEnabled = toSignal(this.configWrite.isWriteEnabled(), {

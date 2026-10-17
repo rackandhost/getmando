@@ -6,6 +6,7 @@ import { NEVER, Observable, of } from 'rxjs';
 
 import {
   DashboardConfig,
+  DashboardLayout,
   DashboardSettings,
   DEFAULT_DASHBOARD_CONFIG,
 } from '../../core/models/dashboard.models';
@@ -1083,6 +1084,131 @@ describe('ConfiguratorPageComponent', () => {
         await waitFor(() => expect(margin()).toBe('79px'));
       });
     });
+
+    describe('with the layout of the active configuration', () => {
+      const originalWidth = window.innerWidth;
+      const resizeTo = (width: number) =>
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+      const SECTION_TITLES = [
+        'Choose a starting point',
+        'Metadata',
+        'Settings',
+        'Categories',
+        'Applications',
+        'Bookmarks',
+        'Export configuration',
+      ];
+
+      afterEach(() => {
+        resizeTo(originalWidth);
+        document.documentElement.style.removeProperty('scroll-padding-top');
+      });
+
+      const renderWith = (layout: WritableSignal<DashboardLayout>) =>
+        render(ConfiguratorPageComponent, {
+          providers: [
+            ...defaultProviders(),
+            { provide: METRICS_SOURCE, useValue: source },
+            {
+              provide: ScrollStateService,
+              useValue: { register: () => ({ mode: signal('static'), dispose: vi.fn() }) },
+            },
+            {
+              provide: SettingsService,
+              useValue: { settings: signal(DEFAULT_DASHBOARD_CONFIG.settings), layout },
+            },
+          ],
+        });
+      const rail = () => screen.queryByRole('complementary', { name: 'Configurator' });
+
+      it.each(['horizontal', 'vertical'] as const)(
+        'draws the same seven sections with the %s layout',
+        async (layout) => {
+          await renderWith(signal(layout));
+
+          const sections = SECTION_IDS.map((id) => document.getElementById(`section-${id}`));
+
+          expect(sections.every(Boolean)).toBe(true);
+          expect(
+            sections.map((section) => section?.querySelector('h2')?.textContent?.trim()),
+          ).toEqual(SECTION_TITLES);
+          expect(screen.getByLabelText('Dashboard title')).toBeInTheDocument();
+          expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute(
+            'id',
+            'configurator-save',
+          );
+        },
+      );
+
+      it('draws the header and the side navigation, and no rail, with the horizontal layout', async () => {
+        await renderWith(signal('horizontal'));
+
+        expect(screen.getByRole('banner')).toBeInTheDocument();
+        expect(rail()).not.toBeInTheDocument();
+      });
+
+      it('draws the rail, and no header band, with the vertical layout', async () => {
+        await renderWith(signal('vertical'));
+
+        expect(rail()).toBeInTheDocument();
+        expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+        expect(within(rail() as HTMLElement).getByRole('heading', { level: 1 })).toHaveTextContent(
+          'Configuration editor',
+        );
+      });
+
+      it('follows the active layout, not the one in the draft', async () => {
+        draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
+        await renderWith(signal('horizontal'));
+
+        expect(screen.getByRole('banner')).toBeInTheDocument();
+        expect(rail()).not.toBeInTheDocument();
+
+        draft.set({ ...draft(), settings: { ...draft().settings, layout: 'horizontal' } });
+      });
+
+      it('swaps the arrangement when the active layout changes, keeping the draft and its fields', async () => {
+        const layout = signal<DashboardLayout>('horizontal');
+        await renderWith(layout);
+        expect(rail()).not.toBeInTheDocument();
+
+        layout.set('vertical');
+
+        await waitFor(() => expect(rail()).toBeInTheDocument());
+        expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Dashboard title')).toHaveValue(draft().metadata.title);
+      });
+
+      it('keeps the 140 px floor of the spy while the rail is a column', async () => {
+        resizeTo(1280);
+        await renderWith(signal('vertical'));
+        flushFrames();
+        placeSections({ start: -900, metadata: -500, settings: 150, categories: 520 });
+
+        scrollTo(600);
+        await waitFor(() => expect(currentItems()).toEqual(['02 Metadata']));
+
+        placeSections({ start: -900, metadata: -500, settings: 130, categories: 520 });
+        scrollTo(620);
+        await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+      });
+
+      it('asks the chip bar for the stuck height: a section within 24 px below it is the active one', async () => {
+        resizeTo(390);
+        await renderWith(signal('vertical'));
+        flushFrames();
+        // The rail's directive keeps the scroll padding equal to the stuck part while it is stuck.
+        document.documentElement.style.scrollPaddingTop = '300px';
+        placeSections({ start: -900, metadata: -500, settings: 320, categories: 520 });
+
+        scrollTo(600);
+        await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+
+        placeSections({ start: -900, metadata: -500, settings: 330, categories: 520 });
+        scrollTo(620);
+        await waitFor(() => expect(currentItems()).toEqual(['02 Metadata']));
+      });
+    });
   });
 
   describe('starting point', () => {
@@ -1475,7 +1601,10 @@ describe('ConfiguratorPageComponent', () => {
           ThemeService,
           {
             provide: SettingsService,
-            useValue: { settings: signal(DEFAULT_DASHBOARD_CONFIG.settings) },
+            useValue: {
+              settings: signal(DEFAULT_DASHBOARD_CONFIG.settings),
+              layout: signal(DEFAULT_DASHBOARD_CONFIG.settings.layout),
+            },
           },
           { provide: LoggerService, useValue: logger },
           { provide: NotificationService, useValue: notifications },
