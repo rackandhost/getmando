@@ -10,6 +10,7 @@ import { AppService } from '../../../core/services/app.service';
 import { MetadataService } from '../../../core/services/metadata.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
+import { themeServiceStub } from '../../../../testing/theme-service.stub';
 import { ConfiguratorChrome, type SectionSelection } from '../configurator-chrome';
 
 import { ConfiguratorVerticalChromeComponent } from './configurator-vertical-chrome.component';
@@ -56,7 +57,7 @@ describe('ConfiguratorVerticalChromeComponent', () => {
       providers: [
         provideRouter([{ path: 'configure', children: [] }]),
         { provide: AppService, useValue: { appVersion: '2.2.0' } },
-        { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+        { provide: ThemeService, useValue: themeServiceStub() },
         {
           provide: MetadataService,
           useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },

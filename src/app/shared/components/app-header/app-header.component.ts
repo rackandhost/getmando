@@ -31,8 +31,11 @@ export class AppHeaderComponent {
 
   readonly metadata = this.metadataService.metadata;
 
-  readonly themeIcon = computed(() => (this.themeService.isDark() ? 'heroMoon' : 'heroSun'));
-  readonly themeText = computed(() => (this.themeService.isDark() ? 'Dark' : 'Light'));
+  /** Whether the active theme sits on the dark background slot: it picks the icon and what a click selects. */
+  private readonly onDarkBackground = computed(
+    () => this.themeService.info().background === 'dark',
+  );
+  readonly themeIcon = computed(() => (this.onDarkBackground() ? 'heroMoon' : 'heroSun'));
 
   /** The configurator link, shared with the other layouts' chrome. */
   private readonly nav = inject(ConfiguratorNavService);
@@ -42,6 +45,6 @@ export class AppHeaderComponent {
   readonly navIcon = this.nav.icon;
 
   onToggleTheme(): void {
-    this.themeService.toggleTheme();
+    this.themeService.select(this.onDarkBackground() ? 'light' : 'dark');
   }
 }

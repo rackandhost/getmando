@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { Mock } from 'vitest';
+import { themeServiceStub, type ThemeServiceStub } from '../../../../testing/theme-service.stub';
 import { CommonModule } from '@angular/common';
 import { signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
@@ -15,8 +15,7 @@ import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models'
 
 describe('AppHeader', () => {
   const setup = async (
-    toggleThemeMock?: Mock,
-    isDark = signal(true),
+    theme: ThemeServiceStub = themeServiceStub(),
     initialUrl = '/',
     metadata: { title: string; description: string } | null = DEFAULT_DASHBOARD_CONFIG.metadata,
     inputs: Record<string, unknown> = {},
@@ -29,13 +28,7 @@ describe('AppHeader', () => {
           { path: '', children: [] },
           { path: 'configure', children: [] },
         ]),
-        {
-          provide: ThemeService,
-          useValue: {
-            isDark,
-            toggleTheme: toggleThemeMock || vi.fn(),
-          },
-        },
+        { provide: ThemeService, useValue: theme },
         {
           provide: MetadataService,
           useValue: {
@@ -61,7 +54,7 @@ describe('AppHeader', () => {
     });
 
     it('shows the YAML title and description in the chip', async () => {
-      await setup(undefined, undefined, '/', {
+      await setup(undefined, '/', {
         title: 'My dashboard',
         description: 'Simply and lovelly',
       });
@@ -71,7 +64,7 @@ describe('AppHeader', () => {
     });
 
     it('falls back to the default title and description without metadata', async () => {
-      await setup(undefined, undefined, '/', null);
+      await setup(undefined, '/', null);
 
       expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
       expect(screen.getByText('Your selfhosted applications')).toBeInTheDocument();
@@ -99,12 +92,12 @@ describe('AppHeader', () => {
     });
 
     it('is 12 px on both sides when compact', async () => {
-      await setup(undefined, undefined, '/', undefined, { compact: true });
+      await setup(undefined, '/', undefined, { compact: true });
       expect(bannerPadding()).toEqual(['12px', '12px']);
     });
 
     it('takes the full and the compact padding from the host (configurator: 24 → 14)', async () => {
-      await setup(undefined, undefined, '/', undefined, {
+      await setup(undefined, '/', undefined, {
         verticalPadding: { full: 24, compact: 14 },
         compact: true,
       });
@@ -113,22 +106,22 @@ describe('AppHeader', () => {
   });
 
   describe('functionality', () => {
-    it('should set the theme', async () => {
-      const toggleThemeMock = vi.fn();
+    it('flips between dark and light through the service, one choice per click', async () => {
+      const theme = themeServiceStub('dark');
 
-      await setup(toggleThemeMock);
+      await setup(theme);
 
-      const themeButton = await screen.findByRole('button');
+      await userEvent.click(await screen.findByRole('button'));
+      expect(theme.select).toHaveBeenCalledExactlyOnceWith('light');
 
-      await userEvent.click(themeButton);
-
-      expect(toggleThemeMock).toBeCalled();
-      expect(toggleThemeMock).toBeCalledTimes(1);
+      await userEvent.click(screen.getByRole('button'));
+      expect(theme.select).toHaveBeenCalledTimes(2);
+      expect(theme.select).toHaveBeenLastCalledWith('dark');
     });
 
     it('should update the presented theme when the active theme changes', async () => {
-      const isDark = signal(true);
-      await setup(undefined, isDark);
+      const theme = themeServiceStub('dark');
+      await setup(theme);
 
       const themeButton = screen.getByRole('button', { name: 'Toggle theme' });
       const darkIcon = themeButton.querySelector('ng-icon');
@@ -142,7 +135,7 @@ describe('AppHeader', () => {
       );
       expect(themeButton).not.toHaveTextContent('🌙');
 
-      isDark.set(false);
+      theme.theme.set('light');
 
       await waitFor(() => {
         const lightSvg = themeButton.querySelector('svg');
@@ -179,7 +172,7 @@ describe('AppHeader', () => {
     });
 
     it('links back to the dashboard when on the configurator', async () => {
-      await setup(undefined, undefined, '/configure');
+      await setup(undefined, '/configure');
 
       await waitFor(() => {
         expect(screen.getByRole('link', { name: 'Back to dashboard' })).toHaveAttribute(
@@ -190,7 +183,7 @@ describe('AppHeader', () => {
     });
 
     it('renders a currentColor Heroicon instead of an emoji on the configurator', async () => {
-      await setup(undefined, undefined, '/configure');
+      await setup(undefined, '/configure');
 
       await waitFor(() => {
         const navLink = screen.getByRole('link', { name: 'Back to dashboard' });
@@ -205,7 +198,7 @@ describe('AppHeader', () => {
     });
 
     it('shows the label beside the arrow on the configurator, keeping it as the accessible name', async () => {
-      await setup(undefined, undefined, '/configure');
+      await setup(undefined, '/configure');
 
       await waitFor(() => {
         const navLink = screen.getByRole('link', { name: 'Back to dashboard' });

@@ -19,8 +19,10 @@ import { SettingsService } from '../../core/services/settings.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { THEME_IDS } from '../../core/themes/theme.registry';
 import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
+import { themeServiceStub } from '../../../testing/theme-service.stub';
 import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
 import type { ChromeMode } from '../../core/scroll/scroll-state';
 import { METRICS_SOURCE, type MetricsSource } from '../../core/scroll/metrics-source';
@@ -160,10 +162,7 @@ describe('ConfiguratorPageComponent', () => {
     return [
       { provide: ConfiguratorStore, useValue: store },
       { provide: AppService, useValue: appService },
-      {
-        provide: ThemeService,
-        useValue: { isDark: signal(true), toggleTheme: vi.fn() },
-      },
+      { provide: ThemeService, useValue: themeServiceStub() },
       {
         provide: MetadataService,
         useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -1593,7 +1592,7 @@ describe('ConfiguratorPageComponent', () => {
       await render(ConfiguratorPageComponent, {
         providers: [
           { provide: AppService, useValue: appService },
-          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          { provide: ThemeService, useValue: themeServiceStub() },
           {
             provide: MetadataService,
             useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -1721,7 +1720,7 @@ describe('ConfiguratorPageComponent', () => {
       await render(ConfiguratorPageComponent, {
         providers: [
           { provide: AppService, useValue: appService },
-          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          { provide: ThemeService, useValue: themeServiceStub() },
           {
             provide: MetadataService,
             useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -1774,7 +1773,7 @@ describe('ConfiguratorPageComponent', () => {
     const renderWithMountedTheme = async (theme: DashboardConfig['settings']['theme']) => {
       const user = userEvent.setup();
       const writeText = vi.fn().mockResolvedValue(undefined);
-      const themeService = { isDark: signal(true), toggleTheme: vi.fn() };
+      const themeService = themeServiceStub();
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
       await render(ConfiguratorPageComponent, {
         providers: [
@@ -1849,7 +1848,7 @@ describe('ConfiguratorPageComponent', () => {
 
       await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
       expect(writeText.mock.calls[0][0]).toContain('settings:\n  theme: light\n');
-      expect(themeService.toggleTheme).not.toHaveBeenCalled();
+      expect(themeService.select).not.toHaveBeenCalled();
     });
   });
 
@@ -1860,13 +1859,12 @@ describe('ConfiguratorPageComponent', () => {
       Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
 
     afterEach(() => {
-      root.classList.remove('dark');
       root.removeAttribute('data-theme');
       localStorage.clear();
       resizeTo(originalWidth);
     });
 
-    it('toggles the dark class from the header and stores the choice as the dashboard does', async () => {
+    it('flips the theme from the header and stores the choice as the dashboard does', async () => {
       const user = userEvent.setup();
       localStorage.setItem('dashboard-theme', 'dark');
       await render(ConfiguratorPageComponent, {
@@ -1884,24 +1882,23 @@ describe('ConfiguratorPageComponent', () => {
           { provide: NotificationService, useValue: notifications },
         ],
       });
-      expect(root).toHaveClass('dark');
+      expect(root).toHaveAttribute('data-theme', 'dark');
 
       await user.click(screen.getByRole('button', { name: 'Toggle theme' }));
 
-      expect(root).not.toHaveClass('dark');
       expect(root).toHaveAttribute('data-theme', 'light');
       expect(localStorage.getItem('dashboard-theme')).toBe('light');
 
       // The dashboard reads the same stored preference when it is displayed.
       root.removeAttribute('data-theme');
       const dashboardTheme = TestBed.runInInjectionContext(() => new ThemeService());
-      expect(dashboardTheme.themeMode()).toBe('light');
+      TestBed.flushEffects();
+      expect(dashboardTheme.theme()).toBe('light');
       expect(root).toHaveAttribute('data-theme', 'light');
-      expect(root).not.toHaveClass('dark');
     });
 
     it.each(
-      (['dark', 'light'] as const).flatMap((theme) =>
+      THEME_IDS.flatMap((theme) =>
         ([1440, 390] as const).flatMap((width) =>
           (['valid', 'invalid'] as const).map((state) => [theme, width, state] as const),
         ),
@@ -1910,7 +1907,7 @@ describe('ConfiguratorPageComponent', () => {
       'has no detectable AXE violations in the %s theme at %i px with a %s draft and an open editor',
       async (theme, width, state) => {
         const user = userEvent.setup();
-        root.classList.toggle('dark', theme === 'dark');
+        root.dataset['theme'] = theme;
         resizeTo(width);
         if (state === 'valid') validationErrors.set([]);
         const view = await render(ConfiguratorPageComponent, { providers: defaultProviders() });

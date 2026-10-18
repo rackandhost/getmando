@@ -54,11 +54,13 @@ export class AppRailActionsComponent {
   protected readonly linkClass = computed(() =>
     this.showsBackText() ? BACK_BUTTON_WITH_TEXT : ICON_BUTTON,
   );
-  protected readonly themeIcon = computed(() =>
-    this.themeService.isDark() ? 'heroMoon' : 'heroSun',
+  /** Whether the active theme sits on the dark background slot: it picks the icon and what a click selects. */
+  private readonly onDarkBackground = computed(
+    () => this.themeService.info().background === 'dark',
   );
+  protected readonly themeIcon = computed(() => (this.onDarkBackground() ? 'heroMoon' : 'heroSun'));
 
   protected toggleTheme(): void {
-    this.themeService.toggleTheme();
+    this.themeService.select(this.onDarkBackground() ? 'light' : 'dark');
   }
 }

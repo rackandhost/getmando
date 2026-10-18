@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
@@ -7,14 +6,15 @@ import userEvent from '@testing-library/user-event';
 import { AppService } from '../../../core/services/app.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
+import { themeServiceStub, type ThemeServiceStub } from '../../../../testing/theme-service.stub';
 
 import { AppRailActionsComponent } from './app-rail-actions.component';
 
 describe('AppRailActionsComponent', () => {
-  const toggleTheme = vi.fn();
+  let theme: ThemeServiceStub;
 
   const setup = async (mode: 'wide' | 'compact', url = '/') => {
-    toggleTheme.mockReset();
+    theme = themeServiceStub('dark');
     const view = await render(`<app-rail-actions mode="${mode}" />`, {
       imports: [AppRailActionsComponent],
       providers: [
@@ -23,7 +23,7 @@ describe('AppRailActionsComponent', () => {
           { path: 'configure', children: [] },
         ]),
         { provide: AppService, useValue: { appVersion: '2.2.0' } },
-        { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme } },
+        { provide: ThemeService, useValue: theme },
       ],
     });
 
@@ -54,12 +54,14 @@ describe('AppRailActionsComponent', () => {
       expect(screen.queryByRole('link', { name: 'Open configurator' })).not.toBeInTheDocument();
     });
 
-    it('toggles the theme', async () => {
+    it('flips between dark and light through the service', async () => {
       await setup(mode);
 
       await userEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
+      expect(theme.select).toHaveBeenCalledExactlyOnceWith('light');
 
-      expect(toggleTheme).toHaveBeenCalledOnce();
+      await userEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
+      expect(theme.select).toHaveBeenLastCalledWith('dark');
     });
 
     it('hides its icons from assistive technology', async () => {
