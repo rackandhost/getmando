@@ -169,6 +169,7 @@ describe('token contrast audit', () => {
     'selected category marker on its tint',
     'search text on field',
     'search placeholder on field',
+    'placeholder on configurator field',
     'main heading on its pill',
     'item count on its pill',
     'setup eyebrow on card tile',

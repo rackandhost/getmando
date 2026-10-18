@@ -197,6 +197,13 @@ const PAIRS: Pair[] = [
     on: ['--field'],
     ink: ['--muted'],
   },
+  {
+    name: 'placeholder on configurator field',
+    surface: 'card',
+    required: 4.5,
+    on: ['--field'],
+    ink: ['--muted'],
+  },
   { name: 'main heading on its pill', surface: 'bar', required: 4.5, ink: ['--text'] },
   { name: 'item count on its pill', surface: 'bar', required: 4.5, ink: ['--muted'] },
   { name: 'setup eyebrow on card tile', surface: 'card', required: 4.5, ink: ['--accent'] },
