@@ -196,7 +196,8 @@ describe('ConfiguratorPageComponent', () => {
     expect(banner).toHaveTextContent(DEFAULT_DASHBOARD_CONFIG.metadata.title);
     expect(banner.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(main).not.toContainElement(banner);
-    expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Change theme, current:/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Toggle theme' })).toBeNull();
   });
 
   it('does not offer load mounted YAML when mounted configuration is unavailable', async () => {
@@ -728,7 +729,7 @@ describe('ConfiguratorPageComponent', () => {
     await user.tab();
     expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Toggle theme' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /^Change theme, current:/ })).toHaveFocus();
     // The section navigation precedes the content it navigates, as it does on screen.
     for (const name of SECTION_NAV) {
       await user.tab();
@@ -2079,7 +2080,7 @@ describe('ConfiguratorPageComponent', () => {
       resizeTo(originalWidth);
     });
 
-    it('flips the theme from the header and stores the choice as the dashboard does', async () => {
+    it('applies a theme from the picker in the header and stores the choice as the dashboard does', async () => {
       const user = userEvent.setup();
       localStorage.setItem('dashboard-theme', 'dark');
       await render(ConfiguratorPageComponent, {
@@ -2099,17 +2100,21 @@ describe('ConfiguratorPageComponent', () => {
       });
       expect(root).toHaveAttribute('data-theme', 'dark');
 
-      await user.click(screen.getByRole('button', { name: 'Toggle theme' }));
+      await user.click(screen.getByRole('button', { name: 'Change theme, current: Dark' }));
+      await user.click(screen.getByRole('option', { name: 'Catppuccin Mocha' }));
 
-      expect(root).toHaveAttribute('data-theme', 'light');
-      expect(localStorage.getItem('dashboard-theme')).toBe('light');
+      expect(root).toHaveAttribute('data-theme', 'catppuccin-mocha');
+      expect(localStorage.getItem('dashboard-theme')).toBe('catppuccin-mocha');
+      expect(
+        screen.getByRole('button', { name: 'Change theme, current: Catppuccin Mocha' }),
+      ).toBeInTheDocument();
 
       // The dashboard reads the same stored preference when it is displayed.
       root.removeAttribute('data-theme');
       const dashboardTheme = TestBed.runInInjectionContext(() => new ThemeService());
       TestBed.flushEffects();
-      expect(dashboardTheme.theme()).toBe('light');
-      expect(root).toHaveAttribute('data-theme', 'light');
+      expect(dashboardTheme.theme()).toBe('catppuccin-mocha');
+      expect(root).toHaveAttribute('data-theme', 'catppuccin-mocha');
     });
 
     it.each(

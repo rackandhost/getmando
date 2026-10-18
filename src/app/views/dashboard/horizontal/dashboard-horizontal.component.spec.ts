@@ -280,7 +280,7 @@ describe('DashboardHorizontalComponent', () => {
 
     const path = [
       screen.getByRole('link', { name: 'Open configurator' }),
-      screen.getByRole('button', { name: 'Toggle theme' }),
+      screen.getByRole('button', { name: /^Change theme, current:/ }),
       screen.getByRole('button', { name: /^Select search engine/ }),
       screen.getByRole('searchbox', { name: 'Search applications' }),
       screen.getByRole('button', { name: 'Apps' }),

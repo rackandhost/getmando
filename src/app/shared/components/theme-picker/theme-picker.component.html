@@ -20,7 +20,10 @@
   (keydown)="onDialogKeydown($event)"
   (mousedown)="onDialogMouseDown($event)"
 >
-  <div class="flex h-[60px] shrink-0 items-center gap-3 border-b border-line px-[18px]">
+  <!-- The focus ring marks the whole row, drawn inside it because the dialog clips what falls outside. -->
+  <div
+    class="flex h-[60px] shrink-0 items-center gap-3 rounded-t-[19px] border-b border-line px-[18px] has-[input:focus-visible]:shadow-[inset_0_0_0_4px_var(--focus-halo)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:-outline-offset-2 has-[input:focus-visible]:outline-focus"
+  >
     <ng-icon aria-hidden="true" class="shrink-0 text-xl text-muted" name="heroMagnifyingGlass" />
     <label class="sr-only" [for]="searchId">Search themes</label>
     <input
@@ -28,7 +31,7 @@
       aria-autocomplete="list"
       aria-expanded="true"
       autocomplete="off"
-      class="h-11 min-w-0 flex-1 bg-transparent text-lg text-text outline-none placeholder:text-muted"
+      class="h-11 min-w-0 flex-1 bg-transparent text-lg text-text placeholder:text-muted focus-visible:[box-shadow:none]! focus-visible:outline-none!"
       placeholder="Search themes…"
       role="combobox"
       type="text"

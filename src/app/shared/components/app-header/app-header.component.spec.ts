@@ -70,13 +70,34 @@ describe('AppHeader', () => {
       expect(screen.getByText('Your selfhosted applications')).toBeInTheDocument();
     });
 
-    it('exposes only the configurator link and the theme toggle as actions', async () => {
+    it('exposes only the configurator link and the theme picker as actions', async () => {
       await setup();
 
       expect(screen.getAllByRole('link')).toHaveLength(1);
       expect(screen.getAllByRole('button')).toHaveLength(1);
       expect(screen.getByRole('link', { name: 'Open configurator' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Change theme, current: Dark' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Toggle theme' })).toBeNull();
+    });
+
+    it('names the committed theme on the picker button', async () => {
+      await setup(themeServiceStub('catppuccin-mocha'));
+
+      expect(
+        screen.getByRole('button', { name: 'Change theme, current: Catppuccin Mocha' }),
+      ).toBeInTheDocument();
+    });
+
+    it('tabs from the configurator link to the theme picker button', async () => {
+      const user = userEvent.setup();
+      await setup();
+
+      await user.tab();
+      expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
+      await user.tab();
+      expect(screen.getByRole('button', { name: /^Change theme/ })).toHaveFocus();
     });
   });
 
@@ -102,51 +123,6 @@ describe('AppHeader', () => {
         compact: true,
       });
       expect(bannerPadding()).toEqual(['14px', '14px']);
-    });
-  });
-
-  describe('functionality', () => {
-    it('flips between dark and light through the service, one choice per click', async () => {
-      const theme = themeServiceStub('dark');
-
-      await setup(theme);
-
-      await userEvent.click(await screen.findByRole('button'));
-      expect(theme.select).toHaveBeenCalledExactlyOnceWith('light');
-
-      await userEvent.click(screen.getByRole('button'));
-      expect(theme.select).toHaveBeenCalledTimes(2);
-      expect(theme.select).toHaveBeenLastCalledWith('dark');
-    });
-
-    it('should update the presented theme when the active theme changes', async () => {
-      const theme = themeServiceStub('dark');
-      await setup(theme);
-
-      const themeButton = screen.getByRole('button', { name: 'Toggle theme' });
-      const darkIcon = themeButton.querySelector('ng-icon');
-      const darkSvg = darkIcon?.querySelector('svg');
-
-      expect(darkIcon).toHaveAttribute('aria-hidden', 'true');
-      expect(darkSvg).toHaveAttribute('stroke', 'currentColor');
-      expect(darkSvg?.querySelector('path')).toHaveAttribute(
-        'd',
-        expect.stringContaining('M21.752 15.002'),
-      );
-      expect(themeButton).not.toHaveTextContent('🌙');
-
-      theme.theme.set('light');
-
-      await waitFor(() => {
-        const lightSvg = themeButton.querySelector('svg');
-        expect(lightSvg).toHaveAttribute('stroke', 'currentColor');
-        expect(lightSvg?.querySelector('path')).toHaveAttribute(
-          'd',
-          expect.stringContaining('M12 3v2.25'),
-        );
-        expect(themeButton).not.toHaveTextContent('☀️');
-        expect(themeButton).not.toHaveTextContent('🌙');
-      });
     });
   });
 
