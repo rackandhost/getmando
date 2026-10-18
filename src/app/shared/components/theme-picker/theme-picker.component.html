@@ -71,7 +71,7 @@
         <!-- Keyboard operation lives on the search field (aria-activedescendant); options are not focusable. -->
         <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <li
-          class="flex min-h-[60px] cursor-pointer items-center gap-3.5 rounded-xl border border-transparent px-3 transition-colors duration-150 motion-reduce:transition-none aria-selected:border-chrome-line aria-selected:bg-surface-2"
+          class="grid min-h-[60px] cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3.5 rounded-xl border border-transparent px-3 transition-colors duration-150 max-[480px]:grid-cols-[auto_minmax(0,1fr)] max-[480px]:py-1.5 motion-reduce:transition-none aria-selected:border-chrome-line aria-selected:bg-surface-2"
           role="option"
           [attr.aria-describedby]="describedBy(row.id)"
           [attr.aria-labelledby]="optionId(row.id, 'name')"
@@ -80,7 +80,7 @@
           (click)="choose(row.id)"
           (mousemove)="highlight.set(row.id)"
         >
-          <app-theme-preview size="sm" [swatches]="row.swatches" />
+          <app-theme-preview class="max-[480px]:row-span-2" size="sm" [swatches]="row.swatches" />
           <span class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="text-[15px] font-semibold" [id]="optionId(row.id, 'name')">{{
               row.name
@@ -91,7 +91,7 @@
           </span>
           @if (row.id === committed()) {
             <span
-              class="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-accent px-[9px] font-mono text-[11px] font-semibold tracking-[0.08em] text-accent-ink uppercase"
+              class="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full bg-accent px-[9px] font-mono text-[11px] font-semibold tracking-[0.08em] text-accent-ink uppercase max-[480px]:col-start-2 max-[480px]:mt-1.5 max-[480px]:justify-self-start"
               [id]="optionId(row.id, 'active')"
             >
               <ng-icon aria-hidden="true" class="text-xs" name="heroCheck" />Active

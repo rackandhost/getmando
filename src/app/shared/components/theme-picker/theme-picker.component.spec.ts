@@ -281,6 +281,22 @@ describe('ThemePickerComponent', () => {
       expect(trigger()).toHaveFocus();
     });
 
+    it.each([
+      ['Escape', () => userEvent.keyboard('{Escape}')],
+      [
+        'the Close button',
+        () => userEvent.click(within(dialog()).getByRole('button', { name: 'Close' })),
+      ],
+      ['a choice', () => userEvent.click(option('Light'))],
+    ])('returns the focus to the button without scrolling the page on %s', async (_way, close) => {
+      await setupOpen();
+      const focus = vi.spyOn(trigger(), 'focus');
+
+      await close();
+
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    });
+
     it('opens again clean: empty search, every theme listed, the committed one highlighted', async () => {
       const { user } = await setupOpen('light');
 
@@ -396,6 +412,20 @@ describe('ThemePickerComponent', () => {
 
       expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
       expect(scrollIntoView.mock.contexts.at(-1)).toBe(option('Light'));
+    });
+
+    it('brings the committed row into view when it opens, even after a filter hid it last time', async () => {
+      const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView');
+      const { user } = await setupPreview('catppuccin-mocha');
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(scrollIntoView.mock.contexts.at(-1)).toBe(option('Catppuccin Mocha'));
+
+      await user.type(search(), 'dark');
+      await user.keyboard('{Escape}');
+      scrollIntoView.mockClear();
+      await user.click(trigger());
+
+      expect(scrollIntoView.mock.contexts.at(-1)).toBe(option('Catppuccin Mocha'));
     });
 
     it('previews the hovered row and leaves it highlighted when the pointer moves on', async () => {

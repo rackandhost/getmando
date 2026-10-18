@@ -1,4 +1,5 @@
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -6,6 +7,7 @@ import {
   effect,
   ElementRef,
   inject,
+  Injector,
   signal,
   viewChild,
 } from '@angular/core';
@@ -38,6 +40,7 @@ let nextId = 0;
 })
 export class ThemePickerComponent {
   private readonly themeService = inject(ThemeService);
+  private readonly injector = inject(Injector);
 
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -101,6 +104,8 @@ export class ThemePickerComponent {
     this.open.set(true);
     this.searchField().nativeElement.focus();
     this.watchButton();
+    // Once the list shows every row again: in a short viewport the committed one can be below the fold.
+    afterNextRender(() => this.scrollToRow(this.committed()), { injector: this.injector });
   }
 
   /** Runs for every way the dialog closes: `Esc` (native or ours), `Close`, or a choice. */
@@ -109,7 +114,8 @@ export class ThemePickerComponent {
     this.buttonWatcher?.disconnect();
     this.buttonWatcher = undefined;
     this.themeService.cancelPreview();
-    this.trigger().nativeElement.focus();
+    // The user opened the dialog from this button, so it was where they could reach it: do not scroll to it.
+    this.trigger().nativeElement.focus({ preventScroll: true });
   }
 
   protected close(): void {
@@ -186,10 +192,12 @@ export class ThemePickerComponent {
     const at = rows.findIndex((row) => row.id === this.highlighted());
     const next = rows[(at + step + rows.length) % rows.length];
     this.highlight.set(next.id);
+    this.scrollToRow(next.id);
+  }
+
+  private scrollToRow(id: ThemeId): void {
     this.dialog()
-      .nativeElement.querySelector(`#${this.optionId(next.id)}`)
-      ?.scrollIntoView({
-        block: 'nearest',
-      });
+      .nativeElement.querySelector(`#${this.optionId(id)}`)
+      ?.scrollIntoView({ block: 'nearest' });
   }
 }
