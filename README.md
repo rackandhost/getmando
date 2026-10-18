@@ -15,11 +15,25 @@
 
 ---
 
-<img alt="Dashboard" width="1024" src="screenshots/dashboard.png" />
+<img alt="Dashboard, horizontal layout" width="1024" src="screenshots/dashboard.png" />
 
-<img alt="Dashboard Light" width="1024" src="screenshots/dashboard_light.png" />
+<img alt="Dashboard, vertical layout" width="1024" src="screenshots/dashboard_vertical.png" />
 
-<img alt="Visual Configurator" width="1024" src="screenshots/configurator.png" />
+<img alt="Visual configurator with the layout selector open" width="1024" src="screenshots/configurator_layout.png" />
+
+<details>
+<summary><strong>More screenshots</strong> (light theme, phone, configurator)</summary>
+<br>
+
+<img alt="Dashboard, horizontal layout, light theme" width="1024" src="screenshots/dashboard_light.png" />
+
+<img alt="Dashboard, vertical layout, light theme" width="1024" src="screenshots/dashboard_vertical_light.png" />
+
+<img alt="Visual configurator, horizontal layout" width="1024" src="screenshots/configurator.png" />
+
+<img alt="Dashboard, vertical layout, on a phone" width="320" src="screenshots/dashboard_vertical_mobile.png" />
+
+</details>
 
 ## 📖 Overview
 
@@ -28,6 +42,7 @@
 ### ✨ Key Features
 
 - **🎨 Inspiring Design** - Minimalist glass interface in light and dark themes: a one-row clock, a search dock that compacts as you scroll, and surfaces that stay legible over any background photo
+- **🧭 Two Layouts** - Choose a horizontal bar (clock, search and categories on top) or a vertical bar (sticky sidebar, apps use the full width) with `settings.layout`, from the configurator or the YAML
 - **⚡ Fast & Lightweight** - Built with Angular 21 and TailwindCSS 4 for optimal performance
 - **🔍 Real-time Search** - Instant search through your applications
 - **🏷️ Categories** - Organize your apps into customizable categories
@@ -300,6 +315,10 @@ mounted config, or a local YAML file you import. The editor validates the draft,
 you **copy** it to the clipboard, **download** it as `dashboard.yaml`, or **save** it to the
 server. Copy and download happen entirely in the browser and never touch the mounted file.
 
+The **Layout** control in the Settings section chooses how the dashboard and the editor itself are
+arranged (see `settings.layout` below). Picking one changes the draft only; the page switches
+once you save the configuration.
+
 **Save** writes the validated draft to the mounted `dashboard.yaml` over
 `POST /api/config`, so the running dashboard reflects it immediately without a manual copy. It
 requires the volume to be mounted `:rw` and `CONFIG_WRITE_TOKEN` to be set on the container (see
@@ -515,30 +534,40 @@ bookmarks:
 
 #### `settings` - Dashboard Settings
 
-| Field                  | Type            | Default          | Options                 | Description                                   |
-|------------------------|-----------------|------------------|-------------------------|-----------------------------------------------|
-| `theme`                | `string`        | `auto`           | `auto`, `light`, `dark` | Set dark and light mode                       |
-| `dateFormat`           | `string`        | `dd-MM-yyyy`     | Any format              | Date format for clock display                 |
-| `datePosition`         | `string`        | `top`            | `top`, `bottom`         | Clock date position                           |
-| `showSeconds`          | `boolean`       | `false`          | -                       | Show seconds in clock                         |
-| `showDate`             | `boolean`       | `false`          | -                       | Show date in clock                            |
-| `itemsPerRow`          | `number`        | `4`              | `1-12`                  | Number of apps per row on desktop             |
-| `allowBookmarks`       | `boolean`       | `false`          | -                       | Enable bookmarks section                      |
-| `showAllCategory`      | `boolean`       | `true`           | -                       | Show "All" category filter                    |
-| `showDescriptions`     | `boolean`       | `true`           | -                       | Show app descriptions in cards                |
-| `showLabels`           | `boolean`       | `true`           | -                       | Show app tags as labels                       |
-| `searchEngines`        | `array[string]` | `[]`             | See below               | Available search engines                      |
-| `lightBackgroundImage` | `string`        | `background.jpg` | -                       | Custom image or url as light theme background |
-| `darkBackgroundImage`  | `string`        | `background.jpg` | -                       | Custom image or url as dark theme background  |
+| Field                  | Type            | Default          | Options                      | Description                                   |
+|------------------------|-----------------|------------------|------------------------------|-----------------------------------------------|
+| `theme`                | `string`        | `auto`           | `auto`, `light`, `dark`      | Set dark and light mode                       |
+| `layout`               | `string`        | `horizontal`     | `horizontal`, `vertical`     | Page layout of the dashboard and the editor   |
+| `dateFormat`           | `string`        | `dd-MM-yyyy`     | Any format                   | Date format for clock display                 |
+| `datePosition`         | `string`        | `top`            | `top`, `bottom`              | Clock date position                           |
+| `showSeconds`          | `boolean`       | `false`          | -                            | Show seconds in clock                         |
+| `showDate`             | `boolean`       | `false`          | -                            | Show date in clock                            |
+| `itemsPerRow`          | `number`        | `4`              | `1-10`                       | Apps per row on desktop (horizontal layout only) |
+| `allowBookmarks`       | `boolean`       | `false`          | -                            | Enable bookmarks section                      |
+| `showAllCategory`      | `boolean`       | `true`           | -                            | Show "All" category filter                    |
+| `showDescriptions`     | `boolean`       | `true`           | -                            | Show app descriptions in cards                |
+| `showLabels`           | `boolean`       | `true`           | -                            | Show app tags as labels                       |
+| `searchEngines`        | `array[string]` | `[]`             | See below                    | Available search engines                      |
+| `lightBackgroundImage` | `string`        | `background.jpg` | -                            | Custom image or url as light theme background |
+| `darkBackgroundImage`  | `string`        | `background.jpg` | -                            | Custom image or url as dark theme background  |
+
+**Layouts:** `horizontal` is the original page: header, clock, search and categories on top, in a
+centred column. `vertical` puts them in a sticky sidebar next to an app grid that uses the full
+width, so `itemsPerRow` does not apply to it (the editor disables that field). Below 1024 px the
+sidebar becomes a bar at the top of the page. A file without `layout` renders the horizontal layout,
+so upgrading changes nothing until you choose the other one. The configurator follows the same
+setting.
 
 **Backgrounds and legibility:** every card, bar and panel keeps an opaque floor under its glass, so
 text keeps its contrast over any image you set in `lightBackgroundImage` / `darkBackgroundImage`,
 bright or dark.
 
-**Scrolling:** the search dock (clock, search and categories) and the phone's search and tabs
-compact into a band while you scroll, but only when the page has enough rows to keep scrolling
-afterwards (roughly four rows of apps on a 1440 × 900 window). With fewer apps, or on a window
-shorter than 720 px (500 px on the phone layout and the configurator), they stay where they are.
+**Scrolling (horizontal layout):** the search dock (clock, search and categories) and the phone's
+search and tabs compact into a band while you scroll, but only when the page has enough rows to
+keep scrolling afterwards (roughly four rows of apps on a 1440 × 900 window). With fewer apps, or
+on a window shorter than 720 px (500 px on the phone layout and the configurator), they stay where
+they are. In the vertical layout the sidebar does not compact; below 1024 px, on a window at least
+500 px tall, the bar scrolls away until only the search and the categories remain stuck at the top.
 
 **Search Engine Options:**
 - `google` - Google Search
@@ -550,6 +579,7 @@ shorter than 720 px (500 px on the phone layout and the configurator), they stay
 ```yaml
 settings:
   theme: 'auto'
+  layout: 'vertical' # or 'horizontal' (default)
   dateFormat: 'd MMMM yyyy'
   datePosition: 'bottom'
   showSeconds: false
