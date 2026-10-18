@@ -519,6 +519,93 @@ describe('ThemePickerComponent', () => {
       expect(option('Dark')).toHaveAttribute('aria-selected', 'true');
       expect(themes.theme()).toBe('dark');
     });
+
+    /**
+     * The rail renders the picker in two places and shows one of them; a resize can turn the one whose
+     * dialog is open into `display: none`. A ResizeObserver on the button reports that as a zero size.
+     */
+    describe('when its button stops being displayed', () => {
+      class FakeResizeObserver {
+        static instances: FakeResizeObserver[] = [];
+        observed: Element[] = [];
+        disconnected = false;
+        constructor(public callback: ResizeObserverCallback) {
+          FakeResizeObserver.instances.push(this);
+        }
+        observe(element: Element) {
+          this.observed.push(element);
+        }
+        unobserve() {}
+        disconnect() {
+          this.disconnected = true;
+        }
+      }
+      const observer = () => FakeResizeObserver.instances.at(-1) as FakeResizeObserver;
+      const reportSize = (width: number, height: number) => {
+        const entry = { contentRect: { width, height } } as ResizeObserverEntry;
+        observer().callback([entry], observer() as unknown as ResizeObserver);
+        TestBed.flushEffects();
+      };
+
+      beforeEach(() => {
+        FakeResizeObserver.instances = [];
+        vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+      });
+
+      afterEach(() => {
+        vi.unstubAllGlobals();
+      });
+
+      it('watches the button while the dialog is open', async () => {
+        await setupPreview('dark');
+
+        expect(FakeResizeObserver.instances).toHaveLength(1);
+        expect(observer().observed).toEqual([trigger()]);
+      });
+
+      it('closes, restores the committed theme and stores nothing when the button is no longer displayed', async () => {
+        const { user, themes } = await setupPreview('dark');
+
+        await user.keyboard('{ArrowDown}');
+        expect(themes.theme()).toBe('light');
+        reportSize(0, 0);
+
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+        expect(themes.theme()).toBe('dark');
+        expect(storedTheme()).toBeNull();
+      });
+
+      it('stays open, still previewing, while the button is only resized', async () => {
+        const { user, themes } = await setupPreview('dark');
+
+        await user.keyboard('{ArrowDown}');
+        reportSize(44, 44);
+
+        expect(dialog()).toBeVisible();
+        expect(themes.theme()).toBe('light');
+      });
+
+      it('stops watching once the dialog is closed, and watches again when it is reopened', async () => {
+        const { user } = await setupPreview('dark');
+        const first = observer();
+
+        await user.keyboard('{Escape}');
+        expect(first.disconnected).toBe(true);
+
+        await user.click(trigger());
+        expect(FakeResizeObserver.instances).toHaveLength(2);
+        expect(observer().disconnected).toBe(false);
+      });
+
+      it('stops watching when it is destroyed while open', async () => {
+        const { fixture } = await setupPreview('dark');
+
+        fixture.destroy();
+
+        expect(observer().disconnected).toBe(true);
+      });
+    });
   });
 
   describe('accessibility', () => {

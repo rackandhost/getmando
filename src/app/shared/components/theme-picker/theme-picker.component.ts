@@ -70,6 +70,7 @@ export class ThemePickerComponent {
   });
 
   private pressedOnBackdrop = false;
+  private buttonWatcher?: ResizeObserver;
 
   constructor() {
     effect(() => {
@@ -78,7 +79,10 @@ export class ThemePickerComponent {
       if (id && id !== this.committed()) this.themeService.preview(id);
       else this.themeService.cancelPreview();
     });
-    inject(DestroyRef).onDestroy(() => this.themeService.cancelPreview());
+    inject(DestroyRef).onDestroy(() => {
+      this.buttonWatcher?.disconnect();
+      this.themeService.cancelPreview();
+    });
   }
 
   protected optionId(id: ThemeId, part?: 'name' | 'description' | 'active'): string {
@@ -96,17 +100,35 @@ export class ThemePickerComponent {
     this.dialog().nativeElement.showModal();
     this.open.set(true);
     this.searchField().nativeElement.focus();
+    this.watchButton();
   }
 
   /** Runs for every way the dialog closes: `Esc` (native or ours), `Close`, or a choice. */
   protected onClosed(): void {
     this.open.set(false);
+    this.buttonWatcher?.disconnect();
+    this.buttonWatcher = undefined;
     this.themeService.cancelPreview();
     this.trigger().nativeElement.focus();
   }
 
   protected close(): void {
     this.dialog().nativeElement.close();
+  }
+
+  /**
+   * The rail renders the picker in two places and shows one at a time, so a resize can hide the button of
+   * an open dialog (`display: none` reports a zero size). The dialog would stay open, invisible and with
+   * the page inert, so it closes instead, like any other way out.
+   */
+  private watchButton(): void {
+    if (typeof ResizeObserver !== 'function') return;
+    this.buttonWatcher = new ResizeObserver((entries) => {
+      if (entries.some(({ contentRect }) => contentRect.width === 0 && contentRect.height === 0)) {
+        this.close();
+      }
+    });
+    this.buttonWatcher.observe(this.trigger().nativeElement);
   }
 
   protected setQuery(event: Event): void {

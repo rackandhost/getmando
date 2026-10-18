@@ -192,15 +192,15 @@ describe('DashboardVerticalComponent', () => {
   it('draws the controls in DOM order: brand, compact actions, search, categories, wide actions, cards', async () => {
     const { container } = await setup();
 
-    const controls = Array.from(
-      container.querySelectorAll<HTMLElement>('a[href], button, input'),
-      (element) => element.getAttribute('aria-label') ?? element.textContent?.trim(),
-    );
+    // The theme picker's dialog is closed: its own controls are not part of the page's order.
+    const controls = Array.from(container.querySelectorAll<HTMLElement>('a[href], button, input'))
+      .filter((element) => !element.closest('dialog'))
+      .map((element) => element.getAttribute('aria-label') ?? element.textContent?.trim());
 
     expect(controls).toEqual([
       // compact position of the actions, right after the brand
       'Open configurator',
-      'Toggle theme',
+      'Change theme, current: Dark',
       'Select search engine, Apps',
       'Search applications',
       'Apps',
@@ -208,7 +208,7 @@ describe('DashboardVerticalComponent', () => {
       // wide position of the actions, after the categories
       'Mando v2.2.0',
       'Open configurator',
-      'Toggle theme',
+      'Change theme, current: Dark',
       'Rack&Host',
       // cards
       expect.stringContaining('Plex'),

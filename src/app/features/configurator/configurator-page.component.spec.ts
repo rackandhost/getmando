@@ -197,7 +197,6 @@ describe('ConfiguratorPageComponent', () => {
     expect(banner.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(main).not.toContainElement(banner);
     expect(screen.getByRole('button', { name: /^Change theme, current:/ })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Toggle theme' })).toBeNull();
   });
 
   it('does not offer load mounted YAML when mounted configuration is unavailable', async () => {

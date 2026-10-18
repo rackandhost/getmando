@@ -79,7 +79,6 @@ describe('AppHeader', () => {
       expect(
         screen.getByRole('button', { name: 'Change theme, current: Dark' }),
       ).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Toggle theme' })).toBeNull();
     });
 
     it('names the committed theme on the picker button', async () => {

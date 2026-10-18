@@ -133,7 +133,7 @@ describe('ConfiguratorVerticalChromeComponent', () => {
   it('keeps the DOM order equal to the visual order: brand, actions, heading, sections, actions', async () => {
     await setup();
 
-    const toggles = screen.getAllByRole('button', { name: 'Toggle theme' });
+    const toggles = screen.getAllByRole('button', { name: 'Change theme, current: Dark' });
     const backLinks = screen.getAllByRole('link', { name: 'Back to dashboard' });
     const heading = within(rail()).getByRole('heading', { level: 1 });
 
