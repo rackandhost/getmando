@@ -163,10 +163,8 @@
           [value]="draft().settings.layout"
           (valueChange)="setSettingChoice('layout', $event)"
         />
-        <app-segmented
-          controlId="field-settings-theme"
-          label="Theme"
-          [options]="themeOptions"
+        <app-default-theme-picker
+          class="col-span-full"
           [value]="draft().settings.theme"
           (valueChange)="setSettingChoice('theme', $event)"
         />

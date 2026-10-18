@@ -16,7 +16,9 @@ import { MetadataService } from '../../../core/services/metadata.service';
 import { SearchService } from '../../../core/services/search.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { THEME_IDS, type ThemeId } from '../../../core/themes/theme.registry';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
+import { themeServiceStub } from '../../../../testing/theme-service.stub';
 
 import { DashboardVerticalComponent } from './dashboard-vertical.component';
 
@@ -44,16 +46,15 @@ describe('DashboardVerticalComponent', () => {
     query = '',
     selected = 'media',
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
-    dark = true,
+    theme = 'dark',
   }: {
     apps?: SelfhostedApp[] | null;
     query?: string;
     selected?: string;
     settings?: DashboardSettings;
-    dark?: boolean;
+    theme?: ThemeId;
   } = {}) => {
     const settingsState = signal<DashboardSettings>({ ...settings, layout: 'vertical' });
-    const isDark = signal(dark);
 
     const view = await render(DashboardVerticalComponent, {
       providers: [
@@ -79,10 +80,7 @@ describe('DashboardVerticalComponent', () => {
           provide: SettingsService,
           useValue: { settings: settingsState, layout: computed(() => settingsState().layout) },
         },
-        {
-          provide: ThemeService,
-          useValue: { isDark, isDarkMode: () => isDark(), toggleTheme: vi.fn() },
-        },
+        { provide: ThemeService, useValue: themeServiceStub(theme) },
         {
           provide: MetadataService,
           useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -194,15 +192,15 @@ describe('DashboardVerticalComponent', () => {
   it('draws the controls in DOM order: brand, compact actions, search, categories, wide actions, cards', async () => {
     const { container } = await setup();
 
-    const controls = Array.from(
-      container.querySelectorAll<HTMLElement>('a[href], button, input'),
-      (element) => element.getAttribute('aria-label') ?? element.textContent?.trim(),
-    );
+    // The theme picker's dialog is closed: its own controls are not part of the page's order.
+    const controls = Array.from(container.querySelectorAll<HTMLElement>('a[href], button, input'))
+      .filter((element) => !element.closest('dialog'))
+      .map((element) => element.getAttribute('aria-label') ?? element.textContent?.trim());
 
     expect(controls).toEqual([
       // compact position of the actions, right after the brand
       'Open configurator',
-      'Toggle theme',
+      'Change theme, current: Dark',
       'Select search engine, Apps',
       'Search applications',
       'Apps',
@@ -210,7 +208,7 @@ describe('DashboardVerticalComponent', () => {
       // wide position of the actions, after the categories
       'Mando v2.2.0',
       'Open configurator',
-      'Toggle theme',
+      'Change theme, current: Dark',
       'Rack&Host',
       // cards
       expect.stringContaining('Plex'),
@@ -229,8 +227,8 @@ describe('DashboardVerticalComponent', () => {
     expect(within(screen.getByRole('main')).queryByRole('contentinfo')).not.toBeInTheDocument();
   });
 
-  it.each([true, false])('has no accessibility violations (dark: %s)', async (dark) => {
-    const { container } = await setup({ dark });
+  it.each(THEME_IDS)('has no accessibility violations in the %s theme', async (theme) => {
+    const { container } = await setup({ theme });
 
     await expectNoAxeViolations(container);
   });

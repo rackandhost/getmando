@@ -36,6 +36,7 @@ import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
@@ -53,6 +54,7 @@ import { activeSection, activeThreshold } from './active-section';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 import { LayoutPickerComponent } from './components/layout-picker.component';
+import { DefaultThemePickerComponent } from './components/default-theme-picker.component';
 import { ConfiguratorHorizontalChromeComponent } from './chrome/configurator-horizontal-chrome.component';
 import { ConfiguratorVerticalChromeComponent } from './chrome/configurator-vertical-chrome.component';
 import {
@@ -104,6 +106,7 @@ const SECTIONS = [
     CollectionEditorComponent,
     AppSegmentedComponent,
     LayoutPickerComponent,
+    DefaultThemePickerComponent,
     AppSwitchComponent,
     ConfigSectionComponent,
     ConfiguratorHorizontalChromeComponent,
@@ -128,13 +131,15 @@ export class ConfiguratorPageComponent {
   private readonly appService = inject(AppService);
   private readonly configExport = inject(ConfigExportService);
   private readonly configWrite = inject(ConfigWriteService);
+  private readonly settingsService = inject(SettingsService);
+  private readonly themeService = inject(ThemeService);
   private readonly notifications = inject(NotificationService);
   private readonly yamlCodec = inject(YamlCodecService);
   private readonly yamlLoader = inject(YamlLoaderService);
   private readonly document = inject(DOCUMENT);
 
   /** The arrangement follows the active configuration; the draft's layout is only data until it is saved. */
-  protected readonly layout = inject(SettingsService).layout;
+  protected readonly layout = this.settingsService.layout;
 
   /** `false` only when the server says it has no write token; until it answers (or if it cannot), Save stays available. */
   protected readonly writeEnabled = toSignal(this.configWrite.isWriteEnabled(), {
@@ -241,11 +246,6 @@ export class ConfiguratorPageComponent {
     startpage: 'Startpage',
     youtube: 'YouTube',
   };
-  protected readonly themeOptions: readonly SegmentedOption[] = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'auto', label: 'Auto' },
-  ];
   protected readonly datePositionOptions: readonly SegmentedOption[] = [
     { value: 'top', label: 'Top' },
     { value: 'bottom', label: 'Bottom' },
@@ -504,6 +504,11 @@ export class ConfiguratorPageComponent {
     if (result.status === 'saved') {
       this.store.markSaved();
       this.notifications.success('Configuration saved to the server.');
+      // A saved default that differs from the live one replaces this device's own choice, so the page
+      // shows what was just saved. The choice goes before the refresh, which then delivers the new default.
+      if (config.settings.theme !== this.settingsService.settings().theme) {
+        this.themeService.clearPreference();
+      }
       await this.refreshLiveConfig();
       return;
     }

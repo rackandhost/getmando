@@ -22,12 +22,16 @@
 <img alt="Visual configurator with the layout selector open" width="1024" src="screenshots/configurator_layout.webp" />
 
 <details>
-<summary><strong>More screenshots</strong> (light theme, phone, configurator)</summary>
+<summary><strong>More screenshots</strong> (light theme, Catppuccin Mocha, phone, configurator)</summary>
 <br>
 
 <img alt="Dashboard, horizontal layout, light theme" width="1024" src="screenshots/dashboard_light.webp" />
 
 <img alt="Dashboard, vertical layout, light theme" width="1024" src="screenshots/dashboard_vertical_light.webp" />
+
+<img alt="Dashboard, horizontal layout, Catppuccin Mocha theme" width="1024" src="screenshots/dashboard_mocha.webp" />
+
+<img alt="Dashboard, vertical layout, Catppuccin Mocha theme" width="1024" src="screenshots/dashboard_vertical_mocha.webp" />
 
 <img alt="Visual configurator, horizontal layout" width="1024" src="screenshots/configurator.webp" />
 
@@ -41,7 +45,8 @@
 
 ### ✨ Key Features
 
-- **🎨 Inspiring Design** - Minimalist glass interface in light and dark themes: a one-row clock, a search dock that compacts as you scroll, and surfaces that stay legible over any background photo
+- **🎨 Inspiring Design** - Minimalist glass interface: a one-row clock, a search dock that compacts as you scroll, and surfaces that stay legible over any background photo
+- **🌗 Themes** - Dark, Light and [Catppuccin Mocha](https://catppuccin.com), chosen from a picker that previews each theme before you apply it; the choice is remembered per browser and `settings.theme` sets the default
 - **🧭 Two Layouts** - Choose a horizontal bar (clock, search and categories on top) or a vertical bar (sticky sidebar, apps use the full width) with `settings.layout`, from the configurator or the YAML
 - **⚡ Fast & Lightweight** - Built with Angular 21 and TailwindCSS 4 for optimal performance
 - **🔍 Real-time Search** - Instant search through your applications
@@ -147,20 +152,6 @@ Then open `http://localhost:8080/configure` and Save.
 > disabled (copy and download still work). To edit from the browser, mount the config
 > **directory** `:rw` (`./config:/app/config:rw`, keeping your existing
 > `./config/dashboard.yaml` in place) and set `CONFIG_WRITE_TOKEN`.
-
-### Beta images (self-hosted Forgejo)
-
-The `develop` branch can be published as a **beta** image to a Forgejo container registry. Betas
-are never published to GHCR, never tagged `latest`, and are not meant for production. If you run
-your own Forgejo with this repository mirrored, you can pull them:
-
-```bash
-docker pull <forgejo-host>/<owner>/getmando:beta                 # moving pointer to the latest beta
-docker pull <forgejo-host>/<owner>/getmando:v2.1.1-beta.<run>    # immutable, one per run
-```
-
-The image is the same `linux/amd64` + `linux/arm64` build as production. See
-[ARCHITECTURE.md](ARCHITECTURE.md#build-and-deployment) for how a beta is produced.
 
 ---
 
@@ -318,6 +309,9 @@ server. Copy and download happen entirely in the browser and never touch the mou
 The **Layout** control in the Settings section chooses how the dashboard and the editor itself are
 arranged (see `settings.layout` below). Picking one changes the draft only; the page switches
 once you save the configuration.
+
+The **Default theme** control in the same section sets `settings.theme` (see "Themes" below). It also
+changes the draft only: the page keeps the theme you picked until you save.
 
 **Save** writes the validated draft to the mounted `dashboard.yaml` over
 `POST /api/config`, so the running dashboard reflects it immediately without a manual copy. It
@@ -536,7 +530,7 @@ bookmarks:
 
 | Field                  | Type            | Default          | Options                      | Description                                   |
 |------------------------|-----------------|------------------|------------------------------|-----------------------------------------------|
-| `theme`                | `string`        | `auto`           | `auto`, `light`, `dark`      | Set dark and light mode                       |
+| `theme`                | `string`        | `dark`           | `auto`, `dark`, `light`, `catppuccin-mocha` | Default theme; `auto` follows the system's light or dark setting (see Themes below) |
 | `layout`               | `string`        | `horizontal`     | `horizontal`, `vertical`     | Page layout of the dashboard and the editor   |
 | `dateFormat`           | `string`        | `dd-MM-yyyy`     | Any format                   | Date format for clock display                 |
 | `datePosition`         | `string`        | `top`            | `top`, `bottom`              | Clock date position                           |
@@ -548,8 +542,8 @@ bookmarks:
 | `showDescriptions`     | `boolean`       | `true`           | -                            | Show app descriptions in cards                |
 | `showLabels`           | `boolean`       | `true`           | -                            | Show app tags as labels                       |
 | `searchEngines`        | `array[string]` | `[]`             | See below                    | Available search engines                      |
-| `lightBackgroundImage` | `string`        | `background.jpg` | -                            | Custom image or url as light theme background |
-| `darkBackgroundImage`  | `string`        | `background.jpg` | -                            | Custom image or url as dark theme background  |
+| `lightBackgroundImage` | `string`        | `background.jpg` | -                            | Custom image or url as the background of the `light` theme |
+| `darkBackgroundImage`  | `string`        | `background.jpg` | -                            | Custom image or url as the background of the dark themes (`dark`, `catppuccin-mocha`) |
 
 **Layouts:** `horizontal` is the original page: header, clock, search and categories on top, in a
 centred column. `vertical` puts them in a sticky sidebar next to an app grid that uses the full
@@ -557,6 +551,16 @@ width, so `itemsPerRow` does not apply to it (the editor disables that field). B
 sidebar becomes a bar at the top of the page. A file without `layout` renders the horizontal layout,
 so upgrading changes nothing until you choose the other one. The configurator follows the same
 setting.
+
+**Themes:** Mando ships `dark` (the default), `light` and `catppuccin-mocha`. The **Change theme** button
+(next to the gear in the header; at the bottom of the sidebar in the vertical layout) opens the theme
+picker: `↑ ↓` or the mouse preview a theme on the page, `↵` or a click applies it, `Esc` goes back to
+the one you had. The choice is kept in this browser's `localStorage` (`dashboard-theme`) and wins over
+the file on that device. `settings.theme` is the default for every browser that has not picked one;
+`auto` follows the system's light or dark setting and is only a default, the picker never lists it.
+Saving a configuration whose `theme` differs from the one in force clears that browser's own choice, so
+what you just saved shows at once; saving anything else leaves it alone. A stored value that is not a
+theme is ignored.
 
 **Backgrounds and legibility:** every card, bar and panel keeps an opaque floor under its glass, so
 text keeps its contrast over any image you set in `lightBackgroundImage` / `darkBackgroundImage`,

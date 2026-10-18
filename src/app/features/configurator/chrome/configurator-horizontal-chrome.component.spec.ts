@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models';
 import { MetadataService } from '../../../core/services/metadata.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { themeServiceStub } from '../../../../testing/theme-service.stub';
 import { ConfiguratorChrome, type SectionSelection } from '../configurator-chrome';
 
 import { ConfiguratorHorizontalChromeComponent } from './configurator-horizontal-chrome.component';
@@ -47,7 +48,7 @@ describe('ConfiguratorHorizontalChromeComponent', () => {
   const setup = () =>
     render(PageHostComponent, {
       providers: [
-        { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+        { provide: ThemeService, useValue: themeServiceStub() },
         {
           provide: MetadataService,
           useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },

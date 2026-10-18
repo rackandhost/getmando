@@ -1,0 +1,62 @@
+/*
+ * Dark theme: the default (design.md § 3.2, with the accessibility amendments), moved verbatim from the old
+ * `.dark` block. Also answers to a bare `:root`, so a page with no data-theme paints it. Selected by
+ * <html data-theme="dark">. Contrast is enforced by src/styles/design-tokens.spec.ts.
+ */
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Colour */
+  --bg: #0d0f11;
+  --scrim: rgba(13, 15, 17, 0.6);
+  --surface: #15181c;
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: #353b44;
+  --text: #edebe6;
+  --muted: #b3b8c0;
+  --accent: #f0b04a;
+  --accent-ink: #17110a;
+  --up: #46d396;
+  --up-bg: rgba(70, 211, 150, 0.12);
+  --down: #ff8a73;
+  --down-bg: rgba(255, 138, 115, 0.14);
+  --clock-ink: #edebe6;
+  --minute-fill: rgba(240, 176, 74, 0.85);
+  --pill-line: rgba(255, 255, 255, 0.5);
+  --pill-bg: rgba(255, 255, 255, 0.04);
+  --card: rgba(21, 24, 28, 0.62);
+  --card-line: rgba(255, 255, 255, 0.1);
+  --card-hover: rgba(32, 36, 43, 0.76);
+  --card-line-hover: rgba(255, 255, 255, 0.24);
+  --chrome: linear-gradient(180deg, rgba(34, 38, 45, 0.58), rgba(18, 21, 25, 0.4));
+  --chrome-line: rgba(255, 255, 255, 0.14);
+  --icon-tile: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  --menu: rgba(21, 24, 28, 0.92);
+  --field: rgba(8, 10, 12, 0.55);
+  --field-border: rgba(255, 255, 255, 0.45);
+  --floor-bar: 0.15;
+  --floor-card: 0.35;
+  --floor-clock: 0.15;
+  --focus: #f0b04a;
+  --focus-halo: rgba(13, 15, 17, 0.9);
+
+  /* Glass */
+  --glass: blur(24px) saturate(160%);
+  --card-glass: blur(16px) saturate(150%);
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 18px rgba(255, 255, 255, 0.04), 0 10px 32px rgba(0, 0, 0, 0.35);
+  --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 18px rgba(0, 0, 0, 0.25);
+  --card-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 1px rgba(240, 176, 74, 0.18),
+    0 16px 36px rgba(0, 0, 0, 0.42);
+  --icon-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --bar-radius: 16px;
+  /* Sticky band shown while the dock is scrolled (design.md § 3.1). */
+  --band: rgba(13, 15, 17, 0.62);
+  --band-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 32px -16px rgba(0, 0, 0, 0.6);
+  --band-glass: blur(22px) saturate(160%);
+}

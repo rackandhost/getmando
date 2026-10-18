@@ -1,35 +1,46 @@
+import type { ThemeId } from '../app/core/themes/theme.registry';
+
 import { compositeOver, contrastRatio, parseColor, type Rgba } from './contrast';
 
-export type Theme = 'light' | 'dark';
 export type TokenSet = Record<string, string>;
+
+/** The source of one registered theme's stylesheet (`styles/themes/<id>.css`). */
+export interface ThemeStylesheet {
+  id: ThemeId;
+  css: string;
+}
 
 export interface Measurement {
   pair: string;
-  theme: Theme;
+  theme: ThemeId;
   /** Worst ratio over a black and a white backdrop and every stop of the surface gradient. */
   ratio: number;
   required: number;
 }
 
 const COMMENT = /\/\*[\s\S]*?\*\//g;
-const BLOCK = /(:root|\.dark)\s*\{([^}]*)\}/g;
+const RULE = /([^{}]+)\{([^}]*)\}/g;
 const DECLARATION = /(--[\w-]+)\s*:\s*([^;]+);/g;
 const COLOR = /rgba?\([^)]*\)|#[0-9a-f]{3,8}\b/gi;
 
 /**
- * Reads the custom properties of every `:root` (light) and `.dark` (dark) block. Blocks may repeat;
- * a later declaration of the same token wins, as in the cascade.
+ * Reads the custom properties of every block whose selector list names `:root[data-theme='<id>']`
+ * (the default theme's list also holds a bare `:root`, which on its own names no theme). Blocks may
+ * repeat; a later declaration of the same token wins, as in the cascade.
  */
-export function parseTokens(css: string): Record<Theme, TokenSet> {
-  const sets: Record<Theme, TokenSet> = { light: {}, dark: {} };
+export function parseThemeTokens(css: string, id: ThemeId): TokenSet {
+  const set: TokenSet = {};
 
-  for (const [, selector, body] of css.replace(COMMENT, '').matchAll(BLOCK)) {
-    const set = sets[selector === ':root' ? 'light' : 'dark'];
+  for (const [, selectors, body] of css.replace(COMMENT, '').matchAll(RULE)) {
+    const list = (selectors.split(';').pop() ?? '')
+      .split(',')
+      .map((s) => s.trim().replace(/"/g, "'"));
+    if (!list.includes(`:root[data-theme='${id}']`)) continue;
     for (const [, name, value] of body.matchAll(DECLARATION)) {
       set[name] = value.trim();
     }
   }
-  return sets;
+  return set;
 }
 
 /**
@@ -90,14 +101,20 @@ function readRecipes(css: string): Recipes {
   return Object.fromEntries(RECIPES.map((name) => [name, read(name)])) as Recipes;
 }
 
-/** Which recipe each audited surface is, and the layer to audit instead of the recipe's (hover). */
-type SurfaceName = 'card' | 'cardHover' | 'bar' | 'widget';
-const SURFACES: Record<SurfaceName, { recipe: RecipeName; layer?: string }> = {
+/** Which recipe each recipe-based surface is, and the layer to audit instead of the recipe's (hover). */
+type RecipeSurfaceName = 'card' | 'cardHover' | 'bar' | 'widget';
+const SURFACES: Record<RecipeSurfaceName, { recipe: RecipeName; layer?: string }> = {
   card: { recipe: 'glass-card' },
   cardHover: { recipe: 'glass-card', layer: '--card-hover' },
   bar: { recipe: 'glass-chrome' },
   widget: { recipe: 'glass-clock' },
 };
+
+/**
+ * `menu` is the one surface that is no recipe: the theme picker's dialog is the translucent `--menu`
+ * fill straight over the page, with no floor and no fallback.
+ */
+type SurfaceName = RecipeSurfaceName | 'menu';
 
 type Layer = string | { token: string; opacity: number };
 
@@ -273,11 +290,32 @@ const PAIRS: Pair[] = [
     on: ['--accent'],
     ink: ['--accent-ink'],
   },
+  // The theme picker's dialog (spec theme-selection "Picker accessibility"). The highlighted row and the
+  // close chip are `--surface-2` on the menu. The `Active` pill is the accent-ink on accent of
+  // 'weekday pill ink on accent' and the search icon is the muted ink of 'muted on menu', so neither
+  // is repeated here.
+  { name: 'text on menu', surface: 'menu', required: 4.5, ink: ['--text'] },
+  { name: 'muted on menu', surface: 'menu', required: 4.5, ink: ['--muted'] },
+  {
+    name: 'text on highlighted menu row',
+    surface: 'menu',
+    required: 4.5,
+    on: ['--surface-2'],
+    ink: ['--text'],
+  },
+  {
+    name: 'muted on highlighted menu row or close chip',
+    surface: 'menu',
+    required: 4.5,
+    on: ['--surface-2'],
+    ink: ['--muted'],
+  },
+  { name: 'focus ring on menu', surface: 'menu', required: 3, ink: ['--focus'] },
 ];
 
 const BACKDROPS = [parseColor('#000000'), parseColor('#FFFFFF')];
 
-function measureTheme(theme: Theme, tokens: TokenSet, recipes: Recipes): Measurement[] {
+function measureTheme(theme: ThemeId, tokens: TokenSet, recipes: Recipes): Measurement[] {
   const token = (name: string): string => {
     const value = tokens[name];
     if (value === undefined) {
@@ -305,8 +343,19 @@ function measureTheme(theme: Theme, tokens: TokenSet, recipes: Recipes): Measure
     }, backdrop);
   const contrastOn = (pair: Pair, background: Rgba) =>
     contrastRatio(paint(pair.ink, background), background);
+  // A translucent fill is blur-independent: whatever is behind shows through it, so the worst case is the
+  // menu over a black and over a white backdrop, which bound every backdrop in between.
+  const onMenu = (pair: Pair) =>
+    Math.min(
+      ...BACKDROPS.map((backdrop) =>
+        contrastOn(pair, paint(pair.on ?? [], compositeOver(solid('--menu'), backdrop))),
+      ),
+    );
 
   const withBlur = PAIRS.map((pair) => {
+    if (pair.surface === 'menu') {
+      return { pair: pair.name, theme, ratio: onMenu(pair), required: pair.required };
+    }
     const { recipe, layer: layerOverride } = SURFACES[pair.surface];
     const { floor: floorToken, layer: recipeLayer } = recipes[recipe];
     const floorOpacity = Number(token(floorToken));
@@ -330,6 +379,14 @@ function measureTheme(theme: Theme, tokens: TokenSet, recipes: Recipes): Measure
 
   // Without backdrop-filter a recipe paints its opaque fallback colour alone, whatever is behind it.
   const withoutBlur = PAIRS.filter((pair) => pair.surface !== 'cardHover').map((pair) => {
+    if (pair.surface === 'menu') {
+      return {
+        pair: `${pair.name} (no blur)`,
+        theme,
+        ratio: onMenu(pair),
+        required: pair.required,
+      };
+    }
     const { recipe } = SURFACES[pair.surface];
     const fallback = solid(recipes[recipe].fallback);
     if (fallback.a !== 1) {
@@ -345,20 +402,23 @@ function measureTheme(theme: Theme, tokens: TokenSet, recipes: Recipes): Measure
 }
 
 /**
- * Contrast of every pair of design.md § 5 in both themes, each at its worst case, through the
- * surface stack the recipes in `surfacesCss` declare, with and without backdrop-filter.
+ * Contrast of every pair of design.md § 5 in every given theme, each at its worst case, through the
+ * surface stack the recipes in `surfacesCss` declare, with and without backdrop-filter. Each theme is
+ * a complete token set on its own: nothing is inherited from another theme.
  */
-export function measureTokens(tokensCss: string, surfacesCss: string): Measurement[] {
-  const { light, dark } = parseTokens(tokensCss);
+export function measureTokens(
+  themes: readonly ThemeStylesheet[],
+  surfacesCss: string,
+): Measurement[] {
   const recipes = readRecipes(surfacesCss);
 
-  return [
-    ...measureTheme('light', light, recipes),
-    ...measureTheme('dark', { ...light, ...dark }, recipes),
-  ];
+  return themes.flatMap(({ id, css }) => measureTheme(id, parseThemeTokens(css, id), recipes));
 }
 
 /** The measurements that fall below their required ratio. */
-export function auditTokens(tokensCss: string, surfacesCss: string): Measurement[] {
-  return measureTokens(tokensCss, surfacesCss).filter((m) => m.ratio < m.required);
+export function auditTokens(
+  themes: readonly ThemeStylesheet[],
+  surfacesCss: string,
+): Measurement[] {
+  return measureTokens(themes, surfacesCss).filter((m) => m.ratio < m.required);
 }

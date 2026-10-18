@@ -21,6 +21,7 @@ import {
   SelfhostedApp,
 } from '../../../core/models/dashboard.models';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
+import { themeServiceStub } from '../../../../testing/theme-service.stub';
 
 describe('DashboardHorizontalComponent', () => {
   const appFixture: SelfhostedApp = {
@@ -42,8 +43,7 @@ describe('DashboardHorizontalComponent', () => {
   const settingsState = signal<DashboardSettings>(DEFAULT_DASHBOARD_CONFIG.settings);
   const selectedCategory = signal(APP_CATEGORY.id);
   const haveSearch = signal(false);
-  const currentTheme = signal<'light' | 'dark'>('dark');
-  const isDark = signal(true);
+  const themeStub = themeServiceStub();
 
   const appServiceMock = {
     appVersion: '0.2.0-test',
@@ -60,14 +60,14 @@ describe('DashboardHorizontalComponent', () => {
     filteredApps = [] as SelfhostedApp[] | null,
     searchQuery = '',
     settings = DEFAULT_DASHBOARD_CONFIG.settings,
-    isDarkMode = true,
+    darkTheme = true,
     scrollState,
     withShell = false,
   }: {
     filteredApps?: SelfhostedApp[] | null;
     searchQuery?: string;
     settings?: DashboardSettings;
-    isDarkMode?: boolean;
+    darkTheme?: boolean;
     scrollState?: Pick<ScrollStateService, 'register'>;
     /** Renders the page inside `app-shell`, which owns the footer. */
     withShell?: boolean;
@@ -78,8 +78,7 @@ describe('DashboardHorizontalComponent', () => {
     settingsState.set(settings);
     haveSearch.set(false);
     selectedCategory.set(APP_CATEGORY.id);
-    currentTheme.set(isDarkMode ? 'dark' : 'light');
-    isDark.set(isDarkMode);
+    themeStub.theme.set(darkTheme ? 'dark' : 'light');
     appServiceMock.filteredApps = signal(filteredApps ?? undefined);
 
     const providers = [
@@ -102,15 +101,7 @@ describe('DashboardHorizontalComponent', () => {
           layout: computed(() => settingsState().layout),
         },
       },
-      {
-        provide: ThemeService,
-        useValue: {
-          currentTheme,
-          isDark,
-          isDarkMode: () => currentTheme() === 'dark',
-          toggleTheme: vi.fn(),
-        },
-      },
+      { provide: ThemeService, useValue: themeStub },
       {
         provide: MetadataService,
         useValue: {
@@ -194,15 +185,7 @@ describe('DashboardHorizontalComponent', () => {
             settings: settingsState,
           },
         },
-        {
-          provide: ThemeService,
-          useValue: {
-            currentTheme,
-            isDark,
-            isDarkMode: () => currentTheme() === 'dark',
-            toggleTheme: vi.fn(),
-          },
-        },
+        { provide: ThemeService, useValue: themeStub },
         {
           provide: MetadataService,
           useValue: {
@@ -250,15 +233,7 @@ describe('DashboardHorizontalComponent', () => {
             settings: settingsState,
           },
         },
-        {
-          provide: ThemeService,
-          useValue: {
-            currentTheme,
-            isDark,
-            isDarkMode: () => currentTheme() === 'dark',
-            toggleTheme: vi.fn(),
-          },
-        },
+        { provide: ThemeService, useValue: themeStub },
         {
           provide: MetadataService,
           useValue: {
@@ -305,7 +280,7 @@ describe('DashboardHorizontalComponent', () => {
 
     const path = [
       screen.getByRole('link', { name: 'Open configurator' }),
-      screen.getByRole('button', { name: 'Toggle theme' }),
+      screen.getByRole('button', { name: /^Change theme, current:/ }),
       screen.getByRole('button', { name: /^Select search engine/ }),
       screen.getByRole('searchbox', { name: 'Search applications' }),
       screen.getByRole('button', { name: 'Apps' }),

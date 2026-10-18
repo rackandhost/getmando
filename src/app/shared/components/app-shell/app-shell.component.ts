@@ -4,7 +4,7 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { AppFooterComponent } from '../app-footer/app-footer.component';
 
 const CONTAINER_BASE = 'overflow-anchor-none flex min-h-dvh w-full flex-col';
-const CONTAINER_TEXT = 'text-neutral-800 dark:text-white';
+const CONTAINER_TEXT = 'text-text';
 /** Centred column; the footer bar follows the routed content. */
 const HORIZONTAL_CONTAINER = `${CONTAINER_BASE} mx-auto max-w-[1360px] px-[clamp(16px,4vw,40px)] ${CONTAINER_TEXT}`;
 /** Full width, 20 px padding (12 px below 1024 px); the rail carries what the footer bar would. */

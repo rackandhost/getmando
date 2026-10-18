@@ -1,0 +1,67 @@
+/*
+ * Catppuccin Mocha (design.md § 3.2): Base #1E1E2E, Mantle #181825, Crust #11111B, Surface0 #313244,
+ * Surface1 #45475A, Text #CDD6F4, Subtext0 #A6ADC8, Mauve #CBA6F7, Lavender #B4BEFE, Green #A6E3A1, Red #F38BA8.
+ * Values come from the Mocha artboard; the ones marked `derived` are not in it and were audited with
+ * src/testing/token-audit.ts (design.md § 3.3). Selected by <html data-theme="catppuccin-mocha">.
+ */
+
+:root[data-theme='catppuccin-mocha'] {
+  color-scheme: dark;
+
+  /* Colour */
+  --bg: #1e1e2e;
+  --scrim: rgba(30, 30, 46, 0.8);
+  --surface: #181825;
+  --surface-2: rgba(205, 214, 244, 0.07);
+  --line: rgba(205, 214, 244, 0.1);
+  --line-strong: #45475a;
+  --text: #cdd6f4;
+  --muted: #a6adc8;
+  --accent: #cba6f7;
+  --accent-ink: #11111b;
+  --up: #a6e3a1;
+  --up-bg: rgba(166, 227, 161, 0.12);
+  --down: #f38ba8;
+  --down-bg: rgba(243, 139, 168, 0.14);
+  --clock-ink: #cdd6f4;
+  --minute-fill: rgba(203, 166, 247, 0.85); /* derived: accent at the dark theme's 0.85 */
+  --pill-line: rgba(205, 214, 244, 0.4);
+  --pill-bg: rgba(205, 214, 244, 0.04);
+  --card: rgba(24, 24, 37, 0.7);
+  --card-line: rgba(205, 214, 244, 0.1);
+  --card-hover: rgba(49, 50, 68, 0.8);
+  --card-line-hover: rgba(180, 190, 254, 0.3);
+  --chrome: linear-gradient(180deg, rgba(49, 50, 68, 0.62), rgba(30, 30, 46, 0.44));
+  --chrome-line: rgba(205, 214, 244, 0.14);
+  --icon-tile: linear-gradient(180deg, rgba(69, 71, 90, 0.7), rgba(49, 50, 68, 0.55));
+  --menu: rgba(24, 24, 37, 0.95);
+  --field: rgba(17, 17, 27, 0.55); /* derived: Crust at the dark theme's 0.55 */
+  --field-border: rgba(
+    205,
+    214,
+    244,
+    0.5
+  ); /* derived: 0.45 leaves the unselected layout radio ring at 2.95 : 1, § 3.3 */
+  --floor-bar: 0.15; /* derived: = dark */
+  --floor-card: 0.35; /* derived: = dark */
+  --floor-clock: 0.15; /* derived: = dark */
+  --focus: #cba6f7; /* derived: accent, as dark uses its accent */
+  --focus-halo: rgba(17, 17, 27, 0.9); /* derived: Crust, as dark uses its bg */
+
+  /* Glass */
+  --glass: blur(24px) saturate(150%);
+  --card-glass: blur(16px) saturate(140%);
+  --glass-shadow:
+    inset 0 1px 0 rgba(205, 214, 244, 0.16), inset 0 -1px 0 rgba(205, 214, 244, 0.04),
+    inset 0 0 18px rgba(205, 214, 244, 0.04), 0 10px 32px rgba(17, 17, 27, 0.45);
+  --card-shadow: inset 0 1px 0 rgba(205, 214, 244, 0.07), 0 4px 18px rgba(17, 17, 27, 0.35);
+  --card-shadow-hover:
+    inset 0 1px 0 rgba(205, 214, 244, 0.14), 0 0 0 1px rgba(203, 166, 247, 0.22),
+    0 16px 36px rgba(17, 17, 27, 0.55);
+  --icon-shadow: inset 0 1px 0 rgba(205, 214, 244, 0.1);
+  --bar-radius: 16px;
+  --band: rgba(24, 24, 37, 0.72);
+  --band-shadow:
+    0 1px 0 rgba(205, 214, 244, 0.08), 0 16px 32px -16px rgba(17, 17, 27, 0.6); /* derived: dark's, tinted */
+  --band-glass: blur(22px) saturate(160%);
+}

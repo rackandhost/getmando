@@ -1,27 +1,35 @@
-import { effect, Injectable, inject } from '@angular/core';
-import { signal, computed, Signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import {
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  Injectable,
+  signal,
+  type Signal,
+} from '@angular/core';
+
+import {
+  resolveTheme,
+  THEME_SETTINGS,
+  themeInfo,
+  type ThemeId,
+  type ThemeInfo,
+  type ThemeSetting,
+} from '../themes/theme.registry';
 
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { SettingsService } from './settings.service';
 
 /**
- * Theme type options
- */
-export type ThemeMode = 'light' | 'dark' | 'auto';
-
-/**
- * Theme state
- */
-export interface ThemeState {
-  mode: ThemeMode;
-  current: 'light' | 'dark';
-}
-
-/**
- * Service for managing application theme (dark/light mode)
- * Integrates with TailwindCSS 4 for seamless theming
+ * Owns which theme the app shows and applies it as `<html data-theme="<id>">`, the only DOM write:
+ * each theme's stylesheet (`styles/themes/<id>.css`) is selected by that attribute.
+ *
+ * Three layers, from the one that persists to the one that does not:
+ * - `preference`: the device's stored choice if there is one, else `settings.theme` (may be `auto`);
+ * - `committed`: the preference resolved to a theme (`auto` follows `prefers-color-scheme` live);
+ * - `theme`: what is shown, the transient preview over `committed`.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -31,158 +39,41 @@ export class ThemeService {
   private readonly notifications = inject(NotificationService);
 
   private readonly STORAGE_KEY = 'dashboard-theme';
+  private readonly LIGHT_SCHEME = '(prefers-color-scheme: light)';
 
-  // Reactive state with signals
-  private readonly themeModeSignal = signal<ThemeMode>('auto');
-  private readonly currentThemeSignal = signal<'light' | 'dark'>('light');
-  private hasUserPreference = false;
+  private readonly stored = signal<ThemeSetting | undefined>(this.readStored());
+  private readonly previewed = signal<ThemeId | undefined>(undefined);
+  private readonly systemPrefersLight = signal(false);
 
-  // Signal-based API (preferred in Angular 21)
-  readonly themeMode: Signal<ThemeMode> = this.themeModeSignal.asReadonly();
-  readonly currentTheme: Signal<'light' | 'dark'> = this.currentThemeSignal.asReadonly();
-  readonly isDark: Signal<boolean> = computed(() => this.currentThemeSignal() === 'dark');
+  /** What governs: the stored choice if present, else the configured `settings.theme`. */
+  readonly preference: Signal<ThemeSetting> = computed(
+    () => this.stored() ?? this.settingsService.settings().theme,
+  );
+  /** The preference resolved to a theme; follows the system while the preference is `auto`. */
+  readonly committed: Signal<ThemeId> = computed(() =>
+    resolveTheme(this.preference(), this.systemPrefersLight()),
+  );
+  /** The active theme: the preview while one is shown, else the committed one. */
+  readonly theme: Signal<ThemeId> = computed(() => this.previewed() ?? this.committed());
+  /** The registry entry of the active theme. */
+  readonly info: Signal<ThemeInfo> = computed(() => themeInfo(this.theme()));
 
   constructor() {
-    this.initializeTheme();
-    this.setupMediaQueryListener();
+    const mediaQuery = window.matchMedia(this.LIGHT_SCHEME);
+    const onChange = (event: MediaQueryListEvent) => this.systemPrefersLight.set(event.matches);
+    this.systemPrefersLight.set(mediaQuery.matches);
+    mediaQuery.addEventListener('change', onChange);
+    inject(DestroyRef).onDestroy(() => mediaQuery.removeEventListener('change', onChange));
+
+    effect(() => this.document.documentElement.setAttribute('data-theme', this.theme()));
   }
 
-  /**
-   * Initialize theme on service creation
-   */
-  private initializeTheme(): void {
-    const storedMode = this.getStoredThemeMode();
-
-    if (storedMode) {
-      this.hasUserPreference = true;
-      this.themeModeSignal.set(storedMode);
-      this.applyTheme(storedMode);
-      return;
-    }
-
-    effect(() => {
-      const configuredMode = this.settingsService.settings().theme;
-
-      if (!this.hasUserPreference) {
-        this.themeModeSignal.set(configuredMode);
-        this.applyTheme(configuredMode);
-      }
-    });
-  }
-
-  /**
-   * Setup system preference listener for 'auto' mode
-   */
-  private setupMediaQueryListener(): void {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handler = (e: MediaQueryListEvent) => {
-      if (this.themeModeSignal() === 'auto') {
-        this.currentThemeSignal.set(e.matches ? 'dark' : 'light');
-        this.applyThemeClass();
-      }
-    };
-
-    mediaQuery.addEventListener('change', handler);
-  }
-
-  /**
-   * Set theme mode
-   * @param mode - Theme mode to set
-   */
-  setThemeMode(mode: ThemeMode): void {
-    this.hasUserPreference = true;
-    this.themeModeSignal.set(mode);
-    this.saveThemeMode(mode);
-    this.applyTheme(mode);
-  }
-
-  /**
-   * Toggle between light and dark mode
-   * If in 'auto' mode, switches to 'dark' or 'light' explicitly
-   */
-  toggleTheme(): void {
-    const currentMode = this.themeModeSignal();
-    const currentTheme = this.currentThemeSignal();
-
-    let newMode: ThemeMode;
-
-    if (currentMode === 'auto') {
-      // Switch from auto to explicit dark/light
-      newMode = currentTheme === 'dark' ? 'light' : 'dark';
-    } else {
-      // Toggle between light and dark
-      newMode = currentMode === 'dark' ? 'light' : 'dark';
-    }
-
-    this.setThemeMode(newMode);
-  }
-
-  /**
-   * Get current theme mode
-   * @returns Current theme mode
-   */
-  getThemeMode(): ThemeMode {
-    return this.themeModeSignal();
-  }
-
-  /**
-   * Get current active theme (resolved for 'auto' mode)
-   * @returns 'light' or 'dark'
-   */
-  getCurrentTheme(): 'light' | 'dark' {
-    return this.currentThemeSignal();
-  }
-
-  /**
-   * Check if currently in dark mode
-   * @returns true if dark mode
-   */
-  isDarkMode(mode?: ThemeMode): boolean {
-    const activeMode = mode || this.themeModeSignal();
-
-    if (activeMode === 'auto') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-
-    return activeMode === 'dark';
-  }
-
-  /**
-   * Apply theme to document (Tailwind 4 compatible)
-   * @param mode - Theme mode to apply
-   */
-  private applyTheme(mode: ThemeMode): void {
-    const isDark = this.isDarkMode(mode);
-    this.currentThemeSignal.set(isDark ? 'dark' : 'light');
-    this.applyThemeClass();
-  }
-
-  /**
-   * Apply theme class to HTML element
-   * Tailwind 4 uses 'dark' class for dark mode
-   */
-  private applyThemeClass(): void {
-    const htmlElement = this.document.documentElement;
-    const isDark = this.currentThemeSignal() === 'dark';
-
-    if (isDark) {
-      htmlElement.classList.add('dark');
-    } else {
-      htmlElement.classList.remove('dark');
-    }
-
-    // Store preference in data attribute for potential CSS custom properties
-    htmlElement.setAttribute('data-theme', this.currentThemeSignal());
-  }
-
-  /**
-   * Save theme mode to localStorage
-   * @param mode - Theme mode to save
-   */
-  private saveThemeMode(mode: ThemeMode): void {
+  /** Commits a registered theme: it becomes the stored preference (ending `auto` on this device). */
+  select(id: ThemeId): void {
+    this.previewed.set(undefined);
+    this.stored.set(id);
     try {
-      localStorage.setItem(this.STORAGE_KEY, mode);
+      localStorage.setItem(this.STORAGE_KEY, id);
     } catch (error) {
       this.logger.warn('[ThemeService] Failed to save theme to localStorage', error);
       this.notifications.warning(
@@ -191,13 +82,42 @@ export class ThemeService {
     }
   }
 
+  /** Shows a theme without committing it: never persisted, never notifies. */
+  preview(id: ThemeId): void {
+    this.previewed.set(id);
+  }
+
+  cancelPreview(): void {
+    this.previewed.set(undefined);
+  }
+
   /**
-   * Get stored theme mode from localStorage
-   * @returns Theme mode or 'auto' if not set
+   * Forgets this device's stored choice so the configured `settings.theme` governs again. A no-op for
+   * the storage when nothing is stored.
    */
-  private getStoredThemeMode(): ThemeMode | undefined {
+  clearPreference(): void {
+    this.previewed.set(undefined);
+    if (this.stored() === undefined) return;
+
+    this.stored.set(undefined);
     try {
-      return (localStorage.getItem(this.STORAGE_KEY) as ThemeMode) || undefined;
+      localStorage.removeItem(this.STORAGE_KEY);
+    } catch (error) {
+      this.logger.warn('[ThemeService] Failed to clear theme from localStorage', error);
+      this.notifications.warning(
+        'Unable to update your saved theme preference. The change will apply for this session.',
+      );
+    }
+  }
+
+  /**
+   * The stored choice: a registered id, or `auto` (written by earlier versions, still meaning "as the
+   * system prefers"). Any other value is ignored as if absent.
+   */
+  private readStored(): ThemeSetting | undefined {
+    try {
+      const value = localStorage.getItem(this.STORAGE_KEY);
+      return THEME_SETTINGS.find((setting) => setting === value);
     } catch (error) {
       this.logger.warn('[ThemeService] Failed to read theme from localStorage', error);
       this.notifications.warning(
@@ -205,38 +125,5 @@ export class ThemeService {
       );
       return undefined;
     }
-  }
-
-  /**
-   * Reset theme to auto mode
-   */
-  resetTheme(): void {
-    this.setThemeMode('auto');
-  }
-
-  /**
-   * Get system preference
-   * @returns System preference: 'light' or 'dark'
-   */
-  getSystemPreference(): 'light' | 'dark' {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
-
-  /**
-   * Watch for system theme changes
-   * @param callback - Callback function
-   * @returns Cleanup function
-   */
-  watchSystemTheme(callback: (theme: 'light' | 'dark') => void): () => void {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handler = (e: MediaQueryListEvent) => {
-      callback(e.matches ? 'dark' : 'light');
-    };
-
-    mediaQuery.addEventListener('change', handler);
-
-    // Return cleanup function
-    return () => mediaQuery.removeEventListener('change', handler);
   }
 }

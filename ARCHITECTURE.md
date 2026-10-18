@@ -43,7 +43,7 @@ Versions below are the ranges declared in [package.json](package.json) and
 | RxJS                    | 7.8             | HTTP startup flow and other genuine asynchronous boundaries          |
 | Vitest                  | 4.0             | Unit and component tests, in the app and the sidecar                 |
 | Angular Testing Library | 19.1            | User-oriented component rendering and interaction tests              |
-| Tailwind CSS            | 4.1             | Utility-first styling, including class-based dark mode               |
+| Tailwind CSS            | 4.1             | Utility-first styling over the per-theme CSS tokens                  |
 | Zod                     | 4.3             | Runtime dashboard schema and inferred types, shared with the sidecar |
 | js-yaml                 | 4.3             | YAML text parsing and serialization, shared with the sidecar         |
 | Fastify                 | 5.2             | `server/` config-write sidecar HTTP server                           |
@@ -68,13 +68,14 @@ src/
       models/             Zod schemas, inferred types, defaults, shared validation
       scroll/             ScrollStateService, its pure core and the browser metrics token
       services/           configuration, state, domain operations, and diagnostics
+      themes/             the theme registry: the only list of themes
     features/
       configurator/       browser-based YAML editor, loaded as a lazy route; chrome/ holds one page arrangement per layout
     shared/
-      components/         reusable or feature-level presentation components; rail/ is the vertical layout's sidebar
+      components/         reusable or feature-level presentation components; rail/ is the vertical layout's sidebar, theme-picker/ the theme dialog
       directives/         sticky dock, rail stick, chip autocenter and horizontal-nav directives
     views/dashboard/      route component that switches between horizontal/ and vertical/ page compositions
-  styles/                 design tokens, glass surface recipes, base layer, self-hosted fonts
+  styles/                 design tokens, one stylesheet per theme (themes/), glass surface recipes, base layer, self-hosted fonts
   testing/                shared test helpers and tooling regression tests
 public/
   config/                 runtime YAML and user-facing example
@@ -336,7 +337,8 @@ Examples:
 - `AppCategoriesComponent` delegates selection through `AppService.setSelectedCategory`.
 - `AppService.filteredApps` combines configuration, bookmarks, search, and category signals.
 - `NotificationService` owns a bounded signal list and timer-backed dismissal.
-- `ThemeService` owns theme mode and resolved light/dark signals.
+- `ThemeService` owns the device's stored theme choice, the committed theme, the transient preview and
+  `<html data-theme>` (see Theme Resolution).
 - `ConfiguratorStore` owns the editor draft, dirty flag, and validation errors for the lifetime of
   the `configure` route.
 - `AppStatusService` owns the statuses signal keyed by application id and its polling lifecycle (see
@@ -349,24 +351,46 @@ not introduce `BehaviorSubject` as a general store or wrap synchronous signal st
 
 ## Theme Resolution
 
-`ThemeService` resolves mode in this order:
+[theme.registry.ts](src/app/core/themes/theme.registry.ts) is the only list of themes (`THEMES`): id,
+name, description, the background slot the theme uses (`light` or `dark`) and the swatch the picker
+draws. `ThemeId`, the `settings.theme` schema (`THEME_SETTINGS`, which adds `auto`: a value of the
+setting, not a theme), the picker, the editor's Default theme control and the contrast audit are all
+derived from it. A theme is the stylesheet `styles/themes/<id>.css`, selected by
+`<html data-theme="<id>">`; the default theme (`dark`) also answers to a bare `:root`.
 
-1. A non-empty persisted value under `dashboard-theme` is treated as the user's preference and
-   wins over configuration. The storage value is type-cast rather than runtime-validated.
-2. Without a persisted value, the YAML `settings.theme` value controls the mode and may update when
-   configuration arrives.
-3. An explicit user selection calls `setThemeMode`, takes precedence for the session, and attempts
-   to persist.
-4. Mode `auto`, whether configured, persisted, or selected, resolves through the system
-   `prefers-color-scheme: dark` media query.
+`ThemeService` has three layers, each a computed over the one before:
 
-The resolved theme updates the root `dark` class and `data-theme` attribute. System changes update
-the rendered theme only while mode is `auto`. Dashboard background selection reacts to both
-settings and resolved theme.
+1. `preference`: a persisted value under `dashboard-theme` wins over configuration. It is a
+   registered id, or `auto` as earlier versions wrote it; any other stored value is ignored as if
+   absent. Without one, the YAML `settings.theme` governs and may change when configuration arrives.
+2. `committed`: the preference resolved to a theme. `auto` resolves through the system
+   `prefers-color-scheme: light` media query and follows system changes live.
+3. `theme`: what is shown, the transient preview if there is one, else `committed`. `info()` is its
+   registry entry.
+
+`select(id)` stores a choice (which ends `auto` on that device) and drops the preview. `preview` and
+`cancelPreview` change only what is shown and never touch storage. `clearPreference()` removes the
+stored choice so the configured theme governs again: the configurator's Save calls it when the saved
+`settings.theme` differs from the one in force, before refreshing the live configuration, so the
+saved theme shows at once; saving anything else keeps the device's choice. One effect writes
+`data-theme` on `<html>`, the only DOM write (there is no `dark` class). The dashboard picks
+`lightBackgroundImage` or `darkBackgroundImage` from `info().background`.
+
+First paint: an inline script in `index.html` copies the stored value to `data-theme` before the
+stylesheet paints, interpreting only `auto`. An unknown value matches no theme selector, so the
+default theme paints until `ThemeService` rewrites the attribute.
+
+The picker is [ThemePickerComponent](src/app/shared/components/theme-picker/theme-picker.component.ts):
+a native `<dialog>` opened with `showModal()`, so the browser supplies the focus trap and the inert page
+and the top layer lifts it above the glass chrome that would clip a fixed overlay. Highlighting a row
+other than the committed theme previews it; Enter or a click commits (`select`); `Esc`, Close and the
+backdrop restore the committed theme. It closes if its button is hidden (a layout change). The swatch
+it draws, `ThemePreviewComponent`, lives in `shared/` and is also used by the editor's Default theme
+control, because `shared/` must not import from `features/`.
 
 Storage failures are non-fatal. A read failure logs and warns, then falls back to configured theme.
-A write failure logs and warns, while preserving the user's selection for the current session. The
-YAML setting itself is not written to browser storage.
+A write or clear failure logs and warns, while the selection still applies for the current session.
+The YAML setting itself is not written to browser storage.
 
 ## Layouts
 
@@ -401,11 +425,13 @@ compacting dock.
 
 ## Design Tokens and Glass Surfaces
 
-The look comes from three CSS files under [src/styles](src/styles), imported by `styles.css`:
+The look comes from the CSS under [src/styles](src/styles), imported by `styles.css`:
 
-- [tokens.css](src/styles/tokens.css) declares every colour, radius, shadow, glass blur and
-  legibility floor twice: the light set on `:root` and the dark set under the `dark` class that
-  `ThemeService` puts on `<html>`. A token exists in both sets or in neither.
+- [tokens.css](src/styles/tokens.css) keeps what no theme changes (a non-colour constant) and the
+  `@theme inline` mapping that makes the Tailwind utilities (`bg-accent`, `text-muted`, …) follow the
+  active theme. Each theme declares every colour, radius, shadow, glass blur and legibility floor in
+  its own [themes/](src/styles/themes) stylesheet under `:root[data-theme='<id>']`. A token exists in
+  every theme or in none.
 - [surfaces.css](src/styles/surfaces.css) holds the recipes `glass-chrome`, `glass-clock`,
   `glass-card` and `glass-field`. A component takes a recipe class and adds only its own radius and
   layout. Each glass surface paints an opaque `--surface` floor of token-defined opacity under a
@@ -416,9 +442,12 @@ The look comes from three CSS files under [src/styles](src/styles), imported by 
   while the configurator is mounted. [fonts.css](src/styles/fonts.css) declares the self-hosted
   Nunito and IBM Plex Mono Latin subsets.
 
-[design-tokens.spec.ts](src/styles/design-tokens.spec.ts) measures every text / surface pair of both
-themes, with and without `backdrop-filter`, through `src/testing/token-audit.ts`. Changing a token
-or a recipe is verified there before any browser check.
+[design-tokens.spec.ts](src/styles/design-tokens.spec.ts) iterates the theme registry: it checks that
+each theme's stylesheet is imported and declares the same tokens as the others, and measures every
+text / surface pair of every theme, with and without `backdrop-filter`, through
+`src/testing/token-audit.ts`. The audit includes the `menu` surface, the translucent panel of the
+theme picker, which axe cannot measure. Adding a theme or changing a token or a recipe is verified
+there before any browser check.
 
 ## Scroll State and Sticky Chrome
 
@@ -584,8 +613,8 @@ repository itself.
 | App status badges              | `AppStatusService`, `app-card`, `status-poller.ts`, `status-checker.ts`    | Opt-in default, any response is up, polls only while monitored         |
 | Sticky dock or header behavior | `ScrollStateService`, `StickyDockDirective`, the page's dock markup        | Pure-core specs, loop-free eligibility, breaker, reduced motion, short viewports |
 | Layout, rail or page chrome   | `SettingsService.layout`, `DashboardComponent`, `AppShellComponent`, `rail/`, `ConfiguratorChrome` | Both layouts at 1920, 834 and 390 px, layout swap keeps place, axe, keyboard walk, horizontal pixel diff |
-| Colours, surfaces, blur        | `tokens.css`, `surfaces.css`, `design-tokens.spec.ts`                      | Contrast audit in both themes, with and without `backdrop-filter`      |
-| Theme or backgrounds           | `ThemeService`, `SettingsService`, dashboard view                          | Precedence, storage failures, auto media changes, both backgrounds     |
+| Colours, surfaces, blur        | `tokens.css`, `themes/*.css`, `surfaces.css`, `design-tokens.spec.ts`      | Contrast audit in every registered theme, with and without `backdrop-filter` |
+| Theme or backgrounds           | `theme.registry.ts`, `ThemeService`, `ThemePickerComponent`, `SettingsService`, dashboard view | Registry-derived lists, precedence and unknown stored values, preview vs commit, storage failures, auto media changes, Save clearing the device choice, background slots, first paint |
 | Search or categories           | `SearchService`, `CategoryService`, `AppService`                           | Local UI state, computed filtering, keyboard behavior                  |
 | Notifications or errors        | Producer, `NotificationService`, `GlobalErrorHandler`                      | One notification owner, safe copy, diagnostics, root toast             |
 | Deployment or config mount     | `angular.json`, Dockerfile, nginx config, `entrypoint.sh`                  | Output path, cache rules, mount path, `/api` proxy, health, multi-arch |

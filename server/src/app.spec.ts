@@ -65,7 +65,9 @@ describe('GET /api/status', () => {
     const app = buildApp({
       configWriteToken: token,
       targetPath,
-      statusPoller: pollerWith(60_000, { app1: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' } }),
+      statusPoller: pollerWith(60_000, {
+        app1: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' },
+      }),
     });
 
     const response = await app.inject({ method: 'GET', url: '/api/status' });
@@ -299,6 +301,37 @@ describe('POST /api/config — schema validation and write', () => {
     expect(response.statusCode).toBe(400);
     expect(response.json().errors).toEqual(
       expect.arrayContaining([expect.objectContaining({ path: ['settings', 'layout'] })]),
+    );
+    await expect(readFile(targetPath, 'utf8')).rejects.toThrow(/ENOENT/);
+  });
+
+  it.each(['auto', 'light', 'catppuccin-mocha'])('writes the %s theme verbatim', async (theme) => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: { theme } },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(await readFile(targetPath, 'utf8')).toContain(`theme: ${theme}\n`);
+  });
+
+  it('rejects an unknown theme with its path and writes nothing', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: { theme: 'neon' } },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: ['settings', 'theme'] })]),
     );
     await expect(readFile(targetPath, 'utf8')).rejects.toThrow(/ENOENT/);
   });

@@ -2,21 +2,20 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { heroArrowLeft, heroCog6Tooth, heroMoon, heroSun } from '@ng-icons/heroicons/outline';
+import { heroArrowLeft, heroCog6Tooth } from '@ng-icons/heroicons/outline';
 
-import { ThemeService } from '../../../core/services/theme.service';
 import { MetadataService } from '../../../core/services/metadata.service';
 import { ConfiguratorNavService } from '../../../core/services/configurator-nav.service';
+import { ThemePickerComponent } from '../theme-picker/theme-picker.component';
 
 @Component({
   selector: 'app-header',
-  imports: [CommonModule, NgIcon, RouterLink],
+  imports: [CommonModule, NgIcon, RouterLink, ThemePickerComponent],
   templateUrl: 'app-header.component.html',
-  viewProviders: [provideIcons({ heroArrowLeft, heroCog6Tooth, heroMoon, heroSun })],
+  viewProviders: [provideIcons({ heroArrowLeft, heroCog6Tooth })],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppHeaderComponent {
-  private readonly themeService = inject(ThemeService);
   private readonly metadataService = inject(MetadataService);
 
   /** The scrolled dock reduces the header's vertical padding (design.md § 4.1). */
@@ -31,17 +30,10 @@ export class AppHeaderComponent {
 
   readonly metadata = this.metadataService.metadata;
 
-  readonly themeIcon = computed(() => (this.themeService.isDark() ? 'heroMoon' : 'heroSun'));
-  readonly themeText = computed(() => (this.themeService.isDark() ? 'Dark' : 'Light'));
-
   /** The configurator link, shared with the other layouts' chrome. */
   private readonly nav = inject(ConfiguratorNavService);
   readonly isConfiguratorRoute = this.nav.isConfiguratorRoute;
   readonly navTarget = this.nav.target;
   readonly navLabel = this.nav.label;
   readonly navIcon = this.nav.icon;
-
-  onToggleTheme(): void {
-    this.themeService.toggleTheme();
-  }
 }

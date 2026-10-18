@@ -1,4 +1,3 @@
-import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
@@ -7,14 +6,12 @@ import userEvent from '@testing-library/user-event';
 import { AppService } from '../../../core/services/app.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
+import { themeServiceStub } from '../../../../testing/theme-service.stub';
 
 import { AppRailActionsComponent } from './app-rail-actions.component';
 
 describe('AppRailActionsComponent', () => {
-  const toggleTheme = vi.fn();
-
   const setup = async (mode: 'wide' | 'compact', url = '/') => {
-    toggleTheme.mockReset();
     const view = await render(`<app-rail-actions mode="${mode}" />`, {
       imports: [AppRailActionsComponent],
       providers: [
@@ -23,7 +20,7 @@ describe('AppRailActionsComponent', () => {
           { path: 'configure', children: [] },
         ]),
         { provide: AppService, useValue: { appVersion: '2.2.0' } },
-        { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme } },
+        { provide: ThemeService, useValue: themeServiceStub('dark') },
       ],
     });
 
@@ -36,7 +33,7 @@ describe('AppRailActionsComponent', () => {
   };
 
   describe.each(['wide', 'compact'] as const)('in the %s position', (mode) => {
-    it('offers the configurator link and the theme toggle, each once', async () => {
+    it('offers the configurator link and the theme picker, each once', async () => {
       await setup(mode);
 
       expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveAttribute(
@@ -44,7 +41,9 @@ describe('AppRailActionsComponent', () => {
         '/configure',
       );
       expect(screen.getAllByRole('button')).toHaveLength(1);
-      expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Change theme, current: Dark' }),
+      ).toBeInTheDocument();
     });
 
     it('links back to the dashboard from the configurator', async () => {
@@ -54,12 +53,14 @@ describe('AppRailActionsComponent', () => {
       expect(screen.queryByRole('link', { name: 'Open configurator' })).not.toBeInTheDocument();
     });
 
-    it('toggles the theme', async () => {
+    it('tabs from the configurator link to the theme picker button', async () => {
+      const user = userEvent.setup();
       await setup(mode);
 
-      await userEvent.click(screen.getByRole('button', { name: 'Toggle theme' }));
+      screen.getByRole('link', { name: 'Open configurator' }).focus();
+      await user.tab();
 
-      expect(toggleTheme).toHaveBeenCalledOnce();
+      expect(screen.getByRole('button', { name: /^Change theme/ })).toHaveFocus();
     });
 
     it('hides its icons from assistive technology', async () => {
@@ -67,7 +68,8 @@ describe('AppRailActionsComponent', () => {
 
       const icons = container.querySelectorAll('ng-icon');
 
-      expect(icons).toHaveLength(2);
+      // The link's and the picker button's, plus those inside the closed dialog.
+      expect(icons.length).toBeGreaterThanOrEqual(2);
       icons.forEach((icon) => expect(icon).toHaveAttribute('aria-hidden', 'true'));
     });
 

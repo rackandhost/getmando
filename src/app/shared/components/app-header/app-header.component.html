@@ -38,15 +38,7 @@
         }
       </a>
 
-      <!-- Theme toggle button -->
-      <button
-        aria-label="Toggle theme"
-        class="glass-chrome flex size-11 items-center justify-center rounded-xl text-text transition-transform active:scale-95"
-        type="button"
-        (click)="onToggleTheme()"
-      >
-        <ng-icon aria-hidden="true" class="text-xl" [name]="themeIcon()" />
-      </button>
+      <app-theme-picker />
     </div>
   </div>
 </header>

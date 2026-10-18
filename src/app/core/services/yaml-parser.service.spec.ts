@@ -139,6 +139,52 @@ settings:
       expect(result.success).toBe(true);
       expect(result.data!.applications[0].favorite).toBe(true);
     });
+
+    describe('settings.theme', () => {
+      const yamlWithSettings = (settings: string) => `
+metadata:
+  title: 'Test'
+  description: 'Test dashboard'
+categories:
+  - id: 'media'
+    name: 'Media'
+applications:
+  - id: 'plex'
+    name: 'Plex'
+    description: 'Media server'
+    url: 'https://plex.example.com'
+    icon:
+      type: 'name'
+      value: 'plex'
+    category: 'media'
+bookmarks: []
+settings:
+${settings}
+`;
+
+      it('defaults to dark when the key is absent', () => {
+        const result = service.parseYaml(yamlWithSettings('  layout: horizontal'));
+
+        expect(result.success).toBe(true);
+        expect(result.data!.settings.theme).toBe('dark');
+      });
+
+      it.each(['auto', 'dark', 'light', 'catppuccin-mocha'])('keeps %s as written', (theme) => {
+        const result = service.parseYaml(yamlWithSettings(`  theme: ${theme}`));
+
+        expect(result.success).toBe(true);
+        expect(result.data!.settings.theme).toBe(theme);
+      });
+
+      it('rejects an unknown theme with the path settings.theme', () => {
+        const result = service.parseYaml(yamlWithSettings('  theme: neon'));
+
+        expect(result.success).toBe(false);
+        expect(result.errors).toContainEqual(
+          expect.objectContaining({ path: ['settings', 'theme'] }),
+        );
+      });
+    });
   });
 
   it('throws a formatted validation error from parseYamlOrThrow', () => {

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal, type WritableSignal } from '@angular/core';
+import { computed, signal, type WritableSignal } from '@angular/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { NEVER, Observable, of } from 'rxjs';
@@ -12,15 +12,21 @@ import {
 } from '../../core/models/dashboard.models';
 import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
-import { ConfigWriteService } from '../../core/services/config-write.service';
+import {
+  ConfigWriteService,
+  type ConfigWriteResult,
+} from '../../core/services/config-write.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { THEME_IDS, type ThemeSetting } from '../../core/themes/theme.registry';
 import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
+import { themeServiceStub } from '../../../testing/theme-service.stub';
+import { stubScrollIntoView } from '../../../testing/scroll-into-view';
 import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
 import type { ChromeMode } from '../../core/scroll/scroll-state';
 import { METRICS_SOURCE, type MetricsSource } from '../../core/scroll/metrics-source';
@@ -160,10 +166,7 @@ describe('ConfiguratorPageComponent', () => {
     return [
       { provide: ConfiguratorStore, useValue: store },
       { provide: AppService, useValue: appService },
-      {
-        provide: ThemeService,
-        useValue: { isDark: signal(true), toggleTheme: vi.fn() },
-      },
+      { provide: ThemeService, useValue: themeServiceStub() },
       {
         provide: MetadataService,
         useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -194,7 +197,7 @@ describe('ConfiguratorPageComponent', () => {
     expect(banner).toHaveTextContent(DEFAULT_DASHBOARD_CONFIG.metadata.title);
     expect(banner.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(main).not.toContainElement(banner);
-    expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Change theme, current:/ })).toBeInTheDocument();
   });
 
   it('does not offer load mounted YAML when mounted configuration is unavailable', async () => {
@@ -664,7 +667,7 @@ describe('ConfiguratorPageComponent', () => {
 
     expect(screen.getByRole('heading', { name: 'Configuration editor' })).toBeInTheDocument();
     expect(screen.getByLabelText('Dashboard title')).toHaveValue('Mando');
-    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked();
+    expect(screen.getByRole('button', { name: /\d+ themes/ })).toHaveTextContent('Dark');
     expect(screen.getByRole('alert')).toHaveTextContent("Category 'missing' does not exist.");
     expect(screen.getByLabelText('Application category for Plex')).toHaveAttribute(
       'aria-describedby',
@@ -726,7 +729,7 @@ describe('ConfiguratorPageComponent', () => {
     await user.tab();
     expect(screen.getByRole('link', { name: 'Open configurator' })).toHaveFocus();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Toggle theme' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: /^Change theme, current:/ })).toHaveFocus();
     // The section navigation precedes the content it navigates, as it does on screen.
     for (const name of SECTION_NAV) {
       await user.tab();
@@ -1566,23 +1569,6 @@ describe('ConfiguratorPageComponent', () => {
       expect(store.updateSettings).toHaveBeenLastCalledWith({ searchEngines: [] });
     });
 
-    it('chooses the theme with the arrow keys: Dark then right arrow is Auto', async () => {
-      const user = userEvent.setup();
-      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
-      const group = screen.getByRole('radiogroup', { name: 'Theme' });
-
-      expect(
-        within(group)
-          .getAllByRole('radio')
-          .map((r) => r.textContent?.trim()),
-      ).toEqual(['Light', 'Dark', 'Auto']);
-      await user.click(within(group).getByRole('radio', { name: 'Dark' }));
-      screen.getByRole('radio', { name: 'Dark' }).focus();
-      await user.keyboard('{ArrowRight}');
-
-      expect(store.updateSettings).toHaveBeenLastCalledWith({ theme: 'auto' });
-    });
-
     it('chooses the date position from a Top | Bottom group', async () => {
       const user = userEvent.setup();
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
@@ -1610,7 +1596,7 @@ describe('ConfiguratorPageComponent', () => {
       await render(ConfiguratorPageComponent, {
         providers: [
           { provide: AppService, useValue: appService },
-          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          { provide: ThemeService, useValue: themeServiceStub() },
           {
             provide: MetadataService,
             useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -1704,19 +1690,21 @@ describe('ConfiguratorPageComponent', () => {
       expect(draft().settings.itemsPerRow).toBe(value);
     });
 
-    it('opens the Settings section, before the theme, reflecting the draft layout', async () => {
+    it('opens the Settings section, with the Default theme directly after the layout, reflecting the draft layout', async () => {
       const user = userEvent.setup();
       draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
       await openLayoutPanel(user);
+      await user.click(screen.getByRole('button', { name: /\d+ themes/ }));
 
       const settings = within(document.getElementById('section-settings') as HTMLElement);
       const layout = settings.getByRole('group', { name: 'Layout' });
 
       expect(within(layout).getByRole('radio', { name: 'Vertical bar' })).toBeChecked();
       expect(
-        layout.compareDocumentPosition(settings.getByRole('radiogroup', { name: 'Theme' })),
+        layout.compareDocumentPosition(settings.getByRole('group', { name: 'Default theme' })),
       ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(settings.queryByRole('radiogroup', { name: 'Theme' })).toBeNull();
     });
 
     it('writes only the layout of the draft when a layout is chosen', async () => {
@@ -1736,7 +1724,7 @@ describe('ConfiguratorPageComponent', () => {
       await render(ConfiguratorPageComponent, {
         providers: [
           { provide: AppService, useValue: appService },
-          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          { provide: ThemeService, useValue: themeServiceStub() },
           {
             provide: MetadataService,
             useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
@@ -1775,20 +1763,331 @@ describe('ConfiguratorPageComponent', () => {
     });
   });
 
+  describe('default theme control', () => {
+    afterEach(() => {
+      store.updateSettings.mockReset();
+      draft.set({ ...draft(), settings: { ...draft().settings, theme: 'dark' } });
+    });
+
+    /** The panel starts closed, so tests of the cards open it first. */
+    const openThemePanel = (user: UserEvent) =>
+      user.click(screen.getByRole('button', { name: /\d+ themes/ }));
+
+    /** Renders the page on the real store, with a mounted YAML whose `settings.theme` is `theme`. */
+    const renderWithMountedTheme = async (theme: DashboardConfig['settings']['theme']) => {
+      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      const themeService = themeServiceStub();
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+      await render(ConfiguratorPageComponent, {
+        providers: [
+          { provide: AppService, useValue: appService },
+          { provide: ThemeService, useValue: themeService },
+          {
+            provide: MetadataService,
+            useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
+          },
+          {
+            provide: YamlLoaderService,
+            useValue: {
+              mountedPath: '/config/dashboard.yaml',
+              mountedConfigResult: signal<MountedConfigResult>({
+                status: 'valid',
+                config: { ...draft(), settings: { ...draft().settings, theme } },
+              }),
+              refreshMountedConfig: yamlLoader.refreshMountedConfig,
+            },
+          },
+          { provide: LoggerService, useValue: logger },
+          { provide: NotificationService, useValue: notifications },
+          { provide: ConfigWriteService, useValue: configWrite },
+          ConfiguratorStore,
+          ConfigExportService,
+        ],
+      });
+      await user.click(screen.getByRole('button', { name: 'Load mounted YAML' }));
+      return { user, writeText, themeService };
+    };
+
+    it('offers Auto, Dark, Light and Catppuccin Mocha, and reads 4 themes', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      expect(screen.getByRole('button', { name: /4 themes/ })).toBeInTheDocument();
+      await openThemePanel(user);
+      const group = screen.getByRole('group', { name: 'Default theme' });
+
+      expect(
+        within(group)
+          .getAllByRole('radio')
+          .map((radio) => radio.getAttribute('aria-labelledby'))
+          .map((id) => document.getElementById(id ?? '')?.textContent?.trim()),
+      ).toEqual(['Auto', 'Dark', 'Light', 'Catppuccin Mocha']);
+
+      await user.click(within(group).getByRole('radio', { name: 'Catppuccin Mocha' }));
+      expect(store.updateSettings).toHaveBeenLastCalledWith({ theme: 'catppuccin-mocha' });
+    });
+
+    it('replaces the Theme segmented control with the Default theme disclosure, closed, below the layout', async () => {
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      const settings = within(document.getElementById('section-settings') as HTMLElement);
+      const layout = settings.getByRole('button', { name: /\d+ layouts/ });
+      const theme = settings.getByRole('button', { name: /\d+ themes/ });
+
+      expect(theme).toHaveAttribute('aria-expanded', 'false');
+      expect(settings.getByText('Default theme')).toBeInTheDocument();
+      expect(layout.compareDocumentPosition(theme)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(settings.queryByRole('radiogroup', { name: 'Theme' })).toBeNull();
+    });
+
+    it('writes only the theme of the draft when a theme is chosen', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      await openThemePanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Light' }));
+
+      expect(store.updateSettings).toHaveBeenCalledExactlyOnceWith({ theme: 'light' });
+    });
+
+    it('selects Auto for a draft imported from theme: auto and exports theme: auto', async () => {
+      const { user, writeText } = await renderWithMountedTheme('auto');
+
+      await openThemePanel(user);
+      expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('theme: auto');
+    });
+
+    it('exports the chosen theme and leaves the device preference alone', async () => {
+      const { user, writeText, themeService } = await renderWithMountedTheme('auto');
+
+      await openThemePanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Light' }));
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('settings:\n  theme: light\n');
+      expect(themeService.select).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('saving a changed default theme', () => {
+    const root = document.documentElement;
+    const key = 'dashboard-theme';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    afterEach(() => {
+      localStorage.clear();
+      root.removeAttribute('data-theme');
+    });
+
+    /**
+     * Renders the page on the real ThemeService over `localStorage`, with a live configuration whose
+     * `settings.theme` is `live` (a successful save refreshes it to what was saved, as the app does)
+     * and a draft that will be saved with `settings.theme: saved`.
+     */
+    const setup = async ({
+      stored,
+      live,
+      saved,
+      result = { status: 'saved' },
+      settings = {},
+    }: {
+      stored: string | null;
+      live: ThemeSetting;
+      saved: ThemeSetting;
+      result?: ConfigWriteResult;
+      settings?: Partial<DashboardSettings>;
+    }) => {
+      if (stored !== null) localStorage.setItem(key, stored);
+      const liveSettings = signal<DashboardSettings>({
+        ...DEFAULT_DASHBOARD_CONFIG.settings,
+        theme: live,
+      });
+      const config = {
+        ...draft(),
+        settings: { ...draft().settings, theme: saved, ...settings },
+      };
+      store.validate.mockReturnValue(true);
+      store.toDashboardConfig.mockReturnValue(config);
+      configWrite.hasToken.mockReturnValue(true);
+      configWrite.save.mockReturnValue(of(result));
+      yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'valid', config }));
+      appService.initializeConfig.mockImplementation((fresh: DashboardConfig) =>
+        liveSettings.set(fresh.settings),
+      );
+      const user = userEvent.setup();
+      // userEvent installs its own clipboard: ours goes in after it.
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+      const view = await render(ConfiguratorPageComponent, {
+        providers: [
+          ...defaultProviders().filter(({ provide }) => provide !== ThemeService),
+          ...exportProviders(),
+          ThemeService,
+          {
+            provide: SettingsService,
+            useValue: {
+              settings: liveSettings,
+              layout: computed(() => liveSettings().layout),
+            },
+          },
+        ],
+      });
+      TestBed.flushEffects();
+      const themeService = TestBed.inject(ThemeService);
+      const clearPreference = vi.spyOn(themeService, 'clearPreference');
+
+      return { user, view, themeService, clearPreference };
+    };
+    const settle = async (view: { fixture: { whenStable: () => Promise<unknown> } }) => {
+      await waitFor(() => expect(configWrite.save).toHaveBeenCalledOnce());
+      await view.fixture.whenStable();
+      TestBed.flushEffects();
+    };
+
+    it.each([
+      ['a device pinned to dark when the default becomes light', 'dark', 'dark', 'light'],
+      ['a device pinned to light when the default becomes dark', 'light', 'light', 'dark'],
+      [
+        'a device pinned to light when the default becomes dark from another one',
+        'light',
+        'dark',
+        'light',
+      ],
+    ] as const)('applies the saved default on %s', async (_label, stored, live, saved) => {
+      const { user, view, themeService } = await setup({ stored, live, saved });
+      expect(themeService.theme()).toBe(stored);
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(localStorage.getItem(key)).toBeNull();
+      expect(root).toHaveAttribute('data-theme', saved);
+      expect(themeService.theme()).toBe(saved);
+    });
+
+    it('lets a saved auto follow the system on this device, which does not prefer light here', async () => {
+      const { user, view, themeService } = await setup({
+        stored: 'light',
+        live: 'dark',
+        saved: 'auto',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(localStorage.getItem(key)).toBeNull();
+      expect(themeService.preference()).toBe('auto');
+      expect(root).toHaveAttribute('data-theme', 'dark');
+    });
+
+    it('keeps the device theme when only another setting is saved', async () => {
+      const { user, view, clearPreference } = await setup({
+        stored: 'light',
+        live: 'dark',
+        saved: 'dark',
+        settings: { itemsPerRow: 6 },
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(clearPreference).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe('light');
+      expect(root).toHaveAttribute('data-theme', 'light');
+    });
+
+    it.each([
+      ['rejected by the server', { status: 'invalid', errors: [] }],
+      [
+        'refused for its token',
+        { status: 'unauthorized', message: 'The write token was rejected.' },
+      ],
+      [
+        'unable to reach the server',
+        { status: 'error', message: 'Unable to reach the write endpoint.' },
+      ],
+    ] as const)('keeps the device theme when the save is %s', async (_label, result) => {
+      const { user, view, clearPreference } = await setup({
+        stored: 'dark',
+        live: 'dark',
+        saved: 'light',
+        result,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(clearPreference).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe('dark');
+      expect(root).toHaveAttribute('data-theme', 'dark');
+    });
+
+    it('keeps the device theme when the changed default is only copied or downloaded', async () => {
+      const createObjectURL = vi.fn(() => 'blob:dashboard');
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      Object.defineProperty(globalThis, 'URL', {
+        configurable: true,
+        value: { createObjectURL, revokeObjectURL: vi.fn() },
+      });
+      const { user, clearPreference } = await setup({
+        stored: 'dark',
+        live: 'dark',
+        saved: 'light',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+      await user.click(screen.getByRole('button', { name: 'Download YAML' }));
+
+      expect(writeText).toHaveBeenCalled();
+      expect(createObjectURL).toHaveBeenCalled();
+      expect(configWrite.save).not.toHaveBeenCalled();
+      expect(clearPreference).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe('dark');
+    });
+
+    it('forgets the device choice before the live configuration is refreshed', async () => {
+      const { user, view, clearPreference } = await setup({
+        stored: 'dark',
+        live: 'dark',
+        saved: 'light',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(clearPreference).toHaveBeenCalledOnce();
+      expect(clearPreference.mock.invocationCallOrder[0]).toBeLessThan(
+        appService.initializeConfig.mock.invocationCallOrder[0],
+      );
+    });
+  });
+
   describe('theme and accessibility matrix', () => {
     const root = document.documentElement;
     const originalWidth = window.innerWidth;
     const resizeTo = (width: number) =>
       Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
 
+    let restoreScrollIntoView: () => void;
+
+    beforeEach(() => {
+      ({ restore: restoreScrollIntoView } = stubScrollIntoView());
+    });
+
     afterEach(() => {
-      root.classList.remove('dark');
+      restoreScrollIntoView();
       root.removeAttribute('data-theme');
       localStorage.clear();
       resizeTo(originalWidth);
     });
 
-    it('toggles the dark class from the header and stores the choice as the dashboard does', async () => {
+    it('applies a theme from the picker in the header and stores the choice as the dashboard does', async () => {
       const user = userEvent.setup();
       localStorage.setItem('dashboard-theme', 'dark');
       await render(ConfiguratorPageComponent, {
@@ -1806,24 +2105,27 @@ describe('ConfiguratorPageComponent', () => {
           { provide: NotificationService, useValue: notifications },
         ],
       });
-      expect(root).toHaveClass('dark');
+      expect(root).toHaveAttribute('data-theme', 'dark');
 
-      await user.click(screen.getByRole('button', { name: 'Toggle theme' }));
+      await user.click(screen.getByRole('button', { name: 'Change theme, current: Dark' }));
+      await user.click(screen.getByRole('option', { name: 'Catppuccin Mocha' }));
 
-      expect(root).not.toHaveClass('dark');
-      expect(root).toHaveAttribute('data-theme', 'light');
-      expect(localStorage.getItem('dashboard-theme')).toBe('light');
+      expect(root).toHaveAttribute('data-theme', 'catppuccin-mocha');
+      expect(localStorage.getItem('dashboard-theme')).toBe('catppuccin-mocha');
+      expect(
+        screen.getByRole('button', { name: 'Change theme, current: Catppuccin Mocha' }),
+      ).toBeInTheDocument();
 
       // The dashboard reads the same stored preference when it is displayed.
       root.removeAttribute('data-theme');
       const dashboardTheme = TestBed.runInInjectionContext(() => new ThemeService());
-      expect(dashboardTheme.themeMode()).toBe('light');
-      expect(root).toHaveAttribute('data-theme', 'light');
-      expect(root).not.toHaveClass('dark');
+      TestBed.flushEffects();
+      expect(dashboardTheme.theme()).toBe('catppuccin-mocha');
+      expect(root).toHaveAttribute('data-theme', 'catppuccin-mocha');
     });
 
     it.each(
-      (['dark', 'light'] as const).flatMap((theme) =>
+      THEME_IDS.flatMap((theme) =>
         ([1440, 390] as const).flatMap((width) =>
           (['valid', 'invalid'] as const).map((state) => [theme, width, state] as const),
         ),
@@ -1832,7 +2134,7 @@ describe('ConfiguratorPageComponent', () => {
       'has no detectable AXE violations in the %s theme at %i px with a %s draft and an open editor',
       async (theme, width, state) => {
         const user = userEvent.setup();
-        root.classList.toggle('dark', theme === 'dark');
+        root.dataset['theme'] = theme;
         resizeTo(width);
         if (state === 'valid') validationErrors.set([]);
         const view = await render(ConfiguratorPageComponent, { providers: defaultProviders() });

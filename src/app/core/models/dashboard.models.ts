@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { DEFAULT_THEME, THEME_SETTINGS } from '../themes/theme.registry';
+
 /**
  * Rejects dangerous URL schemes (`javascript:`, `data:`, `vbscript:`, ...) that `z.string().url()`
  * alone accepts. `window.open()` and other imperative navigation calls bypass Angular's template
@@ -90,7 +92,7 @@ export const DashboardMetadataSchema = z.object({
  * Settings schema
  */
 export const DashboardSettingsSchema = z.object({
-  theme: z.enum(['light', 'dark', 'auto']).default('dark'),
+  theme: z.enum(THEME_SETTINGS).default(DEFAULT_THEME),
   layout: z.enum(['horizontal', 'vertical']).default('horizontal'),
   dateFormat: z.string().default('dd-MM-yyyy'),
   datePosition: z.enum(['top', 'bottom']).default('top'),
