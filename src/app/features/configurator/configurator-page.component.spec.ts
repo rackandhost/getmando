@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { signal, type WritableSignal } from '@angular/core';
+import { computed, signal, type WritableSignal } from '@angular/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { NEVER, Observable, of } from 'rxjs';
@@ -12,14 +12,17 @@ import {
 } from '../../core/models/dashboard.models';
 import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
-import { ConfigWriteService } from '../../core/services/config-write.service';
+import {
+  ConfigWriteService,
+  type ConfigWriteResult,
+} from '../../core/services/config-write.service';
 import { LoggerService } from '../../core/services/logger.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { MetadataService } from '../../core/services/metadata.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { THEME_IDS } from '../../core/themes/theme.registry';
+import { THEME_IDS, type ThemeSetting } from '../../core/themes/theme.registry';
 import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
 import { themeServiceStub } from '../../../testing/theme-service.stub';
@@ -1849,6 +1852,199 @@ describe('ConfiguratorPageComponent', () => {
       await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
       expect(writeText.mock.calls[0][0]).toContain('settings:\n  theme: light\n');
       expect(themeService.select).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('saving a changed default theme', () => {
+    const root = document.documentElement;
+    const key = 'dashboard-theme';
+    const writeText = vi.fn().mockResolvedValue(undefined);
+
+    afterEach(() => {
+      localStorage.clear();
+      root.removeAttribute('data-theme');
+    });
+
+    /**
+     * Renders the page on the real ThemeService over `localStorage`, with a live configuration whose
+     * `settings.theme` is `live` (a successful save refreshes it to what was saved, as the app does)
+     * and a draft that will be saved with `settings.theme: saved`.
+     */
+    const setup = async ({
+      stored,
+      live,
+      saved,
+      result = { status: 'saved' },
+      settings = {},
+    }: {
+      stored: string | null;
+      live: ThemeSetting;
+      saved: ThemeSetting;
+      result?: ConfigWriteResult;
+      settings?: Partial<DashboardSettings>;
+    }) => {
+      if (stored !== null) localStorage.setItem(key, stored);
+      const liveSettings = signal<DashboardSettings>({
+        ...DEFAULT_DASHBOARD_CONFIG.settings,
+        theme: live,
+      });
+      const config = {
+        ...draft(),
+        settings: { ...draft().settings, theme: saved, ...settings },
+      };
+      store.validate.mockReturnValue(true);
+      store.toDashboardConfig.mockReturnValue(config);
+      configWrite.hasToken.mockReturnValue(true);
+      configWrite.save.mockReturnValue(of(result));
+      yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'valid', config }));
+      appService.initializeConfig.mockImplementation((fresh: DashboardConfig) =>
+        liveSettings.set(fresh.settings),
+      );
+      const user = userEvent.setup();
+      // userEvent installs its own clipboard: ours goes in after it.
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+
+      const view = await render(ConfiguratorPageComponent, {
+        providers: [
+          ...defaultProviders().filter(({ provide }) => provide !== ThemeService),
+          ...exportProviders(),
+          ThemeService,
+          {
+            provide: SettingsService,
+            useValue: {
+              settings: liveSettings,
+              layout: computed(() => liveSettings().layout),
+            },
+          },
+        ],
+      });
+      TestBed.flushEffects();
+      const themeService = TestBed.inject(ThemeService);
+      const clearPreference = vi.spyOn(themeService, 'clearPreference');
+
+      return { user, view, themeService, clearPreference };
+    };
+    const settle = async (view: { fixture: { whenStable: () => Promise<unknown> } }) => {
+      await waitFor(() => expect(configWrite.save).toHaveBeenCalledOnce());
+      await view.fixture.whenStable();
+      TestBed.flushEffects();
+    };
+
+    it.each([
+      ['a device pinned to dark when the default becomes light', 'dark', 'dark', 'light'],
+      ['a device pinned to light when the default becomes dark', 'light', 'light', 'dark'],
+      [
+        'a device pinned to light when the default becomes dark from another one',
+        'light',
+        'dark',
+        'light',
+      ],
+    ] as const)('applies the saved default on %s', async (_label, stored, live, saved) => {
+      const { user, view, themeService } = await setup({ stored, live, saved });
+      expect(themeService.theme()).toBe(stored);
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(localStorage.getItem(key)).toBeNull();
+      expect(root).toHaveAttribute('data-theme', saved);
+      expect(themeService.theme()).toBe(saved);
+    });
+
+    it('lets a saved auto follow the system on this device, which does not prefer light here', async () => {
+      const { user, view, themeService } = await setup({
+        stored: 'light',
+        live: 'dark',
+        saved: 'auto',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(localStorage.getItem(key)).toBeNull();
+      expect(themeService.preference()).toBe('auto');
+      expect(root).toHaveAttribute('data-theme', 'dark');
+    });
+
+    it('keeps the device theme when only another setting is saved', async () => {
+      const { user, view, clearPreference } = await setup({
+        stored: 'light',
+        live: 'dark',
+        saved: 'dark',
+        settings: { itemsPerRow: 6 },
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(clearPreference).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe('light');
+      expect(root).toHaveAttribute('data-theme', 'light');
+    });
+
+    it.each([
+      ['rejected by the server', { status: 'invalid', errors: [] }],
+      [
+        'refused for its token',
+        { status: 'unauthorized', message: 'The write token was rejected.' },
+      ],
+      [
+        'unable to reach the server',
+        { status: 'error', message: 'Unable to reach the write endpoint.' },
+      ],
+    ] as const)('keeps the device theme when the save is %s', async (_label, result) => {
+      const { user, view, clearPreference } = await setup({
+        stored: 'dark',
+        live: 'dark',
+        saved: 'light',
+        result,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(clearPreference).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe('dark');
+      expect(root).toHaveAttribute('data-theme', 'dark');
+    });
+
+    it('keeps the device theme when the changed default is only copied or downloaded', async () => {
+      const createObjectURL = vi.fn(() => 'blob:dashboard');
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      Object.defineProperty(globalThis, 'URL', {
+        configurable: true,
+        value: { createObjectURL, revokeObjectURL: vi.fn() },
+      });
+      const { user, clearPreference } = await setup({
+        stored: 'dark',
+        live: 'dark',
+        saved: 'light',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+      await user.click(screen.getByRole('button', { name: 'Download YAML' }));
+
+      expect(writeText).toHaveBeenCalled();
+      expect(createObjectURL).toHaveBeenCalled();
+      expect(configWrite.save).not.toHaveBeenCalled();
+      expect(clearPreference).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe('dark');
+    });
+
+    it('forgets the device choice before the live configuration is refreshed', async () => {
+      const { user, view, clearPreference } = await setup({
+        stored: 'dark',
+        live: 'dark',
+        saved: 'light',
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+      await settle(view);
+
+      expect(clearPreference).toHaveBeenCalledOnce();
+      expect(clearPreference.mock.invocationCallOrder[0]).toBeLessThan(
+        appService.initializeConfig.mock.invocationCallOrder[0],
+      );
     });
   });
 
