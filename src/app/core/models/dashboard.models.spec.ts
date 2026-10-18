@@ -1,3 +1,5 @@
+import { THEME_SETTINGS } from '../themes/theme.registry';
+
 import {
   DashboardConfig,
   DashboardConfigSchema,
@@ -228,5 +230,41 @@ describe('DashboardSettingsSchema layout', () => {
 
   it('keeps horizontal as the layout of the built-in default configuration', () => {
     expect(DEFAULT_DASHBOARD_CONFIG.settings.layout).toBe('horizontal');
+  });
+});
+
+describe('DashboardSettingsSchema theme', () => {
+  const withSettings = (settings: Record<string, unknown>) => ({
+    ...validConfig(),
+    settings,
+  });
+
+  it('defaults to dark when the key is absent', () => {
+    const result = DashboardConfigSchema.safeParse(withSettings({}));
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.settings.theme).toBe('dark');
+  });
+
+  it.each(['auto', 'dark', 'light'] as const)('accepts %s and keeps it as written', (theme) => {
+    const result = DashboardConfigSchema.safeParse(withSettings({ theme }));
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.settings.theme).toBe(theme);
+  });
+
+  it('rejects an unknown theme and reports the setting path', () => {
+    const result = DashboardConfigSchema.safeParse(withSettings({ theme: 'neon' }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path)).toContainEqual(['settings', 'theme']);
+    }
+  });
+
+  it('accepts exactly the registry settings', () => {
+    for (const theme of THEME_SETTINGS) {
+      expect(DashboardConfigSchema.safeParse(withSettings({ theme })).success).toBe(true);
+    }
   });
 });

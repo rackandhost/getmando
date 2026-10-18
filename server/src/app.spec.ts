@@ -303,6 +303,37 @@ describe('POST /api/config — schema validation and write', () => {
     await expect(readFile(targetPath, 'utf8')).rejects.toThrow(/ENOENT/);
   });
 
+  it.each(['auto', 'light'])('writes the %s theme verbatim', async (theme) => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: { theme } },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(await readFile(targetPath, 'utf8')).toContain(`theme: ${theme}\n`);
+  });
+
+  it('rejects an unknown theme with its path and writes nothing', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: { theme: 'neon' } },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: ['settings', 'theme'] })]),
+    );
+    await expect(readFile(targetPath, 'utf8')).rejects.toThrow(/ENOENT/);
+  });
+
   it('rejects a semantically invalid config (dangling category reference) and writes nothing', async () => {
     const app = buildApp({ configWriteToken: token, targetPath });
     const invalidConfig = {

@@ -206,5 +206,17 @@ describe('YamlCodecService', () => {
       expect(result.success).toBe(true);
       if (result.success) expect(result.config.settings.layout).toBe(layout);
     });
+
+    it.each(['auto', 'light'] as const)('round-trips the %s theme', (theme) => {
+      const config = configWith('horizontal');
+      const content = service.serialize({ ...config, settings: { ...config.settings, theme } });
+
+      expect(content).toContain(`settings:\n  theme: ${theme}\n`);
+
+      const result = service.parse(content);
+
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.config.settings.theme).toBe(theme);
+    });
   });
 });
