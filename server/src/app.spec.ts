@@ -65,7 +65,9 @@ describe('GET /api/status', () => {
     const app = buildApp({
       configWriteToken: token,
       targetPath,
-      statusPoller: pollerWith(60_000, { app1: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' } }),
+      statusPoller: pollerWith(60_000, {
+        app1: { status: 'down', checkedAt: '2026-01-01T00:00:00.000Z' },
+      }),
     });
 
     const response = await app.inject({ method: 'GET', url: '/api/status' });
@@ -303,7 +305,7 @@ describe('POST /api/config — schema validation and write', () => {
     await expect(readFile(targetPath, 'utf8')).rejects.toThrow(/ENOENT/);
   });
 
-  it.each(['auto', 'light'])('writes the %s theme verbatim', async (theme) => {
+  it.each(['auto', 'light', 'catppuccin-mocha'])('writes the %s theme verbatim', async (theme) => {
     const app = buildApp({ configWriteToken: token, targetPath });
 
     const response = await app.inject({

@@ -123,6 +123,7 @@ describe('App', () => {
   it.each([
     ['dark', '/img/custom-dark.jpg'],
     ['light', '/img/custom-light.jpg'],
+    ['catppuccin-mocha', '/img/custom-dark.jpg'],
   ] as const)('applies the slot of the %s theme: %s', async (theme, expectedUrl) => {
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,

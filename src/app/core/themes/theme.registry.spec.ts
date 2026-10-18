@@ -8,11 +8,24 @@ import {
 } from './theme.registry';
 
 describe('theme registry', () => {
-  it('registers dark then light, displayed as Dark and Light', () => {
+  it('registers dark, light and catppuccin-mocha, in that order, displayed as Dark, Light and Catppuccin Mocha', () => {
     expect(THEMES.map((theme) => [theme.id, theme.name])).toEqual([
       ['dark', 'Dark'],
       ['light', 'Light'],
+      ['catppuccin-mocha', 'Catppuccin Mocha'],
     ]);
+  });
+
+  it('describes Catppuccin Mocha as a dark theme: it uses the dark image slot', () => {
+    const mocha = THEMES.find((theme) => theme.id === 'catppuccin-mocha');
+
+    expect(mocha).toMatchObject({ description: 'Soothing pastel · dark', background: 'dark' });
+    expect(mocha?.swatch).toEqual({
+      bg: '#1E1E2E',
+      card: '#45475A',
+      accent: '#CBA6F7',
+      text: '#CDD6F4',
+    });
   });
 
   it('derives the ids from the registry, in order', () => {

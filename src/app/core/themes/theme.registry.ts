@@ -30,6 +30,13 @@ export const THEMES = [
     background: 'light',
     swatch: { bg: '#F3F1EC', card: '#FFFFFF', accent: '#9A5B00', text: '#383E44' },
   },
+  {
+    id: 'catppuccin-mocha',
+    name: 'Catppuccin Mocha',
+    description: 'Soothing pastel · dark',
+    background: 'dark',
+    swatch: { bg: '#1E1E2E', card: '#45475A', accent: '#CBA6F7', text: '#CDD6F4' },
+  },
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]['id'];

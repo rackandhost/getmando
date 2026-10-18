@@ -207,7 +207,7 @@ describe('YamlCodecService', () => {
       if (result.success) expect(result.config.settings.layout).toBe(layout);
     });
 
-    it.each(['auto', 'light'] as const)('round-trips the %s theme', (theme) => {
+    it.each(['auto', 'light', 'catppuccin-mocha'] as const)('round-trips the %s theme', (theme) => {
       const config = configWith('horizontal');
       const content = service.serialize({ ...config, settings: { ...config.settings, theme } });
 

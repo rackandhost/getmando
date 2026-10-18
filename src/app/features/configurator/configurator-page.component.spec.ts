@@ -1808,6 +1808,25 @@ describe('ConfiguratorPageComponent', () => {
       return { user, writeText, themeService };
     };
 
+    it('offers Auto, Dark, Light and Catppuccin Mocha, and reads 4 themes', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      expect(screen.getByRole('button', { name: /4 themes/ })).toBeInTheDocument();
+      await openThemePanel(user);
+      const group = screen.getByRole('group', { name: 'Default theme' });
+
+      expect(
+        within(group)
+          .getAllByRole('radio')
+          .map((radio) => radio.getAttribute('aria-labelledby'))
+          .map((id) => document.getElementById(id ?? '')?.textContent?.trim()),
+      ).toEqual(['Auto', 'Dark', 'Light', 'Catppuccin Mocha']);
+
+      await user.click(within(group).getByRole('radio', { name: 'Catppuccin Mocha' }));
+      expect(store.updateSettings).toHaveBeenLastCalledWith({ theme: 'catppuccin-mocha' });
+    });
+
     it('replaces the Theme segmented control with the Default theme disclosure, closed, below the layout', async () => {
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
 

@@ -80,6 +80,24 @@ describe('DefaultThemePickerComponent', () => {
     expect(radioNames()).toEqual(optionNames);
   });
 
+  it('lists Auto, Dark, Light and Catppuccin Mocha and counts four themes', async () => {
+    await setupOpen('catppuccin-mocha');
+
+    expect(radioNames()).toEqual(['Auto', 'Dark', 'Light', 'Catppuccin Mocha']);
+    expect(summary()).toHaveTextContent('Catppuccin Mocha');
+    expect(summary()).toHaveTextContent('Soothing pastel · dark');
+    expect(summary()).toHaveTextContent('4 themes');
+    expect(radio('Catppuccin Mocha')).toBeChecked();
+  });
+
+  it('leaves only Catppuccin Mocha when moc is typed', async () => {
+    const { user } = await setupOpen('dark');
+
+    await user.type(filter(), 'moc');
+
+    expect(radioNames()).toEqual(['Catppuccin Mocha']);
+  });
+
   it('checks the card of the draft theme, including auto', async () => {
     const { user } = await setupOpen('auto');
 

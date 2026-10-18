@@ -246,12 +246,15 @@ describe('DashboardSettingsSchema theme', () => {
     if (result.success) expect(result.data.settings.theme).toBe('dark');
   });
 
-  it.each(['auto', 'dark', 'light'] as const)('accepts %s and keeps it as written', (theme) => {
-    const result = DashboardConfigSchema.safeParse(withSettings({ theme }));
+  it.each(['auto', 'dark', 'light', 'catppuccin-mocha'] as const)(
+    'accepts %s and keeps it as written',
+    (theme) => {
+      const result = DashboardConfigSchema.safeParse(withSettings({ theme }));
 
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.settings.theme).toBe(theme);
-  });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.settings.theme).toBe(theme);
+    },
+  );
 
   it('rejects an unknown theme and reports the setting path', () => {
     const result = DashboardConfigSchema.safeParse(withSettings({ theme: 'neon' }));

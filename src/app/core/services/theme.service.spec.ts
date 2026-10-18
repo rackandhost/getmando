@@ -188,6 +188,21 @@ describe('ThemeService', () => {
       expect(root.dataset['theme']).toBe('light');
     });
 
+    it('shows Catppuccin Mocha on the dark background slot', () => {
+      const service = create();
+
+      service.select('catppuccin-mocha');
+      TestBed.flushEffects();
+
+      expect(service.info()).toMatchObject({
+        id: 'catppuccin-mocha',
+        name: 'Catppuccin Mocha',
+        background: 'dark',
+      });
+      expect(root.dataset['theme']).toBe('catppuccin-mocha');
+      expect(localStorage.getItem('dashboard-theme')).toBe('catppuccin-mocha');
+    });
+
     it('gives the registry entry of the active theme: its name and its background slot', () => {
       const service = create();
 

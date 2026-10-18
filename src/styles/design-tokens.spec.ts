@@ -213,6 +213,33 @@ describe('token stylesheet', () => {
     expect(parseColor(tokensOf('dark')[token])).toEqual(parseColor(dark));
   });
 
+  it.each([
+    ['--bg', '#1E1E2E'],
+    ['--scrim', 'rgba(30,30,46,0.8)'],
+    ['--surface', '#181825'],
+    ['--text', '#CDD6F4'],
+    ['--muted', '#A6ADC8'],
+    ['--accent', '#CBA6F7'],
+    ['--accent-ink', '#11111B'],
+    ['--minute-fill', 'rgba(203,166,247,0.85)'],
+    ['--field-border', 'rgba(205,214,244,0.5)'],
+    ['--focus', '#CBA6F7'],
+    ['--focus-halo', 'rgba(17,17,27,0.9)'],
+    ['--band', 'rgba(24,24,37,0.72)'],
+  ])('resolves %s to the specified value in catppuccin-mocha', (token, expected) => {
+    expect(parseColor(tokensOf('catppuccin-mocha')[token])).toEqual(parseColor(expected));
+  });
+
+  it("gives Catppuccin Mocha the shared recipes' floors: 0.15 on the bar, 0.35 on cards, 0.15 on the clock", () => {
+    const tokens = tokensOf('catppuccin-mocha');
+
+    expect([tokens['--floor-bar'], tokens['--floor-card'], tokens['--floor-clock']]).toEqual([
+      '0.15',
+      '0.35',
+      '0.15',
+    ]);
+  });
+
   it('keeps the set of colour tokens the design had before the vertical layout: none is added for it', () => {
     const colour = /rgba?\([^)]*\)|#[0-9a-f]{3,8}\b/i;
 
@@ -331,6 +358,21 @@ describe('token contrast audit', () => {
       expect.arrayContaining([['field border vs card', theme]]),
     );
     expect(violations.every((v) => v.theme === theme)).toBe(true);
+  });
+
+  it('catches a Mocha field border at 0.45, which leaves the unselected layout radio ring under 3 : 1', () => {
+    const weak = withOverrides({
+      'catppuccin-mocha': '--field-border: rgba(205, 214, 244, 0.45);',
+    });
+
+    const violations = auditTokens(weak, surfacesCss);
+    const ring = violations.find((v) => v.pair === 'unselected layout radio ring');
+
+    expect(violations.map((v) => [v.pair, v.theme])).toEqual([
+      ['unselected layout radio ring', 'catppuccin-mocha'],
+    ]);
+    expect(ring?.ratio).toBeCloseTo(2.95, 1);
+    expect(ring?.required).toBe(3);
   });
 
   it('reproduces the "before" figures of design.md §5 when audited with the mockup tokens', () => {

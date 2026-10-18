@@ -169,7 +169,7 @@ ${settings}
         expect(result.data!.settings.theme).toBe('dark');
       });
 
-      it.each(['auto', 'dark', 'light'])('keeps %s as written', (theme) => {
+      it.each(['auto', 'dark', 'light', 'catppuccin-mocha'])('keeps %s as written', (theme) => {
         const result = service.parseYaml(yamlWithSettings(`  theme: ${theme}`));
 
         expect(result.success).toBe(true);
