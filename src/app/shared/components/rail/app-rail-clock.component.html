@@ -1,0 +1,41 @@
+<div
+  class="glass-clock flex flex-col items-center gap-3 rounded-[18px] px-4 pt-[18px] pb-4 text-center text-text max-[1024px]:mx-auto max-[1024px]:w-fit max-[1024px]:max-w-full max-[1024px]:flex-row max-[1024px]:flex-wrap max-[1024px]:justify-center max-[1024px]:rounded-full max-[1024px]:px-3.5 max-[1024px]:py-2"
+  role="img"
+  [attr.aria-label]="label()"
+>
+  @if (dateOnTop()) {
+    <ng-container *ngTemplateOutlet="pills" />
+  }
+
+  <p
+    class="flex items-baseline justify-center text-[58px] leading-none font-extrabold tracking-[-0.03em] max-[1024px]:text-[32px]"
+  >
+    <span class="text-clock-ink">{{ parts().hours }}</span>
+    <span class="px-[0.04em] text-accent">:</span>
+    <span class="text-minute-fill">{{ parts().minutes }}</span>
+    @if (showSeconds()) {
+      <span
+        aria-hidden="true"
+        class="ml-[0.12em] font-mono text-[max(14px,0.18em)] font-semibold tracking-normal text-muted tabular-nums"
+        >{{ parts().seconds }}</span
+      >
+    }
+  </p>
+
+  @if (dateOnBottom()) {
+    <ng-container *ngTemplateOutlet="pills" />
+  }
+</div>
+
+<ng-template #pills>
+  <div
+    class="flex flex-wrap items-center justify-center gap-1.5 font-mono text-[11px] font-semibold tracking-[0.14em]"
+  >
+    <span class="rounded-full bg-accent px-2.5 py-1 text-accent-ink">{{
+      parts().weekday | uppercase
+    }}</span>
+    <span class="rounded-full border border-pill-line bg-pill-bg px-2.5 py-[3px] text-text">{{
+      parts().date | uppercase
+    }}</span>
+  </div>
+</ng-template>

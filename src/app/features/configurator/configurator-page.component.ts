@@ -35,27 +35,43 @@ import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SettingsService } from '../../core/services/settings.service';
 import { YamlCodecService } from '../../core/services/yaml-codec.service';
 import { YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { ParseError } from '../../core/services/yaml-parser.service';
-import type { ChromeProbe } from '../../core/scroll/scroll-state.service';
-import { AppHeaderComponent } from '../../shared/components/app-header/app-header.component';
 import {
   AppSegmentedComponent,
   type SegmentedOption,
 } from '../../shared/components/app-segmented/app-segmented.component';
 import { AppSwitchComponent } from '../../shared/components/app-switch/app-switch.component';
-import { HorizontalNavDirective } from '../../shared/directives/horizontal-nav.directive';
-import { StickyDockDirective } from '../../shared/directives/sticky-dock.directive';
 
 import {
   CollectionEditEvent,
   CollectionEditorComponent,
 } from './components/collection-editor.component';
 import { activeSection, activeThreshold } from './active-section';
-import { ChipAutocenterDirective } from './chip-autocenter.directive';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
+import { LayoutPickerComponent } from './components/layout-picker.component';
+import { ConfiguratorHorizontalChromeComponent } from './chrome/configurator-horizontal-chrome.component';
+import { ConfiguratorVerticalChromeComponent } from './chrome/configurator-vertical-chrome.component';
+import {
+  ConfiguratorChrome,
+  SECTION_CLEARANCE,
+  type ConfiguratorSection,
+} from './configurator-chrome';
+
+/** Where the user is: the section the navigation marks, its distance from the top of the viewport, and whether the page was scrolled to its end. */
+interface PlaceInView {
+  readonly elementId: string;
+  readonly top: number;
+  readonly atBottom: boolean;
+}
+
+/** Frames in a row that what the new arrangement sticks over the top must hold still before it counts as settled. */
+const SETTLED_FRAMES = 4;
+/** How long to wait for that: a header that compacts takes about 0.3 s. */
+const SETTLE_TIMEOUT_MS = 1000;
 
 type BooleanSetting = Extract<
   keyof DashboardSettings,
@@ -66,19 +82,6 @@ type BooleanSetting = Extract<
   | 'showDescriptions'
   | 'showLabels'
 >;
-
-/** Header padding in px at the top of the page and once scrolled (design.md § 4.1, "Configurator"). */
-const HEADER_PADDING = { full: 24, compact: 14 } as const;
-/** Below this viewport height the header stays Static, as the mobile dock does (design.md § 4.1). */
-const HEADER_MIN_VIEWPORT_HEIGHT = 500;
-
-/** Up to this viewport width (px) the layout is one column and the side navigation is a chip bar. */
-const NARROW_MAX_WIDTH = 900;
-/** Where the chip bar sticks (below the scrolled header), and the air a chip leaves above its section. */
-const CHIP_BAR_TOP = 96;
-const CHIP_BAR_CLEARANCE = 16;
-/** Air the sections keep under the sticky header on a wide page. */
-const SECTION_CLEARANCE = 20;
 
 const SECTIONS = [
   { id: 'start', label: 'Starting point' },
@@ -98,14 +101,13 @@ const SECTIONS = [
   selector: 'app-configurator-page',
   imports: [
     NgIcon,
-    AppHeaderComponent,
     CollectionEditorComponent,
     AppSegmentedComponent,
+    LayoutPickerComponent,
     AppSwitchComponent,
     ConfigSectionComponent,
-    ChipAutocenterDirective,
-    HorizontalNavDirective,
-    StickyDockDirective,
+    ConfiguratorHorizontalChromeComponent,
+    ConfiguratorVerticalChromeComponent,
   ],
   viewProviders: [
     provideIcons({
@@ -131,26 +133,25 @@ export class ConfiguratorPageComponent {
   private readonly yamlLoader = inject(YamlLoaderService);
   private readonly document = inject(DOCUMENT);
 
+  /** The arrangement follows the active configuration; the draft's layout is only data until it is saved. */
+  protected readonly layout = inject(SettingsService).layout;
+
   /** `false` only when the server says it has no write token; until it answers (or if it cannot), Save stays available. */
   protected readonly writeEnabled = toSignal(this.configWrite.isWriteEnabled(), {
     initialValue: true,
   });
 
-  protected readonly sections = SECTIONS;
-  protected readonly headerPadding = HEADER_PADDING;
-
-  /** The sticky header follows the shared scroll state; padding 24 → 14 on both sides loses 20 px. */
-  protected readonly probe: ChromeProbe = {
-    id: 'configurator-header',
-    compactDelta: () => 2 * (HEADER_PADDING.full - HEADER_PADDING.compact),
-    minViewportHeight: HEADER_MIN_VIEWPORT_HEIGHT,
-  };
+  /** The sections as the navigation lists them, each with a link that stays on this page. */
+  protected readonly sectionLinks: readonly ConfiguratorSection[] = SECTIONS.map((section) => ({
+    ...section,
+    href: this.anchorHref(section.elementId),
+  }));
 
   private readonly source = inject(METRICS_SOURCE);
   private readonly injector = inject(Injector);
   private readonly errorSummary = viewChild<ElementRef<HTMLElement>>('errorSummary');
-  private readonly dock = viewChild<ElementRef<HTMLElement>>('dockEl');
-  private readonly nav = viewChild<ElementRef<HTMLElement>>('navEl');
+  /** The arrangement around the page (header and side navigation, or the rail); it answers the scroll-spy's metrics. */
+  private readonly chrome = viewChild(ConfiguratorChrome);
   /** Space (px) the sections keep under the sticky stack when scrolled to; bound to `--section-margin`. */
   protected readonly sectionMargin = signal(SECTION_CLEARANCE);
   private cancelFrame: Cancel | null = null;
@@ -186,40 +187,20 @@ export class ConfiguratorPageComponent {
   }
 
   private updateActiveSection(): void {
+    const chrome = this.chrome();
+    if (!chrome) return;
+
     const positions = SECTIONS.flatMap(({ id, elementId }) => {
       const element = this.document.getElementById(elementId);
       return element ? [{ id, top: element.getBoundingClientRect().top }] : [];
     });
-    const narrow = (this.document.defaultView?.innerWidth ?? Infinity) <= NARROW_MAX_WIDTH;
-    const bar = narrow ? this.nav()?.nativeElement.getBoundingClientRect() : undefined;
-    const stack = this.stackHeight(bar);
-    this.sectionMargin.set(this.marginFor(bar));
-    const atBottom =
-      this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
+    const narrow = chrome.narrow();
+    const stack = chrome.stackHeight();
+    this.sectionMargin.set(chrome.sectionMargin());
+    const atBottom = this.isAtBottom();
 
     const active = activeSection(positions, activeThreshold(stack, narrow), atBottom);
     if (active) this.activeId.set(active);
-  }
-
-  /**
-   * Height of what still covers the top of the viewport: the header while it is sticky (none once it has
-   * scrolled away) and, on a narrow page, the chip bar once it is stuck under it.
-   */
-  private stackHeight(bar: DOMRect | undefined): number {
-    const header = Math.max(0, this.dock()?.nativeElement.getBoundingClientRect().bottom ?? 0);
-    if (bar && bar.top <= CHIP_BAR_TOP + 1) return Math.max(header, bar.bottom);
-    return header;
-  }
-
-  /**
-   * `scroll-margin-top` of the sections. The header's height already is the document's `scroll-padding-top`;
-   * on a narrow page the margin adds what the chip bar covers beyond it, so a chip lands its section clear of the bar.
-   */
-  private marginFor(bar: DOMRect | undefined): number {
-    if (!bar) return SECTION_CLEARANCE;
-
-    const padding = parseFloat(this.document.documentElement.style.scrollPaddingTop) || 0;
-    return Math.max(SECTION_CLEARANCE, CHIP_BAR_TOP + bar.height + CHIP_BAR_CLEARANCE - padding);
   }
 
   protected readonly draft = this.store.draft;
@@ -322,8 +303,8 @@ export class ConfiguratorPageComponent {
     this.store.updateSettings({ [field]: checked } as Partial<DashboardSettings>);
   }
 
-  /** Theme and date position: the value comes from a segmented control, already one of its options. */
-  protected setSettingChoice(field: 'theme' | 'datePosition', value: string): void {
+  /** Theme, date position and layout: the value comes from a choice control, already one of its options. */
+  protected setSettingChoice(field: 'theme' | 'datePosition' | 'layout', value: string): void {
     this.store.updateSettings({ [field]: value } as Partial<DashboardSettings>);
   }
 
@@ -357,8 +338,10 @@ export class ConfiguratorPageComponent {
     return `field-${path.join('-')}`;
   }
 
-  protected describedBy(path: readonly string[]): string | undefined {
-    return this.errorFor(path) ? this.errorId(path) : undefined;
+  /** The ids that describe a field: its error when it has one, then any `also` ids (a hint). */
+  protected describedBy(path: readonly string[], ...also: string[]): string | undefined {
+    const ids = this.errorFor(path) ? [this.errorId(path), ...also] : also;
+    return ids.length > 0 ? ids.join(' ') : undefined;
   }
 
   /** The page's own path in front of an anchor: a bare `#id` resolves against `<base href>` and points at the app root. */
@@ -541,13 +524,87 @@ export class ConfiguratorPageComponent {
 
   /**
    * Re-fetches the just-saved YAML and pushes it into the live dashboard state, so the running
-   * app reflects the save immediately instead of only after a manual reload (F5).
+   * app reflects the save immediately instead of only after a manual reload (F5). When that changes the
+   * layout the page draws its sections again inside the other chrome, so where the user was and the Save
+   * button they pressed are put back once it has.
    */
   private async refreshLiveConfig(): Promise<void> {
     const result = await firstValueFrom(this.yamlLoader.refreshMountedConfig());
-    if (result.status === 'valid') {
+    if (result.status !== 'valid') return;
+
+    if (result.config.settings.layout === this.layout()) {
       this.appService.initializeConfig(result.config);
+      return;
     }
+
+    const place = this.placeInView();
+    this.appService.initializeConfig(result.config);
+    afterNextRender(() => this.restorePlace(place), { injector: this.injector });
+  }
+
+  /** Whether the page is scrolled to its very end. */
+  private isAtBottom(): boolean {
+    return this.source.viewportHeight() + this.source.scrollY() >= this.source.docHeight() - 4;
+  }
+
+  /** The section the navigation marks as current, how far below the top of the viewport it is, and whether the page is at its end. */
+  private placeInView(): PlaceInView | undefined {
+    const elementId = SECTIONS.find((section) => section.id === this.activeId())?.elementId;
+    const element = elementId ? this.document.getElementById(elementId) : null;
+    if (!elementId || !element) return undefined;
+
+    return { elementId, top: element.getBoundingClientRect().top, atBottom: this.isAtBottom() };
+  }
+
+  /**
+   * Puts the user back where they were, instantly (a swap is not a movement to animate): at the end of the
+   * page if they were there, otherwise the section as far from the top as before, which is then kept
+   * below whatever the new arrangement sticks over the top once that has settled. Then focuses Save
+   * without scrolling again.
+   */
+  private restorePlace(place: PlaceInView | undefined): void {
+    const view = this.document.defaultView;
+    const element = place ? this.document.getElementById(place.elementId) : null;
+
+    if (place?.atBottom) {
+      view?.scrollTo({ top: this.source.docHeight(), behavior: 'instant' });
+    } else if (place && element) {
+      view?.scrollBy({ top: element.getBoundingClientRect().top - place.top, behavior: 'instant' });
+      this.keepBelowStack(place.elementId);
+    }
+
+    this.document.getElementById('configurator-save')?.focus({ preventScroll: true });
+  }
+
+  /**
+   * A header or bar that has just rendered is not stuck yet, and is not at its final height: it registers
+   * with the scroll state a frame later and then compacts. Waits for what it sticks over the top to hold
+   * still, then brings the section below it if it ended up underneath, as a click on its navigation item
+   * would. Gives up when the user scrolls meanwhile, or after a second.
+   */
+  private keepBelowStack(elementId: string): void {
+    const scrollY = this.source.scrollY();
+    const deadline = this.source.now() + SETTLE_TIMEOUT_MS;
+    let stackHeight = Number.NaN;
+    let stillFrames = 0;
+
+    const check = () => {
+      if (this.source.scrollY() !== scrollY) return;
+
+      const height = this.chrome()?.stackHeight() ?? 0;
+      stillFrames = height === stackHeight ? stillFrames + 1 : 0;
+      stackHeight = height;
+      if (stillFrames < SETTLED_FRAMES && this.source.now() < deadline) {
+        this.source.requestFrame(check);
+        return;
+      }
+
+      const element = this.document.getElementById(elementId);
+      if (element && element.getBoundingClientRect().top < height) {
+        element.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    };
+    this.source.requestFrame(check);
   }
 
   /** The validated draft, or `undefined` after bringing the error summary into view. */

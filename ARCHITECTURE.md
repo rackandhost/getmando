@@ -69,11 +69,11 @@ src/
       scroll/             ScrollStateService, its pure core and the browser metrics token
       services/           configuration, state, domain operations, and diagnostics
     features/
-      configurator/       browser-based YAML editor, loaded as a lazy route
+      configurator/       browser-based YAML editor, loaded as a lazy route; chrome/ holds one page arrangement per layout
     shared/
-      components/         reusable or feature-level presentation components
-      directives/         sticky dock and horizontal-nav directives
-    views/dashboard/      dashboard page composition
+      components/         reusable or feature-level presentation components; rail/ is the vertical layout's sidebar
+      directives/         sticky dock, rail stick, chip autocenter and horizontal-nav directives
+    views/dashboard/      route component that switches between horizontal/ and vertical/ page compositions
   styles/                 design tokens, glass surface recipes, base layer, self-hosted fonts
   testing/                shared test helpers and tooling regression tests
 public/
@@ -120,14 +120,16 @@ through the `getmando.code-workspace` multi-root workspace.
 
 ### Routing
 
-[app.routes.ts](src/app/app.routes.ts) declares two routes. `''` renders `DashboardComponent`
-directly. `configure` lazy-loads `CONFIGURATOR_ROUTES`, which provides `ConfiguratorStore` and
-renders `ConfiguratorPageComponent`. [AppShellComponent](src/app/shared/components/app-shell/app-shell.component.ts)
-is a centred page container (max 1360 px) shared by both routes: the window scrolls, the routed page
-renders its own `AppHeaderComponent` and sticky chrome, and the shell appends the footer in normal
-flow. `AppHeaderComponent` derives one navigation control from the active URL that toggles between
-the dashboard and the configurator; each page decides how its header compacts (see Scroll State
-and Sticky Chrome).
+[app.routes.ts](src/app/app.routes.ts) declares two routes. `''` renders `DashboardComponent`,
+which draws the dashboard of the active layout (see Layouts). `configure` lazy-loads
+`CONFIGURATOR_ROUTES`, which provides `ConfiguratorStore` and renders `ConfiguratorPageComponent`.
+[AppShellComponent](src/app/shared/components/app-shell/app-shell.component.ts) is the page
+container shared by both routes and follows the layout: a centred column (max 1360 px) followed by
+the footer bar for `horizontal`, full width with no footer bar for `vertical` (the rail carries the
+version and credit). The window scrolls; the routed page renders its own header or rail and sticky
+chrome. The link between the dashboard and the configurator comes from `ConfiguratorNavService`,
+which derives it from the active URL and is shared by every header and rail; each page decides how
+its chrome compacts (see Scroll State and Sticky Chrome).
 
 ## Startup and Configuration
 
@@ -246,6 +248,14 @@ Output paths:
   next to it, only when the sidecar answers `{write: false}`; an unreachable sidecar or an
   unexpected answer leaves Save available, and Save then reports the real error.
 
+The editor's arrangement follows the *active* configuration's `settings.layout`, never the draft's:
+choosing a layout in the Layout control only edits the draft. After a successful Save that changes
+the layout, the page redraws inside the other chrome and `restorePlace` puts the user back at the
+same section and offset (or at the end of the page) and refocuses Save. Because the Items per row
+field is disabled with the vertical layout, `ConfiguratorStore.updateSettings` replaces an invalid
+value with the default when `vertical` is chosen and raises an `info` notification, so the draft
+can still validate.
+
 ## Config Write Sidecar
 
 `server/` is a standalone Fastify service, bundled into the production image and started beside
@@ -358,6 +368,37 @@ Storage failures are non-fatal. A read failure logs and warns, then falls back t
 A write failure logs and warns, while preserving the user's selection for the current session. The
 YAML setting itself is not written to browser storage.
 
+## Layouts
+
+`settings.layout` (`horizontal`, the default, or `vertical`) arranges both routes.
+`SettingsService.layout` is the only read point: a computed over the active configuration, so a
+file without the key renders `horizontal`. The two layouts differ in DOM order, landmarks and
+sticky model, so each is its own component rather than one template restyled by CSS.
+
+- **Dashboard.** `DashboardComponent` is a switch over `DashboardHorizontalComponent` (header, clock,
+  search and categories in a sticky dock) and `DashboardVerticalComponent` (rail beside the app
+  grid). Both read the same services; only structure and presentation differ.
+- **Rail.** [rail/](src/app/shared/components/rail) holds `AppRailComponent` (the frame) and its brand,
+  actions, clock and categories blocks; `AppFinderComponent` has a `rail` variant. From 1024 px the
+  rail is a sticky 300 px column; below it, a bar at the top of the page. The DOM order is the visual
+  order at every width: the actions appear twice and the one that is not drawn is `display: none`.
+- **Compact rail.** [RailStickDirective](src/app/shared/directives/rail-stick.directive.ts) applies
+  below 1024 px on a viewport at least 500 px tall. It measures how far the bar may scroll before it
+  sticks (`--rail-stick`), so only the block marked `data-rail-anchor` (the search) and what follows
+  stay on screen, and sets the document's `scroll-padding-top` to what remains visible so a focused
+  control is not left underneath. The arithmetic is in the pure [rail-stick.ts](src/app/shared/directives/rail-stick.ts).
+- **Configurator.** The page keeps the store, the scroll-spy and every handler, and the form body is
+  shared. Only the arrangement around it changes: `ConfiguratorHorizontalChromeComponent` (sticky
+  header, side navigation, chip bar up to 900 px) or `ConfiguratorVerticalChromeComponent` (the rail
+  with the section navigation, a chip bar when compact). Each provides itself under the abstract
+  `ConfiguratorChrome` (`narrow()`, `stackHeight()`, `sectionMargin()`), which the page finds with
+  `viewChild`, so section scrolling and the spy do not know which layout is drawn.
+- **Layout control.** `LayoutPickerComponent` is a disclosure holding a radio group whose options
+  carry a `LayoutThumbnailComponent` schematic.
+
+Only the horizontal layout registers chromes with `ScrollStateService`; the vertical layout has no
+compacting dock.
+
 ## Design Tokens and Glass Surfaces
 
 The look comes from three CSS files under [src/styles](src/styles), imported by `styles.css`:
@@ -407,6 +448,9 @@ scroll on its own.
 - [HorizontalNavDirective](src/app/shared/directives/horizontal-nav.directive.ts) maps the wheel to
   sideways scrolling and reports which edge of a tab bar still hides content so a fade is drawn
   there; the configurator's `ChipAutocenterDirective` keeps the active chip centred.
+- [RailStickDirective](src/app/shared/directives/rail-stick.directive.ts) is the compact vertical
+  rail's counterpart (see Layouts). It reads the same `METRICS_SOURCE` but takes no part in the
+  scroll state: the rail is plain CSS `position: sticky` plus a measured offset.
 
 ## Error and Notification Flow
 
@@ -539,6 +583,7 @@ repository itself.
 | Config write / Save            | `ConfigWriteService`, `server/src/app.ts`, `write-config.ts`, `nginx.conf` | Token auth, shared-schema rejection, atomic write + `.bak`, proxy path |
 | App status badges              | `AppStatusService`, `app-card`, `status-poller.ts`, `status-checker.ts`    | Opt-in default, any response is up, polls only while monitored         |
 | Sticky dock or header behavior | `ScrollStateService`, `StickyDockDirective`, the page's dock markup        | Pure-core specs, loop-free eligibility, breaker, reduced motion, short viewports |
+| Layout, rail or page chrome   | `SettingsService.layout`, `DashboardComponent`, `AppShellComponent`, `rail/`, `ConfiguratorChrome` | Both layouts at 1920, 834 and 390 px, layout swap keeps place, axe, keyboard walk, horizontal pixel diff |
 | Colours, surfaces, blur        | `tokens.css`, `surfaces.css`, `design-tokens.spec.ts`                      | Contrast audit in both themes, with and without `backdrop-filter`      |
 | Theme or backgrounds           | `ThemeService`, `SettingsService`, dashboard view                          | Precedence, storage failures, auto media changes, both backgrounds     |
 | Search or categories           | `SearchService`, `CategoryService`, `AppService`                           | Local UI state, computed filtering, keyboard behavior                  |

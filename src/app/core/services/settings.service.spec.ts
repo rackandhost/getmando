@@ -21,4 +21,21 @@ describe('SettingsService', () => {
 
     expect(service.settings()).toBe(settings);
   });
+
+  it('exposes the layout: horizontal before config loads, then the configured one', () => {
+    const config = signal<DashboardConfig | undefined>(undefined);
+    TestBed.configureTestingModule({
+      providers: [{ provide: ConfigService, useValue: { config } }],
+    });
+    const service = TestBed.inject(SettingsService);
+
+    expect(service.layout()).toBe('horizontal');
+
+    config.set({
+      ...DEFAULT_DASHBOARD_CONFIG,
+      settings: { ...DEFAULT_DASHBOARD_CONFIG.settings, layout: 'vertical' },
+    });
+
+    expect(service.layout()).toBe('vertical');
+  });
 });

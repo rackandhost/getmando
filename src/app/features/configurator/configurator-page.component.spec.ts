@@ -1,10 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { signal, type WritableSignal } from '@angular/core';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/angular';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { NEVER, Observable, of } from 'rxjs';
 
-import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../../core/models/dashboard.models';
+import {
+  DashboardConfig,
+  DashboardLayout,
+  DashboardSettings,
+  DEFAULT_DASHBOARD_CONFIG,
+} from '../../core/models/dashboard.models';
 import { AppService } from '../../core/services/app.service';
 import { ConfigExportService } from '../../core/services/config-export.service';
 import { ConfigWriteService } from '../../core/services/config-write.service';
@@ -640,7 +645,9 @@ describe('ConfiguratorPageComponent', () => {
     });
 
     const field = screen.getByLabelText(/Items per row/);
-    expect(field).toHaveAttribute('aria-describedby', 'error-settings-itemsPerRow');
+    expect(field).toHaveAccessibleDescription(
+      'Items per row must be between 1 and 10. Used by the horizontal layout only.',
+    );
     expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(
       screen.getByText('Items per row must be between 1 and 10.', { selector: 'p' }),
@@ -908,13 +915,13 @@ describe('ConfiguratorPageComponent', () => {
   describe('scroll-spy navigation', () => {
     const frames: (() => void)[] = [];
     const scrollListeners = new Set<() => void>();
-    const metrics = { scrollY: 0, docHeight: 3000, viewportHeight: 900 };
+    const metrics = { scrollY: 0, docHeight: 3000, viewportHeight: 900, now: 0 };
     const source: MetricsSource = {
       scrollY: () => metrics.scrollY,
       docHeight: () => metrics.docHeight,
       viewportHeight: () => metrics.viewportHeight,
       prefersReducedMotion: () => false,
-      now: () => 0,
+      now: () => metrics.now,
       onScroll: (listener) => {
         scrollListeners.add(listener);
         return () => scrollListeners.delete(listener);
@@ -932,7 +939,7 @@ describe('ConfiguratorPageComponent', () => {
     beforeEach(() => {
       frames.length = 0;
       scrollListeners.clear();
-      Object.assign(metrics, { scrollY: 0, docHeight: 3000, viewportHeight: 900 });
+      Object.assign(metrics, { scrollY: 0, docHeight: 3000, viewportHeight: 900, now: 0 });
     });
 
     const renderSpied = () =>
@@ -1075,6 +1082,327 @@ describe('ConfiguratorPageComponent', () => {
         scrollTo(10);
         // Stuck bar bottom (96 + 54) + 16 of air, minus the 87 px the header's scroll padding already covers.
         await waitFor(() => expect(margin()).toBe('79px'));
+      });
+    });
+
+    describe('with the layout of the active configuration', () => {
+      const originalWidth = window.innerWidth;
+      const resizeTo = (width: number) =>
+        Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+      const SECTION_TITLES = [
+        'Choose a starting point',
+        'Metadata',
+        'Settings',
+        'Categories',
+        'Applications',
+        'Bookmarks',
+        'Export configuration',
+      ];
+
+      afterEach(() => {
+        resizeTo(originalWidth);
+        document.documentElement.style.removeProperty('scroll-padding-top');
+      });
+
+      const renderWith = (layout: WritableSignal<DashboardLayout>) =>
+        render(ConfiguratorPageComponent, {
+          providers: [
+            ...defaultProviders(),
+            ...exportProviders(),
+            { provide: METRICS_SOURCE, useValue: source },
+            {
+              provide: ScrollStateService,
+              useValue: { register: () => ({ mode: signal('static'), dispose: vi.fn() }) },
+            },
+            {
+              provide: SettingsService,
+              useValue: { settings: signal(DEFAULT_DASHBOARD_CONFIG.settings), layout },
+            },
+          ],
+        });
+      const rail = () => screen.queryByRole('complementary', { name: 'Configurator' });
+
+      it.each(['horizontal', 'vertical'] as const)(
+        'draws the same seven sections with the %s layout',
+        async (layout) => {
+          await renderWith(signal(layout));
+
+          const sections = SECTION_IDS.map((id) => document.getElementById(`section-${id}`));
+
+          expect(sections.every(Boolean)).toBe(true);
+          expect(
+            sections.map((section) => section?.querySelector('h2')?.textContent?.trim()),
+          ).toEqual(SECTION_TITLES);
+          expect(screen.getByLabelText('Dashboard title')).toBeInTheDocument();
+          expect(screen.getByRole('button', { name: 'Save' })).toHaveAttribute(
+            'id',
+            'configurator-save',
+          );
+        },
+      );
+
+      it('draws the header and the side navigation, and no rail, with the horizontal layout', async () => {
+        await renderWith(signal('horizontal'));
+
+        expect(screen.getByRole('banner')).toBeInTheDocument();
+        expect(rail()).not.toBeInTheDocument();
+      });
+
+      it('draws the rail, and no header band, with the vertical layout', async () => {
+        await renderWith(signal('vertical'));
+
+        expect(rail()).toBeInTheDocument();
+        expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+        expect(within(rail() as HTMLElement).getByRole('heading', { level: 1 })).toHaveTextContent(
+          'Configuration editor',
+        );
+      });
+
+      it('follows the active layout, not the one in the draft', async () => {
+        draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
+        await renderWith(signal('horizontal'));
+
+        expect(screen.getByRole('banner')).toBeInTheDocument();
+        expect(rail()).not.toBeInTheDocument();
+
+        draft.set({ ...draft(), settings: { ...draft().settings, layout: 'horizontal' } });
+      });
+
+      it('swaps the arrangement when the active layout changes, keeping the draft and its fields', async () => {
+        const layout = signal<DashboardLayout>('horizontal');
+        await renderWith(layout);
+        expect(rail()).not.toBeInTheDocument();
+
+        layout.set('vertical');
+
+        await waitFor(() => expect(rail()).toBeInTheDocument());
+        expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Dashboard title')).toHaveValue(draft().metadata.title);
+      });
+
+      describe('when a save changes the layout', () => {
+        let layout: WritableSignal<DashboardLayout>;
+        /** Where the Settings section is: 100 px from the top (inside the 140 px floor) before the swap, 60 px after it. */
+        const tops = { settings: 100 };
+        const save = () => screen.getByRole('button', { name: 'Save' });
+
+        beforeEach(() => {
+          layout = signal<DashboardLayout>('horizontal');
+          tops.settings = 100;
+          store.toDashboardConfig.mockReturnValue(draft());
+          configWrite.hasToken.mockReturnValue(true);
+          configWrite.save.mockReturnValue(of({ status: 'saved' }));
+          yamlLoader.refreshMountedConfig.mockReturnValue(
+            of({
+              status: 'valid',
+              config: { ...draft(), settings: { ...draft().settings, layout: 'vertical' } },
+            }),
+          );
+          appService.initializeConfig.mockImplementation(() => {
+            tops.settings = 60;
+            layout.set('vertical');
+          });
+          vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+          // The elements the swap creates have no stubbed box: they sit where the new arrangement puts them.
+          vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+            this: Element,
+          ) {
+            return { top: this.id === 'section-settings' ? tops.settings : 5000 } as DOMRect;
+          });
+        });
+
+        afterEach(() => {
+          appService.initializeConfig.mockReset();
+          Reflect.deleteProperty(Element.prototype, 'scrollIntoView');
+          document.documentElement.style.removeProperty('scroll-padding-top');
+        });
+
+        /** The user is `scrollY` px down when Save is pressed: 900 puts Settings in view, 2100 is the bottom of the page. */
+        const saveFromSettings = async (scrollY = 900, active = '03 Settings') => {
+          const user = userEvent.setup();
+          await renderWith(layout);
+          flushFrames();
+          placeSections({ start: -900, metadata: -500, settings: 100, categories: 800 });
+          scrollTo(scrollY);
+          await waitFor(() => expect(currentItems()).toEqual([active]));
+          await user.click(save());
+          await waitFor(() => expect(rail()).toBeInTheDocument());
+        };
+
+        it('scrolls by the distance the section in view moved, so it stays where it was', async () => {
+          await saveFromSettings();
+
+          await waitFor(() =>
+            expect(window.scrollBy).toHaveBeenCalledExactlyOnceWith({
+              top: 60 - 100,
+              behavior: 'instant',
+            }),
+          );
+        });
+
+        it('puts focus on the Save button of the new arrangement', async () => {
+          await saveFromSettings();
+
+          await waitFor(() => expect(save()).toHaveFocus());
+          expect(save()).toHaveAttribute('id', 'configurator-save');
+        });
+
+        it('keeps the same section as the active item of the new navigation', async () => {
+          await saveFromSettings();
+
+          await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+        });
+
+        it('shows only the saved notification and leaves the draft and its validation alone', async () => {
+          const before = { draft: draft(), errors: validationErrors() };
+          await saveFromSettings();
+          await waitFor(() => expect(save()).toHaveFocus());
+
+          expect(notifications.success).toHaveBeenCalledExactlyOnceWith(
+            'Configuration saved to the server.',
+          );
+          expect(notifications.error).not.toHaveBeenCalled();
+          expect(draft()).toBe(before.draft);
+          expect(validationErrors()).toBe(before.errors);
+          expect(store.updateSettings).not.toHaveBeenCalled();
+        });
+
+        /** Replaces `scrollIntoView`, which jsdom lacks, with a recorder. */
+        const stubScrollIntoView = () => {
+          const scrollIntoView = vi.fn();
+          Object.defineProperty(Element.prototype, 'scrollIntoView', {
+            configurable: true,
+            value: scrollIntoView,
+          });
+          return scrollIntoView;
+        };
+        /** Lets the animation frames the page asks for run, as the browser would, until `expectation` holds. */
+        const settle = (expectation: () => void) =>
+          waitFor(() => {
+            flushFrames();
+            expectation();
+          });
+
+        it('brings the section below what the new arrangement sticks over its old spot', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          // The new bar is stuck over the top 300 px; the section was 100 px from the top.
+          document.documentElement.style.scrollPaddingTop = '300px';
+          await saveFromSettings();
+
+          await settle(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+          expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('section-settings'));
+          expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' });
+        });
+
+        it('waits for the new arrangement to settle: what it sticks arrives frames after it renders', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          await saveFromSettings();
+          await settle(() => expect(window.scrollBy).toHaveBeenCalled());
+          expect(scrollIntoView).not.toHaveBeenCalled();
+
+          // The bar was not stuck yet when the section was put back; it is now, over the top 300 px.
+          document.documentElement.style.scrollPaddingTop = '300px';
+
+          await settle(() => expect(scrollIntoView).toHaveBeenCalledOnce());
+          expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('section-settings'));
+        });
+
+        it('does not pull the user back when they scroll while the new arrangement settles', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          await saveFromSettings();
+          await settle(() => expect(window.scrollBy).toHaveBeenCalled());
+
+          metrics.scrollY += 40;
+          document.documentElement.style.scrollPaddingTop = '300px';
+          for (let frame = 0; frame < 10; frame++) flushFrames();
+
+          expect(scrollIntoView).not.toHaveBeenCalled();
+        });
+
+        it('stops waiting after a second even if the new arrangement keeps moving', async () => {
+          const scrollIntoView = stubScrollIntoView();
+          resizeTo(390);
+          await saveFromSettings();
+          await settle(() => expect(window.scrollBy).toHaveBeenCalled());
+
+          // A header that compacts a pixel per frame never holds still.
+          let padding = 100;
+          const move = () => {
+            document.documentElement.style.scrollPaddingTop = `${(padding += 1)}px`;
+            flushFrames();
+          };
+          for (let frame = 0; frame < 20; frame++) move();
+          expect(scrollIntoView).not.toHaveBeenCalled();
+
+          metrics.now = 1100;
+          move();
+
+          expect(scrollIntoView).toHaveBeenCalledOnce();
+          flushFrames();
+          expect(scrollIntoView).toHaveBeenCalledOnce();
+        });
+
+        it('stays at the bottom of the page when Save was pressed there, so the last section stays the active one', async () => {
+          vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+          metrics.docHeight = 3000;
+          await saveFromSettings(2100, '07 Export');
+
+          await waitFor(() =>
+            expect(window.scrollTo).toHaveBeenCalledExactlyOnceWith({
+              top: 3000,
+              behavior: 'instant',
+            }),
+          );
+          expect(window.scrollBy).not.toHaveBeenCalled();
+          await waitFor(() => expect(save()).toHaveFocus());
+        });
+
+        it('leaves the scroll and the focus alone when the saved layout is the one already active', async () => {
+          const user = userEvent.setup();
+          appService.initializeConfig.mockImplementation(() => undefined);
+          yamlLoader.refreshMountedConfig.mockReturnValue(of({ status: 'valid', config: draft() }));
+          await renderWith(layout);
+
+          await user.click(save());
+
+          await waitFor(() => expect(appService.initializeConfig).toHaveBeenCalledOnce());
+          expect(window.scrollBy).not.toHaveBeenCalled();
+          expect(save()).toHaveFocus();
+          expect(rail()).not.toBeInTheDocument();
+        });
+      });
+
+      it('keeps the 140 px floor of the spy while the rail is a column', async () => {
+        resizeTo(1280);
+        await renderWith(signal('vertical'));
+        flushFrames();
+        placeSections({ start: -900, metadata: -500, settings: 150, categories: 520 });
+
+        scrollTo(600);
+        await waitFor(() => expect(currentItems()).toEqual(['02 Metadata']));
+
+        placeSections({ start: -900, metadata: -500, settings: 130, categories: 520 });
+        scrollTo(620);
+        await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+      });
+
+      it('asks the chip bar for the stuck height: a section within 24 px below it is the active one', async () => {
+        resizeTo(390);
+        await renderWith(signal('vertical'));
+        flushFrames();
+        // The rail's directive keeps the scroll padding equal to the stuck part while it is stuck.
+        document.documentElement.style.scrollPaddingTop = '300px';
+        placeSections({ start: -900, metadata: -500, settings: 320, categories: 520 });
+
+        scrollTo(600);
+        await waitFor(() => expect(currentItems()).toEqual(['03 Settings']));
+
+        placeSections({ start: -900, metadata: -500, settings: 330, categories: 520 });
+        scrollTo(620);
+        await waitFor(() => expect(currentItems()).toEqual(['02 Metadata']));
       });
     });
   });
@@ -1326,6 +1654,127 @@ describe('ConfiguratorPageComponent', () => {
     });
   });
 
+  describe('layout control', () => {
+    afterEach(() => {
+      store.updateSettings.mockReset();
+      draft.set({ ...draft(), settings: { ...draft().settings, layout: 'horizontal' } });
+    });
+
+    /** The panel starts closed, so tests of the cards open it first. */
+    const openLayoutPanel = (user: UserEvent) =>
+      user.click(screen.getByRole('button', { name: /2 layouts/ }));
+
+    it.each([
+      ['horizontal', false],
+      ['vertical', true],
+    ] as const)(
+      'says Items per row is used by the horizontal layout only and disables it only for vertical (%s)',
+      async (layout, disabled) => {
+        draft.set({ ...draft(), settings: { ...draft().settings, layout } });
+        await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+        const field = screen.getByLabelText('Items per row');
+
+        expect(screen.getByText('Used by the horizontal layout only.')).toBeVisible();
+        expect(field).toHaveAccessibleDescription('Used by the horizontal layout only.');
+        expect(field).toHaveValue(draft().settings.itemsPerRow);
+        if (disabled) expect(field).toBeDisabled();
+        else expect(field).toBeEnabled();
+      },
+    );
+
+    it('enables Items per row again, with the same value, when Horizontal bar is chosen', async () => {
+      const user = userEvent.setup();
+      draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
+      store.updateSettings.mockImplementation((patch: Partial<DashboardSettings>) =>
+        draft.set({ ...draft(), settings: { ...draft().settings, ...patch } }),
+      );
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      const field = screen.getByLabelText('Items per row');
+      const value = draft().settings.itemsPerRow;
+      expect(field).toBeDisabled();
+
+      await openLayoutPanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Horizontal bar' }));
+
+      expect(field).toBeEnabled();
+      expect(field).toHaveValue(value);
+      await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
+      expect(field).toBeDisabled();
+      expect(draft().settings.itemsPerRow).toBe(value);
+    });
+
+    it('opens the Settings section, before the theme, reflecting the draft layout', async () => {
+      const user = userEvent.setup();
+      draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+      await openLayoutPanel(user);
+
+      const settings = within(document.getElementById('section-settings') as HTMLElement);
+      const layout = settings.getByRole('group', { name: 'Layout' });
+
+      expect(within(layout).getByRole('radio', { name: 'Vertical bar' })).toBeChecked();
+      expect(
+        layout.compareDocumentPosition(settings.getByRole('radiogroup', { name: 'Theme' })),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('writes only the layout of the draft when a layout is chosen', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      await openLayoutPanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
+
+      expect(store.updateSettings).toHaveBeenCalledExactlyOnceWith({ layout: 'vertical' });
+    });
+
+    it('exports layout: vertical after Vertical bar is chosen (data parity)', async () => {
+      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+      await render(ConfiguratorPageComponent, {
+        providers: [
+          { provide: AppService, useValue: appService },
+          { provide: ThemeService, useValue: { isDark: signal(true), toggleTheme: vi.fn() } },
+          {
+            provide: MetadataService,
+            useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
+          },
+          {
+            provide: YamlLoaderService,
+            useValue: {
+              mountedPath: '/config/dashboard.yaml',
+              mountedConfigResult: signal<MountedConfigResult>({
+                status: 'valid',
+                config: {
+                  ...draft(),
+                  settings: { ...draft().settings, layout: 'horizontal' },
+                },
+              }),
+              refreshMountedConfig: yamlLoader.refreshMountedConfig,
+            },
+          },
+          { provide: LoggerService, useValue: logger },
+          { provide: NotificationService, useValue: notifications },
+          { provide: ConfigWriteService, useValue: configWrite },
+          ConfiguratorStore,
+          ConfigExportService,
+        ],
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Load mounted YAML' }));
+      await openLayoutPanel(user);
+      expect(screen.getByRole('radio', { name: 'Horizontal bar' })).toBeChecked();
+      await user.click(screen.getByRole('radio', { name: 'Vertical bar' }));
+      expect(screen.getByRole('radio', { name: 'Vertical bar' })).toBeChecked();
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('layout: vertical');
+    });
+  });
+
   describe('theme and accessibility matrix', () => {
     const root = document.documentElement;
     const originalWidth = window.innerWidth;
@@ -1348,7 +1797,10 @@ describe('ConfiguratorPageComponent', () => {
           ThemeService,
           {
             provide: SettingsService,
-            useValue: { settings: signal(DEFAULT_DASHBOARD_CONFIG.settings) },
+            useValue: {
+              settings: signal(DEFAULT_DASHBOARD_CONFIG.settings),
+              layout: signal(DEFAULT_DASHBOARD_CONFIG.settings.layout),
+            },
           },
           { provide: LoggerService, useValue: logger },
           { provide: NotificationService, useValue: notifications },

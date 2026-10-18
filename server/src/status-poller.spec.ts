@@ -34,6 +34,7 @@ const configWith = (apps: { id: string; healthCheck: boolean }[]): DashboardConf
   bookmarks: [],
   settings: {
     theme: 'dark',
+    layout: 'horizontal',
     dateFormat: 'dd-MM-yyyy',
     datePosition: 'top',
     showSeconds: false,

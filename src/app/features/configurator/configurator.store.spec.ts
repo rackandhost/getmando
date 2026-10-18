@@ -31,12 +31,16 @@ describe('ConfiguratorStore', () => {
   let store: ConfiguratorStore;
   let mountedConfigResult: ReturnType<typeof signal<MountedConfigResult | undefined>>;
   let codec: { parse: ReturnType<typeof vi.fn> };
-  let notifications: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let notifications: {
+    success: ReturnType<typeof vi.fn>;
+    error: ReturnType<typeof vi.fn>;
+    info: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     mountedConfigResult = signal<MountedConfigResult | undefined>(undefined);
     codec = { parse: vi.fn() };
-    notifications = { success: vi.fn(), error: vi.fn() };
+    notifications = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -188,6 +192,57 @@ describe('ConfiguratorStore', () => {
 
     expect(store.validate()).toBe(true);
     expect(store.validationErrors()).toEqual([]);
+  });
+
+  describe('Items per row with the vertical layout', () => {
+    const DEFAULT_ITEMS_PER_ROW = DEFAULT_DASHBOARD_CONFIG.settings.itemsPerRow;
+    const withItemsPerRow = (itemsPerRow: number) => {
+      store.replaceDraft({ ...validConfig, settings: { ...validConfig.settings, itemsPerRow } });
+    };
+
+    it.each([0, 11, 2.5, Number.NaN])(
+      'replaces the invalid value %s with the default when vertical is chosen, so the draft validates',
+      (invalid) => {
+        withItemsPerRow(invalid);
+        expect(store.validate()).toBe(false);
+
+        store.updateSettings({ layout: 'vertical' });
+
+        expect(store.draft().settings.itemsPerRow).toBe(DEFAULT_ITEMS_PER_ROW);
+        expect(store.validate()).toBe(true);
+        expect(notifications.info).toHaveBeenCalledExactlyOnceWith(
+          `Items per row was not valid, so ${DEFAULT_ITEMS_PER_ROW} is used with the vertical layout.`,
+        );
+      },
+    );
+
+    it('keeps a valid value when vertical is chosen, without a notice', () => {
+      withItemsPerRow(7);
+
+      store.updateSettings({ layout: 'vertical' });
+
+      expect(store.draft().settings.itemsPerRow).toBe(7);
+      expect(notifications.info).not.toHaveBeenCalled();
+    });
+
+    it('leaves an invalid value alone with the horizontal layout, where the field is editable', () => {
+      withItemsPerRow(0);
+
+      store.updateSettings({ layout: 'horizontal' });
+
+      expect(store.draft().settings.itemsPerRow).toBe(0);
+      expect(store.validate()).toBe(false);
+      expect(notifications.info).not.toHaveBeenCalled();
+    });
+
+    it('keeps the default it set when horizontal is chosen again', () => {
+      withItemsPerRow(0);
+
+      store.updateSettings({ layout: 'vertical' });
+      store.updateSettings({ layout: 'horizontal' });
+
+      expect(store.draft().settings.itemsPerRow).toBe(DEFAULT_ITEMS_PER_ROW);
+    });
   });
 
   it('adds and updates an application icon as an IconConfig without losing its value on type changes', () => {

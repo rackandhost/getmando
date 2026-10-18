@@ -196,3 +196,37 @@ describe('DashboardConfigSchema semantic validation', () => {
     expect(DashboardConfigSchema.safeParse(config).success).toBe(true);
   });
 });
+
+describe('DashboardSettingsSchema layout', () => {
+  const withSettings = (settings: Record<string, unknown>) => ({
+    ...validConfig(),
+    settings,
+  });
+
+  it('defaults to the horizontal layout when the key is absent', () => {
+    const result = DashboardConfigSchema.safeParse(withSettings({}));
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.settings.layout).toBe('horizontal');
+  });
+
+  it.each(['horizontal', 'vertical'] as const)('accepts the %s layout', (layout) => {
+    const result = DashboardConfigSchema.safeParse(withSettings({ layout }));
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.settings.layout).toBe(layout);
+  });
+
+  it('rejects an unknown layout and reports the setting path', () => {
+    const result = DashboardConfigSchema.safeParse(withSettings({ layout: 'sideways' }));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path.join('.'))).toContain('settings.layout');
+    }
+  });
+
+  it('keeps horizontal as the layout of the built-in default configuration', () => {
+    expect(DEFAULT_DASHBOARD_CONFIG.settings.layout).toBe('horizontal');
+  });
+});

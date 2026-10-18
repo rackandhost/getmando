@@ -1,0 +1,92 @@
+<p class="text-[13px] font-medium text-text" [id]="labelId">Layout</p>
+<div
+  class="rounded-[14px] border border-line bg-surface-2 transition-colors duration-200 data-[open=true]:border-accent/28 data-[open=true]:bg-accent/6 motion-reduce:transition-none"
+  [attr.data-open]="open()"
+>
+  <button
+    class="flex min-h-16 w-full items-center gap-3.5 rounded-[14px] px-3.5 py-2.5 text-left text-text transition-colors duration-200 hover:bg-text/5 motion-reduce:transition-none"
+    type="button"
+    [attr.aria-controls]="panelId"
+    [attr.aria-describedby]="labelId"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()"
+  >
+    <app-layout-thumbnail size="sm" [layout]="current().value" />
+    <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span class="text-[15px] font-semibold">{{ current().name }}</span>
+      <span class="text-[13px] text-muted">{{ current().description }}</span>
+    </span>
+    <span class="shrink-0 font-mono text-xs text-muted max-[640px]:hidden"
+      >{{ layouts.length }} layouts</span
+    >
+    <ng-icon
+      aria-hidden="true"
+      class="shrink-0 text-lg text-muted transition-transform duration-200 data-[open=true]:rotate-180 motion-reduce:transition-none"
+      name="heroChevronDown"
+      [attr.data-open]="open()"
+    />
+  </button>
+
+  <div
+    class="grid grid-rows-[1fr] transition-[grid-template-rows,opacity,visibility] duration-300 ease-out data-[open=false]:grid-rows-[0fr] data-[open=false]:opacity-0 motion-reduce:transition-none"
+    [attr.data-open]="open()"
+    [style.visibility]="open() ? 'visible' : 'hidden'"
+  >
+    <div class="min-h-0 overflow-hidden">
+      <fieldset
+        class="mx-3.5 min-w-0 border-0 border-t border-accent/18 pt-3.5 pb-4"
+        [attr.aria-labelledby]="labelId"
+        [id]="panelId"
+      >
+        <legend class="sr-only">Choose the dashboard layout</legend>
+        <p class="mb-3.5 text-[13px] text-muted">
+          How the dashboard arranges the clock, search and categories around your applications.
+        </p>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(min(220px,100%),1fr))] gap-3">
+          @for (layout of layouts; track layout.value) {
+            <label
+              class="relative flex cursor-pointer flex-col gap-2.5 rounded-[14px] border border-line-strong bg-surface-2 px-2.5 pt-2.5 pb-3 transition-[border-color,background-color,box-shadow] duration-200 has-[input:focus-visible]:shadow-[0_0_0_2px_var(--focus-halo)]! has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus data-[checked=false]:hover:border-accent/60 data-[checked=true]:border-accent data-[checked=true]:bg-accent/8 data-[checked=true]:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_14%,transparent)] motion-reduce:transition-none"
+              [attr.data-checked]="layout.value === value()"
+            >
+              <input
+                class="sr-only"
+                type="radio"
+                [attr.aria-describedby]="optionId(layout, 'description')"
+                [attr.aria-labelledby]="optionId(layout, 'name')"
+                [checked]="layout.value === value()"
+                [name]="groupName"
+                [value]="layout.value"
+                (change)="choose(layout.value)"
+              />
+              <app-layout-thumbnail [layout]="layout.value" />
+              <span class="flex items-center justify-between gap-2 px-0.5">
+                <span class="flex min-w-0 flex-col gap-px">
+                  <span class="text-sm font-semibold text-text" [id]="optionId(layout, 'name')">{{
+                    layout.name
+                  }}</span>
+                  <span class="text-xs text-muted" [id]="optionId(layout, 'description')">{{
+                    layout.description
+                  }}</span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  class="grid size-5 shrink-0 place-items-center rounded-full border-[1.5px] border-field-border text-accent-ink transition-colors duration-200 data-[checked=true]:border-accent data-[checked=true]:bg-accent motion-reduce:transition-none"
+                  [attr.data-checked]="layout.value === value()"
+                >
+                  @if (layout.value === value()) {
+                    <ng-icon
+                      class="text-[11px]"
+                      data-layout-check
+                      name="heroCheck"
+                      strokeWidth="3.2"
+                    />
+                  }
+                </span>
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</div>

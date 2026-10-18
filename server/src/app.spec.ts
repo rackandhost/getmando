@@ -257,6 +257,52 @@ describe('POST /api/config — schema validation and write', () => {
     expect(written.settings.lightBackgroundImage).toBe('custom-light.jpg');
   });
 
+  it('writes a vertical layout verbatim', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: { layout: 'vertical' } },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const written = load(await readFile(targetPath, 'utf8')) as { settings: { layout: string } };
+    expect(written.settings.layout).toBe('vertical');
+  });
+
+  it('writes the horizontal layout when the payload does not name one', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: {} },
+    });
+
+    const written = load(await readFile(targetPath, 'utf8')) as { settings: { layout: string } };
+    expect(written.settings.layout).toBe('horizontal');
+  });
+
+  it('rejects an unknown layout with its path and writes nothing', async () => {
+    const app = buildApp({ configWriteToken: token, targetPath });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/config',
+      headers: { 'x-config-token': token },
+      payload: { ...validConfig, settings: { layout: 'sideways' } },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().errors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: ['settings', 'layout'] })]),
+    );
+    await expect(readFile(targetPath, 'utf8')).rejects.toThrow(/ENOENT/);
+  });
+
   it('rejects a semantically invalid config (dangling category reference) and writes nothing', async () => {
     const app = buildApp({ configWriteToken: token, targetPath });
     const invalidConfig = {

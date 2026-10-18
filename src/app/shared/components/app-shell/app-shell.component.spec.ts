@@ -1,8 +1,11 @@
+import { signal, type WritableSignal } from '@angular/core';
 import { render, screen } from '@testing-library/angular';
 
 import { AppShellComponent } from './app-shell.component';
 
 import { AppService } from '../../../core/services/app.service';
+import { SettingsService } from '../../../core/services/settings.service';
+import type { DashboardLayout } from '../../../core/models/dashboard.models';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
 
 describe('AppShell', () => {
@@ -47,5 +50,55 @@ describe('AppShell', () => {
     const { container } = await setup();
 
     await expectNoAxeViolations(container);
+  });
+
+  describe('layout', () => {
+    const setupWithLayout = (layout: WritableSignal<DashboardLayout>) =>
+      render(
+        '<app-shell><header>Page header</header><main><p>Routed content</p></main></app-shell>',
+        {
+          imports: [AppShellComponent],
+          providers: [
+            { provide: AppService, useValue: { appVersion: '9.9.9' } },
+            { provide: SettingsService, useValue: { layout } },
+          ],
+        },
+      );
+
+    it('keeps the footer bar in the horizontal layout', async () => {
+      await setupWithLayout(signal<DashboardLayout>('horizontal'));
+
+      expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    });
+
+    it('renders no footer bar in the vertical layout, only the routed content', async () => {
+      await setupWithLayout(signal<DashboardLayout>('vertical'));
+
+      expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+      expect(screen.getByRole('main')).toHaveTextContent('Routed content');
+      expect(screen.getByRole('banner')).toHaveTextContent('Page header');
+    });
+
+    it('adds or removes the footer bar when the layout changes while the page is open', async () => {
+      const layout = signal<DashboardLayout>('horizontal');
+      const { fixture } = await setupWithLayout(layout);
+
+      layout.set('vertical');
+      fixture.detectChanges();
+
+      expect(screen.queryByRole('contentinfo')).not.toBeInTheDocument();
+      expect(screen.getByRole('main')).toBeInTheDocument();
+
+      layout.set('horizontal');
+      fixture.detectChanges();
+
+      expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+    });
+
+    it('has no accessibility violations in the vertical layout', async () => {
+      const { container } = await setupWithLayout(signal<DashboardLayout>('vertical'));
+
+      await expectNoAxeViolations(container);
+    });
   });
 });

@@ -99,12 +99,26 @@ const SURFACES: Record<SurfaceName, { recipe: RecipeName; layer?: string }> = {
   widget: { recipe: 'glass-clock' },
 };
 
+type Layer = string | { token: string; opacity: number };
+
+/**
+ * The accent tint behind the selected category (`bg-accent/8`). At 10 % the 3 × 16 px marker, a graphic
+ * object that needs 3 : 1, measured 2.94 : 1 in the light theme; 8 % keeps it above.
+ */
+const SELECTED_TINT: Layer = { token: '--accent', opacity: 0.08 };
+
+/** The accent wash of the open Layout panel (`bg-accent/6`) and the card colour on it (`bg-surface-2`). */
+const LAYOUT_PANEL: Layer = { token: '--accent', opacity: 0.06 };
+
 interface Pair {
   name: string;
   surface: SurfaceName;
   required: number;
-  /** Tokens painted over the surface, in order, to form the backdrop of the ink. */
-  on?: string[];
+  /**
+   * Layers painted over the surface, in order, to form the backdrop of the ink: a token, or a token at a
+   * given opacity (a tint such as `bg-accent/10`).
+   */
+  on?: Layer[];
   /** Tokens painted over the backdrop, in order, to form the foreground. */
   ink: string[];
 }
@@ -147,6 +161,118 @@ const PAIRS: Pair[] = [
     on: ['--field'],
     ink: ['--field-border'],
   },
+  // The vertical layout's rail: the bar recipe, the field on it, the pills of the main column.
+  // Spec design-system "Contrast pairs of the rail".
+  { name: 'text on rail', surface: 'bar', required: 4.5, ink: ['--text'] },
+  { name: 'muted on rail', surface: 'bar', required: 4.5, ink: ['--muted'] },
+  { name: 'brand description on rail', surface: 'bar', required: 4.5, ink: ['--muted'] },
+  { name: 'version and credit on rail', surface: 'bar', required: 4.5, ink: ['--muted'] },
+  { name: 'unselected category on rail', surface: 'bar', required: 4.5, ink: ['--muted'] },
+  {
+    name: 'selected category on its tint',
+    surface: 'bar',
+    required: 4.5,
+    on: [SELECTED_TINT],
+    ink: ['--text'],
+  },
+  {
+    // The marker is the non-colour cue of the selection, so it is a graphic object (WCAG 1.4.11).
+    name: 'selected category marker on its tint',
+    surface: 'bar',
+    required: 3,
+    on: [SELECTED_TINT],
+    ink: ['--accent'],
+  },
+  {
+    name: 'search text on field',
+    surface: 'bar',
+    required: 4.5,
+    on: ['--field'],
+    ink: ['--text'],
+  },
+  {
+    name: 'search placeholder on field',
+    surface: 'bar',
+    required: 4.5,
+    on: ['--field'],
+    ink: ['--muted'],
+  },
+  {
+    name: 'placeholder on configurator field',
+    surface: 'card',
+    required: 4.5,
+    on: ['--field'],
+    ink: ['--muted'],
+  },
+  { name: 'main heading on its pill', surface: 'bar', required: 4.5, ink: ['--text'] },
+  { name: 'item count on its pill', surface: 'bar', required: 4.5, ink: ['--muted'] },
+  { name: 'setup eyebrow on card tile', surface: 'card', required: 4.5, ink: ['--accent'] },
+  // The Layout control of the configurator: a wash on the section card, layout cards on it
+  // (`bg-surface-2`) and, for the selected one, the category tint (`bg-accent/8`) in place of that
+  // colour, not over it. Spec yaml-configurator "Layout control accessibility".
+  {
+    name: 'muted on layout panel',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL],
+    ink: ['--muted'],
+  },
+  {
+    name: 'text on unselected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--text'],
+  },
+  {
+    name: 'muted on unselected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--muted'],
+  },
+  {
+    name: 'text on selected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, SELECTED_TINT],
+    ink: ['--text'],
+  },
+  {
+    name: 'muted on selected layout card',
+    surface: 'card',
+    required: 4.5,
+    on: [LAYOUT_PANEL, SELECTED_TINT],
+    ink: ['--muted'],
+  },
+  {
+    name: 'muted on closed layout summary',
+    surface: 'card',
+    required: 4.5,
+    on: ['--surface-2'],
+    ink: ['--muted'],
+  },
+  {
+    name: 'unselected layout radio ring',
+    surface: 'card',
+    required: 3,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--field-border'],
+  },
+  {
+    name: 'selected layout border',
+    surface: 'card',
+    required: 3,
+    on: [LAYOUT_PANEL, '--surface-2'],
+    ink: ['--accent'],
+  },
+  {
+    name: 'layout check mark on its dot',
+    surface: 'card',
+    required: 3,
+    on: ['--accent'],
+    ink: ['--accent-ink'],
+  },
 ];
 
 const BACKDROPS = [parseColor('#000000'), parseColor('#FFFFFF')];
@@ -169,8 +295,14 @@ function measureTheme(theme: Theme, tokens: TokenSet, recipes: Recipes): Measure
   };
 
   const scrim = solid('--scrim');
-  const paint = (layers: string[], backdrop: Rgba) =>
-    layers.reduce((under, name) => compositeOver(solid(name), under), backdrop);
+  const paint = (layers: Layer[], backdrop: Rgba) =>
+    layers.reduce((under, layer) => {
+      const color = solid(typeof layer === 'string' ? layer : layer.token);
+      return compositeOver(
+        typeof layer === 'string' ? color : { ...color, a: color.a * layer.opacity },
+        under,
+      );
+    }, backdrop);
   const contrastOn = (pair: Pair, background: Rgba) =>
     contrastRatio(paint(pair.ink, background), background);
 

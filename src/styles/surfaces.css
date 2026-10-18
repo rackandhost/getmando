@@ -91,4 +91,9 @@
 @utility glass-field {
   background: var(--field);
   border: 1px solid var(--field-border);
+
+  /* The preflight default (the text colour at 50 %) is 3.4 : 1 on the light field. */
+  &::placeholder {
+    color: var(--muted);
+  }
 }

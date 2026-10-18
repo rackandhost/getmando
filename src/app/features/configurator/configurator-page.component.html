@@ -1,233 +1,204 @@
-<div
-  #dockEl
-  #dock="appStickyDock"
-  class="sticky top-0 z-30 -mx-[clamp(16px,4vw,40px)] px-[clamp(16px,4vw,40px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[dock=scrolled]:bg-[var(--band)] data-[dock=scrolled]:shadow-[var(--band-shadow)] data-[dock=scrolled]:[backdrop-filter:var(--band-glass)] data-[dock=static]:relative"
-  [appStickyDock]="probe"
->
-  <app-header [compact]="dock.mode() === 'scrolled'" [verticalPadding]="headerPadding" />
-</div>
+@switch (layout()) {
+  @case ('vertical') {
+    <app-configurator-vertical-chrome
+      [activeId]="activeId()"
+      [body]="body"
+      [sections]="sectionLinks"
+      (sectionSelected)="goToSection($event.elementId, $event.event)"
+    />
+  }
+  @default {
+    <app-configurator-horizontal-chrome
+      [activeId]="activeId()"
+      [body]="body"
+      [sections]="sectionLinks"
+      (sectionSelected)="goToSection($event.elementId, $event.event)"
+    />
+  }
+}
 
-<main class="min-w-0 flex-1">
-  <div class="glass-card mt-10 mb-7 flex max-w-[760px] flex-col gap-2.5 rounded-3xl px-8 py-7">
-    <p class="font-mono text-xs font-medium tracking-[0.14em] text-accent">DASHBOARD SETUP</p>
-    <h1
-      class="text-[40px] leading-[1.1] font-semibold tracking-[-0.02em] wrap-anywhere text-text max-[330px]:text-[30px]"
+<ng-template #body>
+  <div class="flex min-w-0 flex-1 flex-col gap-5" [style.--section-margin]="sectionMargin() + 'px'">
+    <app-config-section
+      description="Start from an empty draft, reuse the mounted dashboard YAML when available, or import a local YAML file."
+      number="01"
+      section="start"
+      title="Choose a starting point"
     >
-      Configuration editor
-    </h1>
-    <p class="text-[15px] leading-[1.55] text-muted">
-      Build a dashboard configuration locally. Your changes remain in this browser until you export
-      them.
-    </p>
-  </div>
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3">
+        <button
+          aria-describedby="start-empty-caption"
+          aria-labelledby="start-empty-title"
+          class="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-line-strong bg-surface-2 p-[18px] text-left text-text transition-colors duration-200 aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent/10"
+          type="button"
+          [attr.aria-pressed]="startingPoint() === 'empty'"
+          (click)="startEmpty()"
+        >
+          <ng-icon aria-hidden="true" class="text-xl" name="heroDocument" />
+          <span id="start-empty-title" class="text-[15px] font-semibold">Start empty</span>
+          <span id="start-empty-caption" class="text-[13px] text-muted">A blank draft</span>
+        </button>
 
-  <div
-    class="flex items-start gap-8 pb-16 max-[901px]:flex-col max-[901px]:items-stretch max-[901px]:gap-5"
-  >
-    <nav
-      #navEl
-      aria-label="Configurator sections"
-      class="glass-chrome sticky top-[104px] z-[5] w-60 shrink-0 self-start rounded-[18px] px-2.5 py-3 max-[901px]:top-24 max-[901px]:z-20 max-[901px]:w-full max-[901px]:rounded-2xl max-[901px]:p-1.5"
-    >
-      <!-- Up to 900 px this list is the chip bar: one row, native sideways scroll without a scrollbar, edge fades on the overflowing side. -->
-      <ol
-        appHorizontalNav
-        [appChipAutocenter]="activeId()"
-        class="m-0 flex list-none flex-col gap-0.5 border-l border-line p-0 [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[901px]:flex-row max-[901px]:gap-1 max-[901px]:overflow-x-auto max-[901px]:overscroll-x-contain max-[901px]:border-l-0 [&::-webkit-scrollbar]:hidden"
-      >
-        @for (item of sections; track item.id) {
-          <li class="max-[901px]:shrink-0" [attr.data-chip]="item.id">
-            <a
-              class="-ml-px flex min-h-10 items-center gap-3 rounded-r-[10px] border-l-2 border-transparent px-3.5 text-sm whitespace-nowrap text-muted transition-colors duration-200 hover:text-text aria-[current=true]:border-accent aria-[current=true]:bg-accent/10 aria-[current=true]:text-text max-[901px]:mx-0 max-[901px]:gap-2 max-[901px]:rounded-[10px] max-[901px]:border-l-0 max-[901px]:px-3"
-              [attr.aria-current]="activeId() === item.id ? 'true' : null"
-              [href]="anchorHref(item.elementId)"
-              (click)="goToSection(item.elementId, $event)"
-            >
-              <span class="font-mono text-xs">{{ item.number }}</span>
-              {{ item.label }}
-            </a>
-          </li>
-        }
-      </ol>
-    </nav>
-
-    <div
-      class="flex min-w-0 flex-1 flex-col gap-5"
-      [style.--section-margin]="sectionMargin() + 'px'"
-    >
-      <app-config-section
-        description="Start from an empty draft, reuse the mounted dashboard YAML when available, or import a local YAML file."
-        number="01"
-        section="start"
-        title="Choose a starting point"
-      >
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-3">
+        @if (canLoadMountedConfig()) {
           <button
-            aria-describedby="start-empty-caption"
-            aria-labelledby="start-empty-title"
+            aria-describedby="start-mounted-caption"
+            aria-labelledby="start-mounted-title"
             class="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-line-strong bg-surface-2 p-[18px] text-left text-text transition-colors duration-200 aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent/10"
             type="button"
-            [attr.aria-pressed]="startingPoint() === 'empty'"
-            (click)="startEmpty()"
+            [attr.aria-pressed]="startingPoint() === 'mounted'"
+            (click)="loadMountedConfig()"
           >
-            <ng-icon aria-hidden="true" class="text-xl" name="heroDocument" />
-            <span id="start-empty-title" class="text-[15px] font-semibold">Start empty</span>
-            <span id="start-empty-caption" class="text-[13px] text-muted">A blank draft</span>
+            <ng-icon aria-hidden="true" class="text-xl" name="heroServerStack" />
+            <span id="start-mounted-title" class="text-[15px] font-semibold"
+              >Load mounted YAML</span
+            >
+            <span id="start-mounted-caption" class="font-mono text-xs break-all text-muted">{{
+              mountedPath
+            }}</span>
           </button>
-
-          @if (canLoadMountedConfig()) {
-            <button
-              aria-describedby="start-mounted-caption"
-              aria-labelledby="start-mounted-title"
-              class="flex min-h-28 flex-col items-start gap-2 rounded-xl border border-line-strong bg-surface-2 p-[18px] text-left text-text transition-colors duration-200 aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent/10"
-              type="button"
-              [attr.aria-pressed]="startingPoint() === 'mounted'"
-              (click)="loadMountedConfig()"
-            >
-              <ng-icon aria-hidden="true" class="text-xl" name="heroServerStack" />
-              <span id="start-mounted-title" class="text-[15px] font-semibold"
-                >Load mounted YAML</span
-              >
-              <span id="start-mounted-caption" class="font-mono text-xs break-all text-muted">{{
-                mountedPath
-              }}</span>
-            </button>
-          }
-
-          <label
-            class="relative flex min-h-28 cursor-pointer flex-col items-start gap-2 rounded-xl border border-dashed border-line-strong p-[18px] text-text transition-colors duration-200 has-[input:focus-visible]:shadow-[0_0_0_2px_var(--focus-halo)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus data-[selected=true]:border-accent data-[selected=true]:bg-accent/10"
-            [attr.data-selected]="startingPoint() === 'import'"
-          >
-            <ng-icon aria-hidden="true" class="text-xl" name="heroArrowUpTray" />
-            <span id="start-import-title" class="text-[15px] font-semibold">Import local YAML</span>
-            <span id="start-import-caption" class="text-[13px] text-muted"
-              >Choose a .yaml file</span
-            >
-            @if (startingPoint() === 'import') {
-              <span id="start-import-state" class="sr-only">Selected</span>
-            }
-            <input
-              accept=".yaml,.yml,application/yaml,text/yaml,text/x-yaml"
-              class="sr-only"
-              type="file"
-              aria-labelledby="start-import-title"
-              [attr.aria-describedby]="
-                startingPoint() === 'import'
-                  ? 'start-import-caption start-import-state'
-                  : 'start-import-caption'
-              "
-              (change)="importLocalYaml($event)"
-            />
-          </label>
-        </div>
-
-        @if (validationErrors().length > 0) {
-          <div
-            #errorSummary
-            class="mt-5 rounded-xl border border-down/50 bg-down-bg px-[18px] py-4"
-            role="alert"
-          >
-            <h3 class="text-sm font-semibold text-down">Fix the following errors</h3>
-            <ul class="mt-2 list-disc pl-[18px] font-mono text-[13px] leading-[1.7] text-text">
-              @for (error of validationErrors(); track error.path.join('.')) {
-                <li>
-                  @if (error.path.length > 0) {
-                    <code>{{ formatPath(error.path) }}</code> —
-                  }
-                  <a
-                    class="underline underline-offset-4"
-                    [href]="anchorHref(fieldId(error.path))"
-                    (click)="jumpToField(error.path, $event)"
-                    >{{ error.message }}</a
-                  >
-                </li>
-              }
-            </ul>
-          </div>
         }
-      </app-config-section>
 
-      <app-config-section
-        description="Set the dashboard identity."
-        number="02"
-        section="metadata"
-        title="Metadata"
-      >
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
-          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
-            Dashboard title
-            <input
-              id="field-metadata-title"
-              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
-              [attr.aria-describedby]="describedBy(['metadata', 'title'])"
-              [attr.aria-invalid]="errorFor(['metadata', 'title']) ? 'true' : null"
-              [value]="draft().metadata.title"
-              (input)="updateMetadata('title', $event)"
-            />
-            @if (errorFor(['metadata', 'title']); as error) {
-              <p id="error-metadata-title" class="text-[13px] font-medium text-down">
-                {{ error }}
-              </p>
+        <label
+          class="relative flex min-h-28 cursor-pointer flex-col items-start gap-2 rounded-xl border border-dashed border-line-strong p-[18px] text-text transition-colors duration-200 has-[input:focus-visible]:shadow-[0_0_0_2px_var(--focus-halo)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-focus data-[selected=true]:border-accent data-[selected=true]:bg-accent/10"
+          [attr.data-selected]="startingPoint() === 'import'"
+        >
+          <ng-icon aria-hidden="true" class="text-xl" name="heroArrowUpTray" />
+          <span id="start-import-title" class="text-[15px] font-semibold">Import local YAML</span>
+          <span id="start-import-caption" class="text-[13px] text-muted">Choose a .yaml file</span>
+          @if (startingPoint() === 'import') {
+            <span id="start-import-state" class="sr-only">Selected</span>
+          }
+          <input
+            accept=".yaml,.yml,application/yaml,text/yaml,text/x-yaml"
+            class="sr-only"
+            type="file"
+            aria-labelledby="start-import-title"
+            [attr.aria-describedby]="
+              startingPoint() === 'import'
+                ? 'start-import-caption start-import-state'
+                : 'start-import-caption'
+            "
+            (change)="importLocalYaml($event)"
+          />
+        </label>
+      </div>
+
+      @if (validationErrors().length > 0) {
+        <div
+          #errorSummary
+          class="mt-5 rounded-xl border border-down/50 bg-down-bg px-[18px] py-4"
+          role="alert"
+        >
+          <h3 class="text-sm font-semibold text-down">Fix the following errors</h3>
+          <ul class="mt-2 list-disc pl-[18px] font-mono text-[13px] leading-[1.7] text-text">
+            @for (error of validationErrors(); track error.path.join('.')) {
+              <li>
+                @if (error.path.length > 0) {
+                  <code>{{ formatPath(error.path) }}</code> —
+                }
+                <a
+                  class="underline underline-offset-4"
+                  [href]="anchorHref(fieldId(error.path))"
+                  (click)="jumpToField(error.path, $event)"
+                  >{{ error.message }}</a
+                >
+              </li>
             }
-          </label>
-          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
-            Dashboard description
-            <input
-              id="field-metadata-description"
-              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
-              [attr.aria-describedby]="describedBy(['metadata', 'description'])"
-              [attr.aria-invalid]="errorFor(['metadata', 'description']) ? 'true' : null"
-              [value]="draft().metadata.description"
-              (input)="updateMetadata('description', $event)"
-            />
-            @if (errorFor(['metadata', 'description']); as error) {
-              <p id="error-metadata-description" class="text-[13px] font-medium text-down">
-                {{ error }}
-              </p>
-            }
-          </label>
+          </ul>
         </div>
-      </app-config-section>
+      }
+    </app-config-section>
 
-      <app-config-section
-        description="Configure theme, date display, layout, search, and dashboard display options."
-        number="03"
-        section="settings"
-        title="Settings"
-      >
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
-          <app-segmented
-            controlId="field-settings-theme"
-            label="Theme"
-            [options]="themeOptions"
-            [value]="draft().settings.theme"
-            (valueChange)="setSettingChoice('theme', $event)"
+    <app-config-section
+      description="Set the dashboard identity."
+      number="02"
+      section="metadata"
+      title="Metadata"
+    >
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
+        <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+          Dashboard title
+          <input
+            id="field-metadata-title"
+            class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+            [attr.aria-describedby]="describedBy(['metadata', 'title'])"
+            [attr.aria-invalid]="errorFor(['metadata', 'title']) ? 'true' : null"
+            [value]="draft().metadata.title"
+            (input)="updateMetadata('title', $event)"
           />
-          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
-            Date format
-            <input
-              id="field-settings-dateFormat"
-              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
-              [value]="draft().settings.dateFormat"
-              (input)="updateSettingText('dateFormat', $event)"
-            />
-          </label>
-          <app-segmented
-            controlId="field-settings-datePosition"
-            label="Date position"
-            [options]="datePositionOptions"
-            [value]="draft().settings.datePosition"
-            (valueChange)="setSettingChoice('datePosition', $event)"
+          @if (errorFor(['metadata', 'title']); as error) {
+            <p id="error-metadata-title" class="text-[13px] font-medium text-down">
+              {{ error }}
+            </p>
+          }
+        </label>
+        <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+          Dashboard description
+          <input
+            id="field-metadata-description"
+            class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+            [attr.aria-describedby]="describedBy(['metadata', 'description'])"
+            [attr.aria-invalid]="errorFor(['metadata', 'description']) ? 'true' : null"
+            [value]="draft().metadata.description"
+            (input)="updateMetadata('description', $event)"
           />
+          @if (errorFor(['metadata', 'description']); as error) {
+            <p id="error-metadata-description" class="text-[13px] font-medium text-down">
+              {{ error }}
+            </p>
+          }
+        </label>
+      </div>
+    </app-config-section>
+
+    <app-config-section
+      description="Configure theme, date display, layout, search, and dashboard display options."
+      number="03"
+      section="settings"
+      title="Settings"
+    >
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-x-5 gap-y-4">
+        <app-layout-picker
+          class="col-span-full"
+          [value]="draft().settings.layout"
+          (valueChange)="setSettingChoice('layout', $event)"
+        />
+        <app-segmented
+          controlId="field-settings-theme"
+          label="Theme"
+          [options]="themeOptions"
+          [value]="draft().settings.theme"
+          (valueChange)="setSettingChoice('theme', $event)"
+        />
+        <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+          Date format
+          <input
+            id="field-settings-dateFormat"
+            class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+            [value]="draft().settings.dateFormat"
+            (input)="updateSettingText('dateFormat', $event)"
+          />
+        </label>
+        <app-segmented
+          controlId="field-settings-datePosition"
+          label="Date position"
+          [options]="datePositionOptions"
+          [value]="draft().settings.datePosition"
+          (valueChange)="setSettingChoice('datePosition', $event)"
+        />
+        <div class="flex flex-col gap-2">
           <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
             Items per row
             <input
               id="field-settings-itemsPerRow"
-              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text disabled:cursor-not-allowed disabled:opacity-60"
               type="number"
               min="1"
               max="10"
-              [attr.aria-describedby]="describedBy(['settings', 'itemsPerRow'])"
+              [disabled]="draft().settings.layout === 'vertical'"
+              [attr.aria-describedby]="
+                describedBy(['settings', 'itemsPerRow'], 'hint-settings-itemsPerRow')
+              "
               [attr.aria-invalid]="errorFor(['settings', 'itemsPerRow']) ? 'true' : null"
               [value]="draft().settings.itemsPerRow"
               (input)="updateSettingNumber('itemsPerRow', $event)"
@@ -238,180 +209,184 @@
               </p>
             }
           </label>
-          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
-            Light background image
-            <input
-              id="field-settings-lightBackgroundImage"
-              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
-              placeholder="Leave blank to use the built-in default"
-              [value]="draft().settings.lightBackgroundImage"
-              (input)="updateSettingText('lightBackgroundImage', $event)"
-            />
-          </label>
-          <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
-            Dark background image
-            <input
-              id="field-settings-darkBackgroundImage"
-              class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
-              placeholder="Leave blank to use the built-in default"
-              [value]="draft().settings.darkBackgroundImage"
-              (input)="updateSettingText('darkBackgroundImage', $event)"
-            />
-          </label>
-        </div>
-
-        <fieldset class="mt-7 min-w-0 border-t border-line pt-6">
-          <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
-            Display options
-          </legend>
-          <div
-            class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-2.5"
-          >
-            @for (option of displayOptions; track option.field) {
-              <app-switch
-                [checked]="isSettingEnabled(option.field)"
-                [controlId]="'field-settings-' + option.field"
-                [label]="option.label"
-                (checkedChange)="setSettingBoolean(option.field, $event)"
-              />
-            }
-          </div>
-        </fieldset>
-
-        <fieldset
-          id="field-settings-searchEngines"
-          class="mt-7 min-w-0 border-t border-line pt-6"
-          tabindex="-1"
-        >
-          <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
-            Search engines
-          </legend>
-          <div
-            class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-2.5"
-          >
-            @for (engine of searchEngineOptions; track engine) {
-              <app-switch
-                [checked]="hasSearchEngine(engine)"
-                [controlId]="'field-settings-searchEngines-' + engine"
-                [label]="searchEngineLabels[engine]"
-                (checkedChange)="setSearchEngine(engine, $event)"
-              />
-            }
-          </div>
-        </fieldset>
-      </app-config-section>
-
-      <app-collection-editor
-        collection="categories"
-        sectionNumber="04"
-        [items]="draft().categories"
-        [fieldErrorIds]="collectionErrorIds('categories')"
-        [fieldErrors]="collectionErrors('categories')"
-        (addItem)="addCategory()"
-        (editItem)="updateCategory($event)"
-        (removeItem)="store.removeCategory($event)"
-        (moveItem)="store.moveCategory($event.from, $event.to)"
-      />
-      <app-collection-editor
-        collection="applications"
-        sectionNumber="05"
-        [items]="draft().applications"
-        [categoryOptions]="draft().categories"
-        [fieldErrorIds]="collectionErrorIds('applications')"
-        [fieldErrors]="collectionErrors('applications')"
-        (addItem)="addApplication()"
-        (editItem)="updateApplication($event)"
-        (removeItem)="store.removeApplication($event)"
-        (moveItem)="store.moveApplication($event.from, $event.to)"
-      />
-      <app-collection-editor
-        collection="bookmarks"
-        sectionNumber="06"
-        [items]="draft().bookmarks"
-        [fieldErrorIds]="collectionErrorIds('bookmarks')"
-        [fieldErrors]="collectionErrors('bookmarks')"
-        (addItem)="addBookmark()"
-        (editItem)="updateBookmark($event)"
-        (removeItem)="store.removeBookmark($event)"
-        (moveItem)="store.moveBookmark($event.from, $event.to)"
-      />
-
-      <app-config-section
-        description="Copy and download validate your draft, then create normalized YAML locally. Save also writes it to the mounted dashboard.yaml, if the write API is enabled."
-        number="07"
-        section="export"
-        title="Export configuration"
-        narrowDescription
-      >
-        <div class="flex flex-wrap gap-2.5">
-          <button [class]="secondaryActionClass" type="button" (click)="copyYaml()">
-            <ng-icon aria-hidden="true" class="text-base" name="heroClipboardDocument" />
-            Copy YAML
-          </button>
-          <button [class]="secondaryActionClass" type="button" (click)="downloadYaml()">
-            <ng-icon aria-hidden="true" class="text-base" name="heroArrowDownTray" />
-            Download YAML
-          </button>
-          <button
-            [attr.aria-describedby]="writeEnabled() ? null : 'save-unavailable-help'"
-            [class]="primaryActionClass + ' px-5'"
-            type="button"
-            [disabled]="isSavingToServer() || !writeEnabled()"
-            (click)="saveToServer()"
-          >
-            <ng-icon aria-hidden="true" class="text-base" name="heroCheck" />
-            Save
-          </button>
-        </div>
-
-        @if (!writeEnabled()) {
-          <p id="save-unavailable-help" class="mt-3 max-w-[640px] text-[13px] text-muted">
-            Save is off: there is no
-            <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the server. Set it and
-            restart to save from here; Copy and Download still work.
+          <p id="hint-settings-itemsPerRow" class="text-[13px] text-muted">
+            Used by the horizontal layout only.
           </p>
-        }
+        </div>
+        <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+          Light background image
+          <input
+            id="field-settings-lightBackgroundImage"
+            class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+            placeholder="Leave blank to use the built-in default"
+            [value]="draft().settings.lightBackgroundImage"
+            (input)="updateSettingText('lightBackgroundImage', $event)"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-[13px] font-medium text-text">
+          Dark background image
+          <input
+            id="field-settings-darkBackgroundImage"
+            class="glass-field font-mono h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+            placeholder="Leave blank to use the built-in default"
+            [value]="draft().settings.darkBackgroundImage"
+            (input)="updateSettingText('darkBackgroundImage', $event)"
+          />
+        </label>
+      </div>
 
-        @if (showTokenPrompt()) {
-          <div
-            class="mt-6 flex max-w-[520px] flex-col gap-2.5 rounded-xl border border-line bg-field p-5"
-          >
-            <label for="field-config-write-token" class="text-[13px] font-medium text-text">
-              Write token
-            </label>
-            <input
-              id="field-config-write-token"
-              type="password"
-              autocomplete="off"
-              aria-describedby="field-config-write-token-help"
-              class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
-              [value]="pendingToken()"
-              (input)="updatePendingToken($event)"
+      <fieldset class="mt-7 min-w-0 border-t border-line pt-6">
+        <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
+          Display options
+        </legend>
+        <div
+          class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-2.5"
+        >
+          @for (option of displayOptions; track option.field) {
+            <app-switch
+              [checked]="isSettingEnabled(option.field)"
+              [controlId]="'field-settings-' + option.field"
+              [label]="option.label"
+              (checkedChange)="setSettingBoolean(option.field, $event)"
             />
-            <p id="field-config-write-token-help" class="text-[13px] text-muted">
-              Same value as <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the
-              server. Stored only in this browser.
-            </p>
-            <div class="mt-1.5 flex flex-wrap gap-2.5">
-              <button
-                [class]="primaryActionClass + ' px-[18px]'"
-                type="button"
-                [disabled]="isSavingToServer()"
-                (click)="confirmToken()"
-              >
-                Save token & save
-              </button>
-              <button
-                class="flex h-11 items-center rounded-[10px] border border-line-strong px-4 text-sm font-medium text-text transition-colors duration-200 hover:bg-surface-2"
-                type="button"
-                (click)="cancelTokenPrompt()"
-              >
-                Cancel
-              </button>
-            </div>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset
+        id="field-settings-searchEngines"
+        class="mt-7 min-w-0 border-t border-line pt-6"
+        tabindex="-1"
+      >
+        <legend class="float-left mb-3 w-full text-[13px] font-medium text-text">
+          Search engines
+        </legend>
+        <div
+          class="clear-both grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-2.5"
+        >
+          @for (engine of searchEngineOptions; track engine) {
+            <app-switch
+              [checked]="hasSearchEngine(engine)"
+              [controlId]="'field-settings-searchEngines-' + engine"
+              [label]="searchEngineLabels[engine]"
+              (checkedChange)="setSearchEngine(engine, $event)"
+            />
+          }
+        </div>
+      </fieldset>
+    </app-config-section>
+
+    <app-collection-editor
+      collection="categories"
+      sectionNumber="04"
+      [items]="draft().categories"
+      [fieldErrorIds]="collectionErrorIds('categories')"
+      [fieldErrors]="collectionErrors('categories')"
+      (addItem)="addCategory()"
+      (editItem)="updateCategory($event)"
+      (removeItem)="store.removeCategory($event)"
+      (moveItem)="store.moveCategory($event.from, $event.to)"
+    />
+    <app-collection-editor
+      collection="applications"
+      sectionNumber="05"
+      [items]="draft().applications"
+      [categoryOptions]="draft().categories"
+      [fieldErrorIds]="collectionErrorIds('applications')"
+      [fieldErrors]="collectionErrors('applications')"
+      (addItem)="addApplication()"
+      (editItem)="updateApplication($event)"
+      (removeItem)="store.removeApplication($event)"
+      (moveItem)="store.moveApplication($event.from, $event.to)"
+    />
+    <app-collection-editor
+      collection="bookmarks"
+      sectionNumber="06"
+      [items]="draft().bookmarks"
+      [fieldErrorIds]="collectionErrorIds('bookmarks')"
+      [fieldErrors]="collectionErrors('bookmarks')"
+      (addItem)="addBookmark()"
+      (editItem)="updateBookmark($event)"
+      (removeItem)="store.removeBookmark($event)"
+      (moveItem)="store.moveBookmark($event.from, $event.to)"
+    />
+
+    <app-config-section
+      description="Copy and download validate your draft, then create normalized YAML locally. Save also writes it to the mounted dashboard.yaml, if the write API is enabled."
+      number="07"
+      section="export"
+      title="Export configuration"
+      narrowDescription
+    >
+      <div class="flex flex-wrap gap-2.5">
+        <button [class]="secondaryActionClass" type="button" (click)="copyYaml()">
+          <ng-icon aria-hidden="true" class="text-base" name="heroClipboardDocument" />
+          Copy YAML
+        </button>
+        <button [class]="secondaryActionClass" type="button" (click)="downloadYaml()">
+          <ng-icon aria-hidden="true" class="text-base" name="heroArrowDownTray" />
+          Download YAML
+        </button>
+        <button
+          [attr.aria-describedby]="writeEnabled() ? null : 'save-unavailable-help'"
+          [class]="primaryActionClass + ' px-5'"
+          id="configurator-save"
+          type="button"
+          [disabled]="isSavingToServer() || !writeEnabled()"
+          (click)="saveToServer()"
+        >
+          <ng-icon aria-hidden="true" class="text-base" name="heroCheck" />
+          Save
+        </button>
+      </div>
+
+      @if (!writeEnabled()) {
+        <p id="save-unavailable-help" class="mt-3 max-w-[640px] text-[13px] text-muted">
+          Save is off: there is no
+          <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the server. Set it and
+          restart to save from here; Copy and Download still work.
+        </p>
+      }
+
+      @if (showTokenPrompt()) {
+        <div
+          class="mt-6 flex max-w-[520px] flex-col gap-2.5 rounded-xl border border-line bg-field p-5"
+        >
+          <label for="field-config-write-token" class="text-[13px] font-medium text-text">
+            Write token
+          </label>
+          <input
+            id="field-config-write-token"
+            type="password"
+            autocomplete="off"
+            aria-describedby="field-config-write-token-help"
+            class="glass-field h-11 w-full rounded-[10px] px-3 text-sm font-normal text-text"
+            [value]="pendingToken()"
+            (input)="updatePendingToken($event)"
+          />
+          <p id="field-config-write-token-help" class="text-[13px] text-muted">
+            Same value as <span class="font-mono text-text">CONFIG_WRITE_TOKEN</span> on the server.
+            Stored only in this browser.
+          </p>
+          <div class="mt-1.5 flex flex-wrap gap-2.5">
+            <button
+              [class]="primaryActionClass + ' px-[18px]'"
+              type="button"
+              [disabled]="isSavingToServer()"
+              (click)="confirmToken()"
+            >
+              Save token & save
+            </button>
+            <button
+              class="flex h-11 items-center rounded-[10px] border border-line-strong px-4 text-sm font-medium text-text transition-colors duration-200 hover:bg-surface-2"
+              type="button"
+              (click)="cancelTokenPrompt()"
+            >
+              Cancel
+            </button>
           </div>
-        }
-      </app-config-section>
-    </div>
+        </div>
+      }
+    </app-config-section>
   </div>
-</main>
+</ng-template>

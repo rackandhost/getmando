@@ -2,7 +2,7 @@
   <button
     #trigger
     aria-haspopup="listbox"
-    class="group flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-surface-2 px-3 text-sm font-medium text-text transition-[height,background-color] duration-300 group-data-[size=compact]/bar:h-8 group-data-[size=expanded]/bar:h-10 hover:bg-line disabled:cursor-default"
+    class="group flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-surface-2 px-3 text-sm font-medium text-text transition-[height,background-color] duration-300 group-data-[size=compact]/bar:h-8 group-data-[size=expanded]/bar:h-10 group-data-[variant=rail]/bar:w-full hover:bg-line disabled:cursor-default"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-label]="'Select search engine, ' + scopeLabel()"
     [disabled]="validEngines().length === 0"
@@ -11,13 +11,15 @@
   >
     <ng-icon
       aria-hidden="true"
-      class="text-xl [--ng-icon__color:var(--muted)]"
+      class="text-xl [--ng-icon__color:var(--muted)] group-data-[variant=rail]/bar:shrink-0"
       name="heroMagnifyingGlass"
     />
-    <span>{{ scopeLabel() }}</span>
+    <span class="group-data-[variant=rail]/bar:min-w-0 group-data-[variant=rail]/bar:truncate">{{
+      scopeLabel()
+    }}</span>
     <ng-icon
       aria-hidden="true"
-      class="text-base transition-transform [--ng-icon__color:var(--muted)]"
+      class="text-base transition-transform [--ng-icon__color:var(--muted)] group-data-[variant=rail]/bar:shrink-0"
       name="heroChevronDown"
       [class.rotate-180]="isOpen()"
     />
