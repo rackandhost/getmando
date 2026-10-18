@@ -4,10 +4,13 @@
   [class.cursor-not-allowed]="haveSearch()"
   [style.opacity]="haveSearch() ? 0.45 : null"
 >
-  <!-- The bar scrolls sideways when the tabs do not fit; the edge fades sit on this inner scroller so the glass itself stays whole. -->
+  <!-- The bar scrolls sideways when the tabs do not fit; the edge fades sit on this inner scroller so the glass itself stays whole.
+       The scroll padding is the width of the fades: a tab that takes focus is brought clear of them. While a query is typed every tab is disabled,
+       so the scroller stops scrolling (a scrollable region with nothing focusable fails axe scrollable-region-focusable). -->
   <div
     appHorizontalNav
-    class="flex h-full items-stretch gap-7 overflow-x-auto px-[18px] [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] [&::-webkit-scrollbar]:hidden"
+    class="flex h-full scroll-px-7 items-stretch gap-7 overflow-x-auto px-[18px] [scrollbar-width:none] data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] data-[searching=true]:overflow-x-hidden [&::-webkit-scrollbar]:hidden"
+    [attr.data-searching]="haveSearch() || null"
   >
     @for (category of categories(); track category.id) {
       <button

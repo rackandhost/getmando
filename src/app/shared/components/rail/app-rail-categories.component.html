@@ -10,10 +10,12 @@
     Categories
   </p>
 
-  <!-- A column in the wide rail; below 1024 px a row that scrolls sideways, with the edge fades on this scroller. -->
+  <!-- A column in the wide rail; below 1024 px a row that scrolls sideways, with the edge fades on this scroller.
+       While a query is typed every chip is disabled, so the row stops scrolling (axe scrollable-region-focusable). -->
   <div
     appHorizontalNav
-    class="flex flex-col gap-0.5 max-[1024px]:snap-x max-[1024px]:snap-proximity max-[1024px]:flex-row max-[1024px]:gap-1 max-[1024px]:overflow-x-auto max-[1024px]:overscroll-x-contain max-[1024px]:[scrollbar-width:none] max-[1024px]:data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] max-[1024px]:data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] max-[1024px]:data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[1024px]:[&::-webkit-scrollbar]:hidden"
+    class="flex flex-col gap-0.5 max-[1024px]:snap-x max-[1024px]:snap-proximity max-[1024px]:flex-row max-[1024px]:gap-1 max-[1024px]:overflow-x-auto max-[1024px]:overscroll-x-contain max-[1024px]:[scrollbar-width:none] max-[1024px]:data-[fade=both]:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%_-_28px),transparent)] max-[1024px]:data-[fade=end]:[mask-image:linear-gradient(to_left,transparent,#000_28px)] max-[1024px]:data-[fade=start]:[mask-image:linear-gradient(to_right,transparent,#000_20px)] max-[1024px]:data-[searching=true]:overflow-x-hidden max-[1024px]:[&::-webkit-scrollbar]:hidden"
+    [attr.data-searching]="haveSearch() || null"
     [appChipAutocenter]="selectedCategory()"
   >
     @for (category of categories(); track category.id) {
