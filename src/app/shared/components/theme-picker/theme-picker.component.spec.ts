@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
+import type { Mock } from 'vitest';
 
 import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models';
 import { LoggerService } from '../../../core/services/logger.service';
@@ -11,10 +12,20 @@ import { ThemeService } from '../../../core/services/theme.service';
 import { THEMES, type ThemeId } from '../../../core/themes/theme.registry';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
 import { themeServiceStub } from '../../../../testing/theme-service.stub';
+import { stubScrollIntoView } from '../../../../testing/scroll-into-view';
 
 import { ThemePickerComponent } from './theme-picker.component';
 
 describe('ThemePickerComponent', () => {
+  let scrollIntoView: Mock;
+  let restoreScrollIntoView: () => void;
+
+  beforeEach(() => {
+    ({ scrollIntoView, restore: restoreScrollIntoView } = stubScrollIntoView());
+  });
+
+  afterEach(() => restoreScrollIntoView());
+
   const setup = async (committed: ThemeId = 'dark') => {
     const user = userEvent.setup();
     const theme = themeServiceStub(committed);
@@ -405,7 +416,6 @@ describe('ThemePickerComponent', () => {
     });
 
     it('keeps the highlighted option in view when the arrows move it', async () => {
-      const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView');
       const { user } = await setupPreview('dark');
 
       await user.keyboard('{ArrowDown}');
@@ -415,7 +425,6 @@ describe('ThemePickerComponent', () => {
     });
 
     it('brings the committed row into view when it opens, even after a filter hid it last time', async () => {
-      const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView');
       const { user } = await setupPreview('catppuccin-mocha');
       expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
       expect(scrollIntoView.mock.contexts.at(-1)).toBe(option('Catppuccin Mocha'));

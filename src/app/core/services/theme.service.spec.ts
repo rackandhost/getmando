@@ -439,6 +439,8 @@ describe('ThemeService', () => {
   describe('the document', () => {
     it('writes data-theme and nothing else on the root element', () => {
       root.className = 'untouched';
+      // Spec files of a worker share one document, and others leave a `style` attribute on the root.
+      const before = root.getAttributeNames();
       const service = create();
 
       service.select('light');
@@ -447,7 +449,9 @@ describe('ThemeService', () => {
 
       expect(root.dataset['theme']).toBe('dark');
       expect(root.className).toBe('untouched');
-      expect(root.getAttributeNames().sort()).toEqual(['class', 'data-theme']);
+      expect(root.getAttributeNames().filter((name) => !before.includes(name))).toEqual([
+        'data-theme',
+      ]);
     });
 
     it('stops listening to the system when the service is destroyed', () => {

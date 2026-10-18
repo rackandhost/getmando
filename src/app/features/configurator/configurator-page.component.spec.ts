@@ -26,6 +26,7 @@ import { THEME_IDS, type ThemeSetting } from '../../core/themes/theme.registry';
 import { MountedConfigResult, YamlLoaderService } from '../../core/services/yaml-loader.service';
 import { expectNoAxeViolations } from '../../../testing/a11y';
 import { themeServiceStub } from '../../../testing/theme-service.stub';
+import { stubScrollIntoView } from '../../../testing/scroll-into-view';
 import { ScrollStateService, type ChromeProbe } from '../../core/scroll/scroll-state.service';
 import type { ChromeMode } from '../../core/scroll/scroll-state';
 import { METRICS_SOURCE, type MetricsSource } from '../../core/scroll/metrics-source';
@@ -2073,7 +2074,14 @@ describe('ConfiguratorPageComponent', () => {
     const resizeTo = (width: number) =>
       Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
 
+    let restoreScrollIntoView: () => void;
+
+    beforeEach(() => {
+      ({ restore: restoreScrollIntoView } = stubScrollIntoView());
+    });
+
     afterEach(() => {
+      restoreScrollIntoView();
       root.removeAttribute('data-theme');
       localStorage.clear();
       resizeTo(originalWidth);
