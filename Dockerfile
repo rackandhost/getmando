@@ -33,8 +33,10 @@ RUN npm ci
 COPY server/tsconfig.json ./
 COPY server/src ./src
 # The sidecar imports this file directly (see design.md) rather than duplicating the schema; the
-# relative import path in server/src/app.ts expects it at /src/... one level above /server.
+# relative import path in server/src/app.ts expects it at /src/... one level above /server. The schema
+# derives `settings.theme` from the theme registry, so that file travels with it.
 COPY src/app/core/models/dashboard.models.ts /src/app/core/models/dashboard.models.ts
+COPY src/app/core/themes/theme.registry.ts /src/app/core/themes/theme.registry.ts
 
 RUN npm run build
 # Drop devDependencies (typescript, vitest, esbuild, tsx, @types/*) now that the bundle exists —
