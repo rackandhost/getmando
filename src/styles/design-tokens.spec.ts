@@ -296,6 +296,12 @@ describe('token contrast audit', () => {
     'unselected layout radio ring',
     'selected layout border',
     'layout check mark on its dot',
+    // The theme picker's dialog (spec theme-selection "Picker accessibility"): a translucent menu over the page
+    'text on menu',
+    'muted on menu',
+    'text on highlighted menu row',
+    'muted on highlighted menu row or close chip',
+    'focus ring on menu',
   ];
 
   it('finds no pair below its required ratio in any registered theme', () => {
@@ -347,6 +353,34 @@ describe('token contrast audit', () => {
     );
     expect(violations.every((v) => v.theme === 'light')).toBe(true);
     expect(violations.every((v) => v.ratio < v.required)).toBe(true);
+  });
+
+  it.each(THEME_IDS)(
+    'names the menu pairs and %s when that theme has a menu too translucent to keep its text legible',
+    (theme) => {
+      // 20 % of a mid grey: the page behind (black or white) decides the colour, and the ink of every theme loses.
+      const doctored = withOverrides({ [theme]: '--menu: rgba(128, 128, 128, 0.2);' });
+
+      const violations = auditTokens(doctored, surfacesCss);
+
+      expect(violations.map((v) => [v.pair, v.theme])).toEqual(
+        expect.arrayContaining([
+          ['text on menu', theme],
+          ['muted on menu', theme],
+        ]),
+      );
+      expect(violations.every((v) => v.theme === theme && v.pair.includes('menu'))).toBe(true);
+    },
+  );
+
+  it('measures the menu pairs the same with and without backdrop-filter: a translucent fill is blur-independent', () => {
+    const measurements = measureTokens(themes, surfacesCss);
+
+    for (const theme of THEME_IDS) {
+      expect(ratioOf(measurements, 'text on menu (no blur)', theme)).toBe(
+        ratioOf(measurements, 'text on menu', theme),
+      );
+    }
   });
 
   it.each(THEME_IDS)('names the pair and %s when that theme has a weak field border', (theme) => {
