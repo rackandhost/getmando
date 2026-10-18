@@ -5,6 +5,8 @@ import type { ThemeId, ThemeInfo } from '../../../core/themes/theme.registry';
 /** A registry swatch with the id of its theme: one half of a preview. */
 export type PreviewSwatch = ThemeInfo['swatch'] & { readonly id: ThemeId };
 
+export const toSwatch = ({ id, swatch }: ThemeInfo): PreviewSwatch => ({ id, ...swatch });
+
 /**
  * A decorative preview of one theme (its swatch) or of several side by side, as `Auto` does with dark
  * and light. It draws registry data, not the active tokens, because it must show themes that are not

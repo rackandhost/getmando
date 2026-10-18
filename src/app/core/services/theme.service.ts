@@ -12,7 +12,7 @@ import {
 import {
   resolveTheme,
   THEME_SETTINGS,
-  THEMES,
+  themeInfo,
   type ThemeId,
   type ThemeInfo,
   type ThemeSetting,
@@ -56,9 +56,7 @@ export class ThemeService {
   /** The active theme: the preview while one is shown, else the committed one. */
   readonly theme: Signal<ThemeId> = computed(() => this.previewed() ?? this.committed());
   /** The registry entry of the active theme. */
-  readonly info: Signal<ThemeInfo> = computed(
-    () => THEMES.find((theme) => theme.id === this.theme()) ?? THEMES[0],
-  );
+  readonly info: Signal<ThemeInfo> = computed(() => themeInfo(this.theme()));
 
   constructor() {
     const mediaQuery = window.matchMedia(this.LIGHT_SCHEME);

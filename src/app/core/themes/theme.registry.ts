@@ -45,6 +45,11 @@ export const THEME_IDS = THEMES.map((theme) => theme.id) as [ThemeId, ...ThemeId
 
 export const DEFAULT_THEME: ThemeId = 'dark';
 
+/** The registry entry of a theme (the first one for an id the type cannot rule out). */
+export function themeInfo(id: ThemeId): ThemeInfo {
+  return THEMES.find((theme) => theme.id === id) ?? THEMES[0];
+}
+
 /**
  * `auto` is not a theme (no stylesheet, no swatch, never in the picker): it is a value of
  * `settings.theme` that resolves to a theme by the operating system's colour scheme.

@@ -2,14 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { heroCheck, heroChevronDown, heroMagnifyingGlass } from '@ng-icons/heroicons/outline';
 
+import { THEMES, themeInfo, type ThemeSetting } from '../../../core/themes/theme.registry';
 import {
-  THEMES,
-  type ThemeId,
-  type ThemeInfo,
-  type ThemeSetting,
-} from '../../../core/themes/theme.registry';
-
-import { type PreviewSwatch, ThemePreviewComponent } from './theme-preview.component';
+  type PreviewSwatch,
+  ThemePreviewComponent,
+  toSwatch,
+} from '../../../shared/components/theme-preview/theme-preview.component';
 
 interface ThemeOption {
   readonly value: ThemeSetting;
@@ -18,9 +16,6 @@ interface ThemeOption {
   /** One swatch for a theme; `Auto` shows two, dark and light, side by side. */
   readonly swatches: readonly PreviewSwatch[];
 }
-
-const toSwatch = ({ id, swatch }: ThemeInfo): PreviewSwatch => ({ id, ...swatch });
-const themeInfo = (id: ThemeId): ThemeInfo => THEMES.find((theme) => theme.id === id) ?? THEMES[0];
 
 /** `Auto` first, then the registry in order: the options are derived, never listed here. */
 const OPTIONS: readonly ThemeOption[] = [

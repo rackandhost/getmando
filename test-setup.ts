@@ -53,3 +53,19 @@ if (!globalThis.localStorage) {
     value: createMemoryStorage(),
   });
 }
+
+/**
+ * jsdom 27 has `HTMLDialogElement.open` but neither `showModal()` nor `close()`. This is the part a
+ * unit test can observe: `open` and the `close` event. The focus trap, the inertness of the page and the
+ * top layer are the browser's and are checked in the browser smoke, not here.
+ */
+if (!HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  };
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    if (!this.open) return;
+    this.removeAttribute('open');
+    this.dispatchEvent(new Event('close'));
+  };
+}

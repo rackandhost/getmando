@@ -1,0 +1,129 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { heroCheck, heroMagnifyingGlass, heroSwatch } from '@ng-icons/heroicons/outline';
+
+import { ThemeService } from '../../../core/services/theme.service';
+import { THEMES, themeInfo, type ThemeId } from '../../../core/themes/theme.registry';
+import { ThemePreviewComponent, toSwatch } from '../theme-preview/theme-preview.component';
+
+let nextId = 0;
+
+/**
+ * The theme button of the chrome and the modal dialog it opens. The dialog is a native `<dialog>` shown
+ * with `showModal()`: the browser gives it the focus trap, makes the page behind inert and draws it in
+ * the top layer, above the `glass-chrome` surfaces that would otherwise clip a fixed overlay.
+ *
+ * Focus stays in the search field; the highlighted option is exposed through `aria-activedescendant`.
+ * Choosing an option stores it as this device's preference (`ThemeService.select`).
+ */
+@Component({
+  selector: 'app-theme-picker',
+  imports: [NgIcon, ThemePreviewComponent],
+  templateUrl: 'theme-picker.component.html',
+  viewProviders: [provideIcons({ heroCheck, heroMagnifyingGlass, heroSwatch })],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class ThemePickerComponent {
+  private readonly themeService = inject(ThemeService);
+
+  private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
+  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly searchField = viewChild.required<ElementRef<HTMLInputElement>>('searchField');
+  private readonly closeButton = viewChild.required<ElementRef<HTMLButtonElement>>('closeButton');
+
+  private readonly id = nextId++;
+  protected readonly searchId = `theme-picker-${this.id}-search`;
+  protected readonly listId = `theme-picker-${this.id}-list`;
+
+  /** The theme applied without a preview: the button's name and the `Active` marker follow it. */
+  protected readonly committed = this.themeService.committed;
+  protected readonly committedName = computed(() => themeInfo(this.committed()).name);
+
+  protected readonly open = signal(false);
+  protected readonly query = signal('');
+  /** The row the user moved to; `undefined` means the first row shown. */
+  private readonly highlight = signal<ThemeId | undefined>(undefined);
+
+  /** Case-insensitive substring over name and description, in registry order. */
+  protected readonly rows = computed(() => {
+    const query = this.query().trim().toLowerCase();
+    return THEMES.filter((theme) =>
+      `${theme.name} ${theme.description}`.toLowerCase().includes(query),
+    ).map((theme) => ({ ...theme, swatches: [toSwatch(theme)] }));
+  });
+  protected readonly highlighted = computed(() => {
+    const rows = this.rows();
+    return rows.find((row) => row.id === this.highlight())?.id ?? rows[0]?.id;
+  });
+
+  protected optionId(id: ThemeId, part?: 'name' | 'description' | 'active'): string {
+    return `theme-picker-${this.id}-${id}${part ? `-${part}` : ''}`;
+  }
+
+  protected describedBy(id: ThemeId): string {
+    const description = this.optionId(id, 'description');
+    return id === this.committed() ? `${description} ${this.optionId(id, 'active')}` : description;
+  }
+
+  protected show(): void {
+    this.query.set('');
+    this.highlight.set(this.committed());
+    this.dialog().nativeElement.showModal();
+    this.open.set(true);
+    this.searchField().nativeElement.focus();
+  }
+
+  /** Runs for every way the dialog closes: `Esc` (native or ours), `Close`, or a choice. */
+  protected onClosed(): void {
+    this.open.set(false);
+    this.trigger().nativeElement.focus();
+  }
+
+  protected close(): void {
+    this.dialog().nativeElement.close();
+  }
+
+  protected setQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+    this.highlight.set(undefined);
+  }
+
+  protected choose(id: ThemeId): void {
+    this.themeService.select(id);
+    this.close();
+  }
+
+  /**
+   * The native modal keeps focus off the page but lets it leave for the browser's own interface after
+   * the last control. The dialog has two focusable controls, the search field and `Close`, so wrapping
+   * at those two edges keeps `Tab` and `Shift+Tab` cycling inside it.
+   */
+  protected onDialogKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Tab') return;
+    const first = this.searchField().nativeElement;
+    const last = this.closeButton().nativeElement;
+    const [leaving, entering] = event.shiftKey ? [first, last] : [last, first];
+    if (event.target !== leaving) return;
+    event.preventDefault();
+    entering.focus();
+  }
+
+  protected onSearchKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.close();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const id = this.highlighted();
+      if (id) this.choose(id);
+    }
+  }
+}
