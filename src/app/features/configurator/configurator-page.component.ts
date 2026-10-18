@@ -53,6 +53,7 @@ import { activeSection, activeThreshold } from './active-section';
 import { ConfigSectionComponent, configSectionId } from './components/config-section.component';
 import { ConfiguratorStore } from './configurator.store';
 import { LayoutPickerComponent } from './components/layout-picker.component';
+import { DefaultThemePickerComponent } from './components/default-theme-picker.component';
 import { ConfiguratorHorizontalChromeComponent } from './chrome/configurator-horizontal-chrome.component';
 import { ConfiguratorVerticalChromeComponent } from './chrome/configurator-vertical-chrome.component';
 import {
@@ -104,6 +105,7 @@ const SECTIONS = [
     CollectionEditorComponent,
     AppSegmentedComponent,
     LayoutPickerComponent,
+    DefaultThemePickerComponent,
     AppSwitchComponent,
     ConfigSectionComponent,
     ConfiguratorHorizontalChromeComponent,
@@ -241,11 +243,6 @@ export class ConfiguratorPageComponent {
     startpage: 'Startpage',
     youtube: 'YouTube',
   };
-  protected readonly themeOptions: readonly SegmentedOption[] = [
-    { value: 'light', label: 'Light' },
-    { value: 'dark', label: 'Dark' },
-    { value: 'auto', label: 'Auto' },
-  ];
   protected readonly datePositionOptions: readonly SegmentedOption[] = [
     { value: 'top', label: 'Top' },
     { value: 'bottom', label: 'Bottom' },

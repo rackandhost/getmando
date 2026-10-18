@@ -664,7 +664,7 @@ describe('ConfiguratorPageComponent', () => {
 
     expect(screen.getByRole('heading', { name: 'Configuration editor' })).toBeInTheDocument();
     expect(screen.getByLabelText('Dashboard title')).toHaveValue('Mando');
-    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked();
+    expect(screen.getByRole('button', { name: /\d+ themes/ })).toHaveTextContent('Dark');
     expect(screen.getByRole('alert')).toHaveTextContent("Category 'missing' does not exist.");
     expect(screen.getByLabelText('Application category for Plex')).toHaveAttribute(
       'aria-describedby',
@@ -1566,23 +1566,6 @@ describe('ConfiguratorPageComponent', () => {
       expect(store.updateSettings).toHaveBeenLastCalledWith({ searchEngines: [] });
     });
 
-    it('chooses the theme with the arrow keys: Dark then right arrow is Auto', async () => {
-      const user = userEvent.setup();
-      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
-      const group = screen.getByRole('radiogroup', { name: 'Theme' });
-
-      expect(
-        within(group)
-          .getAllByRole('radio')
-          .map((r) => r.textContent?.trim()),
-      ).toEqual(['Light', 'Dark', 'Auto']);
-      await user.click(within(group).getByRole('radio', { name: 'Dark' }));
-      screen.getByRole('radio', { name: 'Dark' }).focus();
-      await user.keyboard('{ArrowRight}');
-
-      expect(store.updateSettings).toHaveBeenLastCalledWith({ theme: 'auto' });
-    });
-
     it('chooses the date position from a Top | Bottom group', async () => {
       const user = userEvent.setup();
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
@@ -1704,19 +1687,21 @@ describe('ConfiguratorPageComponent', () => {
       expect(draft().settings.itemsPerRow).toBe(value);
     });
 
-    it('opens the Settings section, before the theme, reflecting the draft layout', async () => {
+    it('opens the Settings section, with the Default theme directly after the layout, reflecting the draft layout', async () => {
       const user = userEvent.setup();
       draft.set({ ...draft(), settings: { ...draft().settings, layout: 'vertical' } });
       await render(ConfiguratorPageComponent, { providers: defaultProviders() });
       await openLayoutPanel(user);
+      await user.click(screen.getByRole('button', { name: /\d+ themes/ }));
 
       const settings = within(document.getElementById('section-settings') as HTMLElement);
       const layout = settings.getByRole('group', { name: 'Layout' });
 
       expect(within(layout).getByRole('radio', { name: 'Vertical bar' })).toBeChecked();
       expect(
-        layout.compareDocumentPosition(settings.getByRole('radiogroup', { name: 'Theme' })),
+        layout.compareDocumentPosition(settings.getByRole('group', { name: 'Default theme' })),
       ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(settings.queryByRole('radiogroup', { name: 'Theme' })).toBeNull();
     });
 
     it('writes only the layout of the draft when a layout is chosen', async () => {
@@ -1772,6 +1757,99 @@ describe('ConfiguratorPageComponent', () => {
 
       await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
       expect(writeText.mock.calls[0][0]).toContain('layout: vertical');
+    });
+  });
+
+  describe('default theme control', () => {
+    afterEach(() => {
+      store.updateSettings.mockReset();
+      draft.set({ ...draft(), settings: { ...draft().settings, theme: 'dark' } });
+    });
+
+    /** The panel starts closed, so tests of the cards open it first. */
+    const openThemePanel = (user: UserEvent) =>
+      user.click(screen.getByRole('button', { name: /\d+ themes/ }));
+
+    /** Renders the page on the real store, with a mounted YAML whose `settings.theme` is `theme`. */
+    const renderWithMountedTheme = async (theme: DashboardConfig['settings']['theme']) => {
+      const user = userEvent.setup();
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      const themeService = { isDark: signal(true), toggleTheme: vi.fn() };
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+      await render(ConfiguratorPageComponent, {
+        providers: [
+          { provide: AppService, useValue: appService },
+          { provide: ThemeService, useValue: themeService },
+          {
+            provide: MetadataService,
+            useValue: { metadata: signal(DEFAULT_DASHBOARD_CONFIG.metadata) },
+          },
+          {
+            provide: YamlLoaderService,
+            useValue: {
+              mountedPath: '/config/dashboard.yaml',
+              mountedConfigResult: signal<MountedConfigResult>({
+                status: 'valid',
+                config: { ...draft(), settings: { ...draft().settings, theme } },
+              }),
+              refreshMountedConfig: yamlLoader.refreshMountedConfig,
+            },
+          },
+          { provide: LoggerService, useValue: logger },
+          { provide: NotificationService, useValue: notifications },
+          { provide: ConfigWriteService, useValue: configWrite },
+          ConfiguratorStore,
+          ConfigExportService,
+        ],
+      });
+      await user.click(screen.getByRole('button', { name: 'Load mounted YAML' }));
+      return { user, writeText, themeService };
+    };
+
+    it('replaces the Theme segmented control with the Default theme disclosure, closed, below the layout', async () => {
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      const settings = within(document.getElementById('section-settings') as HTMLElement);
+      const layout = settings.getByRole('button', { name: /\d+ layouts/ });
+      const theme = settings.getByRole('button', { name: /\d+ themes/ });
+
+      expect(theme).toHaveAttribute('aria-expanded', 'false');
+      expect(settings.getByText('Default theme')).toBeInTheDocument();
+      expect(layout.compareDocumentPosition(theme)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(settings.queryByRole('radiogroup', { name: 'Theme' })).toBeNull();
+    });
+
+    it('writes only the theme of the draft when a theme is chosen', async () => {
+      const user = userEvent.setup();
+      await render(ConfiguratorPageComponent, { providers: defaultProviders() });
+
+      await openThemePanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Light' }));
+
+      expect(store.updateSettings).toHaveBeenCalledExactlyOnceWith({ theme: 'light' });
+    });
+
+    it('selects Auto for a draft imported from theme: auto and exports theme: auto', async () => {
+      const { user, writeText } = await renderWithMountedTheme('auto');
+
+      await openThemePanel(user);
+      expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('theme: auto');
+    });
+
+    it('exports the chosen theme and leaves the device preference alone', async () => {
+      const { user, writeText, themeService } = await renderWithMountedTheme('auto');
+
+      await openThemePanel(user);
+      await user.click(screen.getByRole('radio', { name: 'Light' }));
+      await user.click(screen.getByRole('button', { name: 'Copy YAML' }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+      expect(writeText.mock.calls[0][0]).toContain('settings:\n  theme: light\n');
+      expect(themeService.toggleTheme).not.toHaveBeenCalled();
     });
   });
 
