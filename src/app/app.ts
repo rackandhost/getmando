@@ -20,24 +20,16 @@ export class App {
   constructor() {
     effect(() => {
       const { lightBackgroundImage, darkBackgroundImage } = this.settingsService.settings();
-      this.themeService.currentTheme();
-      this.setBackgroundImage({ lightBackgroundImage, darkBackgroundImage });
+      const image =
+        this.themeService.info().background === 'dark' ? darkBackgroundImage : lightBackgroundImage;
+      this.setBackgroundImage(image);
     });
   }
 
-  private setBackgroundImage({
-    lightBackgroundImage,
-    darkBackgroundImage,
-  }: {
-    lightBackgroundImage: string;
-    darkBackgroundImage: string;
-  }): void {
+  private setBackgroundImage(selectedImage: string): void {
     const bgLayer = document.getElementById('app-background');
     if (!bgLayer) return;
 
-    const selectedImage = this.themeService.isDarkMode()
-      ? darkBackgroundImage
-      : lightBackgroundImage;
     const isImageAnUrl = selectedImage.startsWith('https') || selectedImage.startsWith('http');
 
     bgLayer.style.backgroundImage = `url(${isImageAnUrl ? '' : '/img/'}${selectedImage})`;

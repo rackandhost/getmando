@@ -19,8 +19,9 @@ class StubPageComponent {}
 
 describe('App', () => {
   const settingsState = signal<DashboardSettings>(DEFAULT_DASHBOARD_CONFIG.settings);
-  const currentTheme = signal<'light' | 'dark'>('dark');
+  let originalMatchMediaDescriptor: PropertyDescriptor | undefined;
 
+  /** The real ThemeService runs over the configured settings and a system that does not prefer light. */
   const shellProviders = [
     provideRouter([]),
     { provide: AppService, useValue: { appVersion: '1.1.0-test' } },
@@ -28,15 +29,6 @@ describe('App', () => {
     {
       provide: SettingsService,
       useValue: { settings: settingsState, layout: computed(() => settingsState().layout) },
-    },
-    {
-      provide: ThemeService,
-      useValue: {
-        currentTheme,
-        isDark: () => currentTheme() === 'dark',
-        isDarkMode: () => currentTheme() === 'dark',
-        toggleTheme: vi.fn(),
-      },
     },
   ];
 
@@ -52,6 +44,16 @@ describe('App', () => {
   };
 
   beforeEach(() => {
+    originalMatchMediaDescriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    });
+    localStorage.clear();
     let bgLayer = document.getElementById('app-background');
     if (!bgLayer) {
       bgLayer = document.createElement('div');
@@ -60,7 +62,16 @@ describe('App', () => {
     }
     bgLayer.style.backgroundImage = '';
     settingsState.set(DEFAULT_DASHBOARD_CONFIG.settings);
-    currentTheme.set('dark');
+  });
+
+  afterEach(() => {
+    if (originalMatchMediaDescriptor) {
+      Object.defineProperty(window, 'matchMedia', originalMatchMediaDescriptor);
+    } else {
+      Reflect.deleteProperty(window, 'matchMedia');
+    }
+    localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
   });
 
   it('provides a router shell and one global toast host', async () => {
@@ -109,39 +120,29 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Mando' })).toHaveFocus();
   });
 
-  it('applies the background image that matches the current theme', async () => {
+  it.each([
+    ['dark', '/img/custom-dark.jpg'],
+    ['light', '/img/custom-light.jpg'],
+  ] as const)('applies the slot of the %s theme: %s', async (theme, expectedUrl) => {
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme,
       darkBackgroundImage: 'custom-dark.jpg',
       lightBackgroundImage: 'custom-light.jpg',
     });
-    currentTheme.set('dark');
 
     await render(App, { providers: shellProviders });
 
-    expectBackgroundImageToBe('/img/custom-dark.jpg');
-  });
-
-  it('applies the light background image when light theme is active', async () => {
-    settingsState.set({
-      ...DEFAULT_DASHBOARD_CONFIG.settings,
-      darkBackgroundImage: 'custom-dark.jpg',
-      lightBackgroundImage: 'custom-light.jpg',
-    });
-    currentTheme.set('light');
-
-    await render(App, { providers: shellProviders });
-
-    expectBackgroundImageToBe('/img/custom-light.jpg');
+    expectBackgroundImageToBe(expectedUrl);
   });
 
   it('should not prefix https background image URLs with /img/', async () => {
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme: 'dark',
       darkBackgroundImage: 'https://cdn.example.com/dark.jpg',
       lightBackgroundImage: 'http://cdn.example.com/light.jpg',
     });
-    currentTheme.set('dark');
 
     await render(App, { providers: shellProviders });
 
@@ -154,10 +155,10 @@ describe('App', () => {
   it('should not prefix http background image URLs with /img/', async () => {
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme: 'light',
       darkBackgroundImage: 'https://cdn.example.com/dark.jpg',
       lightBackgroundImage: 'http://cdn.example.com/light.jpg',
     });
-    currentTheme.set('light');
 
     await render(App, { providers: shellProviders });
 
@@ -167,38 +168,55 @@ describe('App', () => {
     );
   });
 
-  it('updates the background image when the theme changes after render', async () => {
+  it('updates the background image when the theme is selected after render', async () => {
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme: 'dark',
       darkBackgroundImage: 'custom-dark.jpg',
       lightBackgroundImage: 'custom-light.jpg',
     });
-    currentTheme.set('dark');
-
     const view = await render(App, { providers: shellProviders });
-
     expectBackgroundImageToBe('/img/custom-dark.jpg');
 
-    currentTheme.set('light');
+    TestBed.inject(ThemeService).select('light');
     await view.fixture.whenStable();
 
     expectBackgroundImageToBe('/img/custom-light.jpg');
   });
 
+  it('follows a theme preview and goes back to the committed theme when it is cancelled', async () => {
+    settingsState.set({
+      ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme: 'dark',
+      darkBackgroundImage: 'custom-dark.jpg',
+      lightBackgroundImage: 'custom-light.jpg',
+    });
+    const view = await render(App, { providers: shellProviders });
+    const themes = TestBed.inject(ThemeService);
+
+    themes.preview('light');
+    await view.fixture.whenStable();
+    expectBackgroundImageToBe('/img/custom-light.jpg');
+
+    themes.cancelPreview();
+    await view.fixture.whenStable();
+    expectBackgroundImageToBe('/img/custom-dark.jpg');
+    expect(localStorage.getItem('dashboard-theme')).toBeNull();
+  });
+
   it('updates the background image when settings change after render', async () => {
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme: 'dark',
       darkBackgroundImage: 'initial-dark.jpg',
       lightBackgroundImage: 'initial-light.jpg',
     });
-    currentTheme.set('dark');
-
     const view = await render(App, { providers: shellProviders });
-
     expectBackgroundImageToBe('/img/initial-dark.jpg');
 
     settingsState.set({
       ...DEFAULT_DASHBOARD_CONFIG.settings,
+      theme: 'dark',
       darkBackgroundImage: 'updated-dark.jpg',
       lightBackgroundImage: 'updated-light.jpg',
     });
