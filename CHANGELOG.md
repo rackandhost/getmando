@@ -11,6 +11,7 @@
 ### Bug Fixes
 
 - **Accessibility findings of the previous UI**: the toast host no longer carries an ARIA attribute that its role prohibits, and each application card's accessible name now contains its visible text. Lighthouse accessibility goes from 96 to 100 on desktop and mobile.
+- **Contrast and focus findings of the layout verification**: the placeholder of the configurator's text fields uses the muted colour (3.4 : 1 → 8 : 1 in the light theme); the section numbers of the configurator keep 4.5 : 1 under the shadow of the sticky chip bar; the categories row no longer counts as a scrollable region with nothing to focus while a search is typed; and a category tab that takes focus at the edge of the bar is scrolled clear of the edge fade.
 
 ### CI & Tooling
 
