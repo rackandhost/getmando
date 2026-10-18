@@ -6,6 +6,20 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="img/mando.png" />
+    <!--
+      First paint: copy the stored theme to <html data-theme> before the stylesheet paints, so a returning
+      user never sees the default theme flash. Only `auto` is interpreted (what resolveTheme does, in two
+      lines: this runs before the bundle). Any other value is left as is: an unknown one matches no theme
+      selector, so the default theme (dark) paints until ThemeService validates it and rewrites the attribute.
+    -->
+    <script>
+      try {
+        var t = localStorage.getItem('dashboard-theme');
+        if (t === 'auto')
+          t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="app-background"></div>
