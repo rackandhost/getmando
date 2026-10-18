@@ -15,23 +15,23 @@
 
 ---
 
-<img alt="Dashboard, horizontal layout" width="1024" src="screenshots/dashboard.png" />
+<img alt="Dashboard, horizontal layout" width="1024" src="screenshots/dashboard.webp" />
 
-<img alt="Dashboard, vertical layout" width="1024" src="screenshots/dashboard_vertical.png" />
+<img alt="Dashboard, vertical layout" width="1024" src="screenshots/dashboard_vertical.webp" />
 
-<img alt="Visual configurator with the layout selector open" width="1024" src="screenshots/configurator_layout.png" />
+<img alt="Visual configurator with the layout selector open" width="1024" src="screenshots/configurator_layout.webp" />
 
 <details>
 <summary><strong>More screenshots</strong> (light theme, phone, configurator)</summary>
 <br>
 
-<img alt="Dashboard, horizontal layout, light theme" width="1024" src="screenshots/dashboard_light.png" />
+<img alt="Dashboard, horizontal layout, light theme" width="1024" src="screenshots/dashboard_light.webp" />
 
-<img alt="Dashboard, vertical layout, light theme" width="1024" src="screenshots/dashboard_vertical_light.png" />
+<img alt="Dashboard, vertical layout, light theme" width="1024" src="screenshots/dashboard_vertical_light.webp" />
 
-<img alt="Visual configurator, horizontal layout" width="1024" src="screenshots/configurator.png" />
+<img alt="Visual configurator, horizontal layout" width="1024" src="screenshots/configurator.webp" />
 
-<img alt="Dashboard, vertical layout, on a phone" width="320" src="screenshots/dashboard_vertical_mobile.png" />
+<img alt="Dashboard, vertical layout, on a phone" width="320" src="screenshots/dashboard_vertical_mobile.webp" />
 
 </details>
 
