@@ -1,0 +1,61 @@
+/*
+ * Light theme: a complete token set (design.md § 3.1, with the accessibility amendments), moved verbatim
+ * from the old `:root` block. Selected by <html data-theme="light">. Contrast is enforced by
+ * src/styles/design-tokens.spec.ts.
+ */
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Colour */
+  --bg: #f3f1ec;
+  --scrim: rgba(243, 241, 236, 0.2);
+  --surface: #ffffff;
+  --surface-2: rgba(22, 24, 27, 0.06);
+  --line: rgba(22, 24, 27, 0.1);
+  --line-strong: #cec8bc;
+  --text: #16181b;
+  --muted: #474c54;
+  --accent: #9a5b00;
+  --accent-ink: #ffffff;
+  --up: #11724a;
+  --up-bg: rgba(17, 114, 74, 0.1);
+  --down: #b8341f;
+  --down-bg: rgba(184, 52, 31, 0.1);
+  --clock-ink: #383e44;
+  --minute-fill: rgba(154, 91, 0, 0.75);
+  --pill-line: rgba(22, 24, 27, 0.4);
+  --pill-bg: rgba(255, 255, 255, 0.45);
+  --card: rgba(255, 255, 255, 0.72);
+  --card-line: rgba(255, 255, 255, 0.8);
+  --card-hover: rgba(255, 255, 255, 0.9);
+  --card-line-hover: rgba(255, 255, 255, 1);
+  --chrome: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.42));
+  --chrome-line: rgba(255, 255, 255, 0.75);
+  --icon-tile: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.7));
+  --menu: rgba(255, 255, 255, 0.9);
+  --field: rgba(255, 255, 255, 0.7);
+  --field-border: rgba(22, 24, 27, 0.55);
+  --floor-bar: 0.55;
+  --floor-card: 0.8;
+  --floor-clock: 0.9;
+  --focus: #16181b;
+  --focus-halo: rgba(255, 255, 255, 0.9);
+
+  /* Glass */
+  --glass: blur(24px) saturate(180%);
+  --card-glass: blur(16px) saturate(160%);
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 0 18px rgba(255, 255, 255, 0.25), 0 10px 32px rgba(30, 36, 50, 0.14);
+  --card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 4px 18px rgba(30, 36, 50, 0.08);
+  --card-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 1), 0 0 0 1px rgba(154, 91, 0, 0.16),
+    0 16px 36px rgba(30, 36, 50, 0.18);
+  --icon-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(30, 36, 50, 0.08);
+  --bar-radius: 12px;
+  /* Sticky band shown while the dock is scrolled (design.md § 3.1). */
+  --band: rgba(243, 241, 236, 0.55);
+  --band-shadow: 0 1px 0 rgba(255, 255, 255, 0.7), 0 16px 32px -16px rgba(30, 36, 50, 0.25);
+  --band-glass: blur(22px) saturate(160%);
+}

@@ -3,20 +3,46 @@ import path from 'node:path';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { DEFAULT_THEME, THEME_IDS, THEMES, type ThemeId } from '../app/core/themes/theme.registry';
 import { contrastRatio, parseColor } from '../testing/contrast';
-import { auditTokens, measureTokens, parseTokens, type Measurement } from '../testing/token-audit';
+import {
+  auditTokens,
+  measureTokens,
+  parseThemeTokens,
+  type Measurement,
+  type ThemeStylesheet,
+} from '../testing/token-audit';
 
 let tokensCss: string;
 let surfacesCss: string;
+let stylesCss: string;
+/** The stylesheet of every registered theme, read from `styles/themes/<id>.css`. */
+let themes: ThemeStylesheet[];
 
 beforeAll(async () => {
-  const read = (file: string) => fs.readFile(path.join(process.cwd(), 'src/styles', file), 'utf8');
-  [tokensCss, surfacesCss] = await Promise.all([read('tokens.css'), read('surfaces.css')]);
+  const read = (file: string) => fs.readFile(path.join(process.cwd(), 'src', file), 'utf8');
+  [tokensCss, surfacesCss, stylesCss] = await Promise.all([
+    read('styles/tokens.css'),
+    read('styles/surfaces.css'),
+    read('styles.css'),
+  ]);
+  themes = await Promise.all(
+    THEME_IDS.map(async (id) => ({
+      id,
+      css: await read(`styles/themes/${id}.css`).catch(() => ''),
+    })),
+  );
 });
 
-/** Appends later declarations, which win the cascade, to simulate a changed token. */
-function withOverrides(css: string, light: string, dark: string): string {
-  return `${css}\n:root { ${light} }\n.dark { ${dark} }\n`;
+const tokensOf = (id: ThemeId) =>
+  parseThemeTokens((themes.find((theme) => theme.id === id) as ThemeStylesheet).css, id);
+
+/** Appends later declarations, which win the cascade, to the named themes to simulate a changed token. */
+function withOverrides(overrides: Partial<Record<ThemeId, string>>): ThemeStylesheet[] {
+  return themes.map(({ id, css }) => ({
+    id,
+    css: `${css}\n:root[data-theme='${id}'] { ${overrides[id] ?? ''} }\n`,
+  }));
 }
 
 /** Points `property` of one recipe at another token, e.g. the floor a recipe declares. */
@@ -29,7 +55,7 @@ function redirect(css: string, recipe: string, property: string, token: string):
   return changed;
 }
 
-function ratioOf(measurements: Measurement[], pair: string, theme: 'light' | 'dark'): number {
+function ratioOf(measurements: Measurement[], pair: string, theme: ThemeId): number {
   const found = measurements.find((m) => m.pair === pair && m.theme === theme);
   if (!found) {
     throw new Error(`Pair "${pair}" was not measured for the ${theme} theme`);
@@ -37,28 +63,43 @@ function ratioOf(measurements: Measurement[], pair: string, theme: 'light' | 'da
   return found.ratio;
 }
 
-describe('parseTokens', () => {
-  it('reads :root as the light set and .dark as the dark set', () => {
-    const { light, dark } = parseTokens(':root { --bg: #fff; } .dark { --bg: #000; }');
+describe('parseThemeTokens', () => {
+  it('reads the tokens of the named theme and of no other', () => {
+    const css =
+      ":root[data-theme='light'] { --bg: #fff; }\n:root[data-theme='dark'] { --bg: #000; }";
 
-    expect(light['--bg']).toBe('#fff');
-    expect(dark['--bg']).toBe('#000');
+    expect(parseThemeTokens(css, 'light')['--bg']).toBe('#fff');
+    expect(parseThemeTokens(css, 'dark')['--bg']).toBe('#000');
+  });
+
+  it('reads a selector list that names the theme, as the default theme under :root does', () => {
+    const css = ":root, :root[data-theme='dark'] { --bg: #000; }";
+
+    expect(parseThemeTokens(css, 'dark')['--bg']).toBe('#000');
+    expect(parseThemeTokens(css, 'light')).toEqual({});
+  });
+
+  it('does not read a bare :root block as the tokens of any theme', () => {
+    const css = ':root { --dock-compact-height: 284px; }';
+
+    expect(parseThemeTokens(css, 'light')).toEqual({});
+    expect(parseThemeTokens(css, 'dark')).toEqual({});
   });
 
   it('lets a later declaration of the same token win and ignores comments', () => {
-    const { light } = parseTokens(
-      '/* --bg: red; */ :root { --bg: #111; }\n:root { --bg: #222; /* note */ }',
-    );
+    const css =
+      "/* --bg: red; */ :root[data-theme='light'] { --bg: #111; }\n:root[data-theme='light'] { --bg: #222; /* note */ }";
 
-    expect(light['--bg']).toBe('#222');
+    expect(parseThemeTokens(css, 'light')['--bg']).toBe('#222');
   });
 
   it('keeps multi-line values intact', () => {
-    const { light } = parseTokens(
-      ':root {\n  --chrome: linear-gradient(\n    180deg,\n    #fff, #000\n  );\n}',
-    );
+    const css =
+      ":root[data-theme='light'] {\n  --chrome: linear-gradient(\n    180deg,\n    #fff, #000\n  );\n}";
 
-    expect(light['--chrome']).toBe('linear-gradient(\n    180deg,\n    #fff, #000\n  )');
+    expect(parseThemeTokens(css, 'light')['--chrome']).toBe(
+      'linear-gradient(\n    180deg,\n    #fff, #000\n  )',
+    );
   });
 });
 
@@ -107,10 +148,58 @@ const COLOUR_TOKENS_BEFORE_LAYOUT_OPTIONS = [
 ];
 
 describe('token stylesheet', () => {
-  it('defines in the dark set every token the light set defines, so none leaks across themes', () => {
-    const { light, dark } = parseTokens(tokensCss);
+  it('declares in every registered theme exactly the token names of the others, so none leaks across themes', () => {
+    const names = themes.map(({ id, css }) => [id, Object.keys(parseThemeTokens(css, id)).sort()]);
+    const [, reference] = names[0];
 
-    expect(Object.keys(dark).sort()).toEqual(Object.keys(light).sort());
+    expect(reference.length).toBeGreaterThan(0);
+    for (const [id, declared] of names) expect(declared, `tokens of ${id}`).toEqual(reference);
+  });
+
+  it.each(THEMES)(
+    '$id has its stylesheet imported by styles.css and declaring its tokens',
+    ({ id }) => {
+      const { css } = themes.find((theme) => theme.id === id) as ThemeStylesheet;
+
+      expect(css, `themes/${id}.css is missing or empty`).not.toBe('');
+      expect(stylesCss).toContain(`@import './styles/themes/${id}.css';`);
+      expect(
+        Object.keys(parseThemeTokens(css, id)).length,
+        `:root[data-theme='${id}']`,
+      ).toBeGreaterThan(0);
+    },
+  );
+
+  it.each(THEMES)(
+    'sets color-scheme: $background in $id, so native controls follow the theme',
+    ({ id, background }) => {
+      const { css } = themes.find((theme) => theme.id === id) as ThemeStylesheet;
+
+      expect(css).toMatch(new RegExp(`color-scheme:\\s*${background}\\s*;`));
+    },
+  );
+
+  it('lets only the default theme answer to a bare :root, so a page with no data-theme paints it', () => {
+    const answersBareRoot = (css: string) =>
+      /(?:^|\})\s*:root\s*[,{]/.test(css.replace(/\/\*[\s\S]*?\*\//g, ''));
+
+    expect(themes.filter(({ css }) => answersBareRoot(css)).map(({ id }) => id)).toEqual([
+      DEFAULT_THEME,
+    ]);
+  });
+
+  it('keeps no theme token in tokens.css: only the non-theme constant on :root, besides the @theme mapping', () => {
+    const shared = tokensCss
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/@theme inline\s*\{[^}]*\}/, '');
+
+    expect([...shared.matchAll(/(--[\w-]+)\s*:/g)].map(([, name]) => name)).toEqual([
+      '--dock-compact-height',
+    ]);
+    expect(shared).not.toContain('.dark');
+    for (const { id, css } of themes) {
+      expect(parseThemeTokens(css, id)).not.toHaveProperty('--dock-compact-height');
+    }
   });
 
   it.each([
@@ -120,18 +209,15 @@ describe('token stylesheet', () => {
     ['--minute-fill', 'rgba(154,91,0,0.75)', 'rgba(240,176,74,0.85)'],
     ['--band', 'rgba(243,241,236,0.55)', 'rgba(13,15,17,0.62)'],
   ])('resolves %s to the specified value in light and in dark', (token, light, dark) => {
-    const tokens = parseTokens(tokensCss);
-
-    expect(parseColor(tokens.light[token])).toEqual(parseColor(light));
-    expect(parseColor(tokens.dark[token])).toEqual(parseColor(dark));
+    expect(parseColor(tokensOf('light')[token])).toEqual(parseColor(light));
+    expect(parseColor(tokensOf('dark')[token])).toEqual(parseColor(dark));
   });
 
   it('keeps the set of colour tokens the design had before the vertical layout: none is added for it', () => {
-    const { light } = parseTokens(tokensCss);
     const colour = /rgba?\([^)]*\)|#[0-9a-f]{3,8}\b/i;
 
     expect(
-      Object.entries(light)
+      Object.entries(tokensOf('light'))
         .filter(([, value]) => colour.test(value))
         .map(([name]) => name)
         .sort(),
@@ -185,32 +271,33 @@ describe('token contrast audit', () => {
     'layout check mark on its dot',
   ];
 
-  it('finds no pair below its required ratio in either theme', () => {
-    const summaries = auditTokens(tokensCss, surfacesCss).map(
+  it('finds no pair below its required ratio in any registered theme', () => {
+    const summaries = auditTokens(themes, surfacesCss).map(
       (v) => `${v.pair} (${v.theme}): ${v.ratio.toFixed(2)} < ${v.required}`,
     );
 
     expect(summaries).toEqual([]);
   });
 
-  it('measures every pair of the design in both themes, with and without backdrop-filter', () => {
-    const measurements = measureTokens(tokensCss, surfacesCss);
+  it('measures every pair of the design in every registered theme, with and without backdrop-filter', () => {
+    const measurements = measureTokens(themes, surfacesCss);
     const expected = [
       ...pairs,
       'muted on hovered card',
       ...pairs.map((pair) => `${pair} (no blur)`),
     ].sort();
 
-    for (const theme of ['light', 'dark'] as const) {
+    expect([...new Set(measurements.map((m) => m.theme))].sort()).toEqual([...THEME_IDS].sort());
+    for (const theme of THEME_IDS) {
       const measured = measurements.filter((m) => m.theme === theme).map((m) => m.pair);
       expect(measured.sort()).toEqual(expected);
     }
   });
 
-  it.each(['light', 'dark'] as const)(
+  it.each(THEME_IDS)(
     'keeps minute fill, field border and focus ring at 3:1 or better in %s',
     (theme) => {
-      const measurements = measureTokens(tokensCss, surfacesCss);
+      const measurements = measureTokens(themes, surfacesCss);
 
       expect(ratioOf(measurements, 'minute digits fill only', theme)).toBeGreaterThanOrEqual(3);
       expect(ratioOf(measurements, 'field border vs card', theme)).toBeGreaterThanOrEqual(3);
@@ -221,7 +308,7 @@ describe('token contrast audit', () => {
   );
 
   it('fails and names the pair and theme when --floor-card is lowered in light', () => {
-    const doctored = withOverrides(tokensCss, '--floor-card: 0.2;', '');
+    const doctored = withOverrides({ light: '--floor-card: 0.2;' });
 
     const violations = auditTokens(doctored, surfacesCss);
 
@@ -235,13 +322,24 @@ describe('token contrast audit', () => {
     expect(violations.every((v) => v.ratio < v.required)).toBe(true);
   });
 
+  it.each(THEME_IDS)('names the pair and %s when that theme has a weak field border', (theme) => {
+    const doctored = withOverrides({ [theme]: '--field-border: rgba(128, 128, 128, 0.2);' });
+
+    const violations = auditTokens(doctored, surfacesCss);
+
+    expect(violations.map((v) => [v.pair, v.theme])).toEqual(
+      expect.arrayContaining([['field border vs card', theme]]),
+    );
+    expect(violations.every((v) => v.theme === theme)).toBe(true);
+  });
+
   it('reproduces the "before" figures of design.md §5 when audited with the mockup tokens', () => {
     // Mockup: minute fill 0.42 (dark) / 0.32 (light) and no legibility floors.
-    const mockup = withOverrides(
-      tokensCss,
-      '--minute-fill: rgba(154,91,0,0.32); --floor-bar: 0; --floor-card: 0; --floor-clock: 0;',
-      '--minute-fill: rgba(240,176,74,0.42); --floor-bar: 0; --floor-card: 0; --floor-clock: 0;',
-    );
+    const mockup = withOverrides({
+      light:
+        '--minute-fill: rgba(154,91,0,0.32); --floor-bar: 0; --floor-card: 0; --floor-clock: 0;',
+      dark: '--minute-fill: rgba(240,176,74,0.42); --floor-bar: 0; --floor-card: 0; --floor-clock: 0;',
+    });
 
     const measurements = measureTokens(mockup, surfacesCss);
 
@@ -254,13 +352,16 @@ describe('token contrast audit', () => {
   });
 
   it('reports the missing token instead of computing a ratio from nothing', () => {
-    const incomplete = ':root { --bg: #fff; } .dark { --bg: #000; }';
+    const incomplete: ThemeStylesheet[] = [
+      { id: 'light', css: ":root[data-theme='light'] { --bg: #fff; }" },
+      { id: 'dark', css: ":root[data-theme='dark'] { --bg: #000; }" },
+    ];
 
     expect(() => measureTokens(incomplete, surfacesCss)).toThrow(/--scrim/);
   });
 
   it('audits the rail through the bar recipe: dropping --floor-bar fails the rail pairs, not the card ones', () => {
-    const noBarFloor = withOverrides(tokensCss, '--floor-bar: 0;', '--floor-bar: 0;');
+    const noBarFloor = withOverrides({ light: '--floor-bar: 0;', dark: '--floor-bar: 0;' });
 
     const failing = auditTokens(noBarFloor, surfacesCss).map((v) => v.pair);
 
@@ -277,7 +378,7 @@ describe('token contrast audit', () => {
 
 describe('surface recipes', () => {
   it('are audited with the floor they declare, not a fixed token', () => {
-    const lowCardFloor = withOverrides(tokensCss, '--floor-card: 0.2;', '');
+    const lowCardFloor = withOverrides({ light: '--floor-card: 0.2;' });
     const lightPairs = (css: string) =>
       auditTokens(lowCardFloor, css)
         .filter((v) => v.theme === 'light')
@@ -293,7 +394,7 @@ describe('surface recipes', () => {
 
   it('are audited with the glass layer they declare', () => {
     // In light, make the hover layer solid black: text on a card that paints it is unreadable.
-    const blackHover = withOverrides(tokensCss, '--card-hover: rgba(0,0,0,1);', '');
+    const blackHover = withOverrides({ light: '--card-hover: rgba(0,0,0,1);' });
     const textOnCard = (css: string) =>
       ratioOf(measureTokens(blackHover, css), 'text on card', 'light');
     const paintsHover = redirect(surfacesCss, 'glass-card', '--glass-layer', '--card-hover');
@@ -305,31 +406,28 @@ describe('surface recipes', () => {
   it('are rejected by the audit when a recipe declares no legibility floor', () => {
     const noFloor = surfacesCss.replace(/--glass-floor:[^;]*;/g, '');
 
-    expect(() => auditTokens(tokensCss, noFloor)).toThrow(/glass-\w+.*floor/i);
+    expect(() => auditTokens(themes, noFloor)).toThrow(/glass-\w+.*floor/i);
   });
 
   it('are rejected by the audit when a recipe declares a floor but never paints it', () => {
     const unpainted = surfacesCss.replace(/var\(--glass-floor\)/g, '0');
 
-    expect(() => auditTokens(tokensCss, unpainted)).toThrow(/glass-\w+.*floor/i);
+    expect(() => auditTokens(themes, unpainted)).toThrow(/glass-\w+.*floor/i);
   });
 
   it('fall back to an opaque --surface so text keeps its contrast without backdrop-filter', () => {
-    const measurements = measureTokens(tokensCss, surfacesCss);
-    const { light, dark } = parseTokens(tokensCss);
+    const measurements = measureTokens(themes, surfacesCss);
 
-    for (const [theme, set] of [
-      ['light', light],
-      ['dark', { ...light, ...dark }],
-    ] as const) {
+    for (const { id, css } of themes) {
+      const set = parseThemeTokens(css, id);
       const expected = contrastRatio(parseColor(set['--text']), parseColor(set['--surface']));
-      expect(ratioOf(measurements, 'text on card (no blur)', theme)).toBeCloseTo(expected, 6);
+      expect(ratioOf(measurements, 'text on card (no blur)', id)).toBeCloseTo(expected, 6);
     }
   });
 
   it('are rejected by the audit when the fallback is not opaque', () => {
     const translucent = redirect(surfacesCss, 'glass-card', '--glass-fallback', '--scrim');
 
-    expect(() => auditTokens(tokensCss, translucent)).toThrow(/opaque/i);
+    expect(() => auditTokens(themes, translucent)).toThrow(/opaque/i);
   });
 });
