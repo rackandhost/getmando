@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
+  effect,
   ElementRef,
   inject,
   signal,
@@ -22,7 +24,10 @@ let nextId = 0;
  * the top layer, above the `glass-chrome` surfaces that would otherwise clip a fixed overlay.
  *
  * Focus stays in the search field; the highlighted option is exposed through `aria-activedescendant`.
- * Choosing an option stores it as this device's preference (`ThemeService.select`).
+ * While the dialog is open a highlighted option other than the committed theme is shown as a preview
+ * (`ThemeService.preview`; the committed theme needs none, so highlighting it leaves no preview);
+ * choosing one stores it as this device's preference (`ThemeService.select`), and every other way out
+ * (`Esc`, `Close`, the backdrop, destroying the component) restores the committed theme.
  */
 @Component({
   selector: 'app-theme-picker',
@@ -50,7 +55,7 @@ export class ThemePickerComponent {
   protected readonly open = signal(false);
   protected readonly query = signal('');
   /** The row the user moved to; `undefined` means the first row shown. */
-  private readonly highlight = signal<ThemeId | undefined>(undefined);
+  protected readonly highlight = signal<ThemeId | undefined>(undefined);
 
   /** Case-insensitive substring over name and description, in registry order. */
   protected readonly rows = computed(() => {
@@ -63,6 +68,18 @@ export class ThemePickerComponent {
     const rows = this.rows();
     return rows.find((row) => row.id === this.highlight())?.id ?? rows[0]?.id;
   });
+
+  private pressedOnBackdrop = false;
+
+  constructor() {
+    effect(() => {
+      const id = this.highlighted();
+      if (!this.open()) return;
+      if (id && id !== this.committed()) this.themeService.preview(id);
+      else this.themeService.cancelPreview();
+    });
+    inject(DestroyRef).onDestroy(() => this.themeService.cancelPreview());
+  }
 
   protected optionId(id: ThemeId, part?: 'name' | 'description' | 'active'): string {
     return `theme-picker-${this.id}-${id}${part ? `-${part}` : ''}`;
@@ -84,6 +101,7 @@ export class ThemePickerComponent {
   /** Runs for every way the dialog closes: `Esc` (native or ours), `Close`, or a choice. */
   protected onClosed(): void {
     this.open.set(false);
+    this.themeService.cancelPreview();
     this.trigger().nativeElement.focus();
   }
 
@@ -116,6 +134,15 @@ export class ThemePickerComponent {
     entering.focus();
   }
 
+  /** A press and release on the backdrop closes; a text selection dragged out of the field does not. */
+  protected onDialogMouseDown(event: MouseEvent): void {
+    this.pressedOnBackdrop = event.target === event.currentTarget;
+  }
+
+  protected onDialogClick(event: MouseEvent): void {
+    if (this.pressedOnBackdrop && event.target === event.currentTarget) this.close();
+  }
+
   protected onSearchKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -124,6 +151,23 @@ export class ThemePickerComponent {
       event.preventDefault();
       const id = this.highlighted();
       if (id) this.choose(id);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.move(event.key === 'ArrowDown' ? 1 : -1);
     }
+  }
+
+  /** Moves the highlight one row, wrapping at both ends, and keeps it in view in a scrolling list. */
+  private move(step: 1 | -1): void {
+    const rows = this.rows();
+    if (rows.length === 0) return;
+    const at = rows.findIndex((row) => row.id === this.highlighted());
+    const next = rows[(at + step + rows.length) % rows.length];
+    this.highlight.set(next.id);
+    this.dialog()
+      .nativeElement.querySelector(`#${this.optionId(next.id)}`)
+      ?.scrollIntoView({
+        block: 'nearest',
+      });
   }
 }

@@ -69,3 +69,8 @@ if (!HTMLDialogElement.prototype.showModal) {
     this.dispatchEvent(new Event('close'));
   };
 }
+
+/** jsdom does no layout and does not implement `scrollIntoView`; specs spy on it where it matters. */
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = vi.fn();
+}

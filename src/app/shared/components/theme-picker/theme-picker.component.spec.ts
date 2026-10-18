@@ -1,6 +1,12 @@
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 
+import { DEFAULT_DASHBOARD_CONFIG } from '../../../core/models/dashboard.models';
+import { LoggerService } from '../../../core/services/logger.service';
+import { NotificationService } from '../../../core/services/notification.service';
+import { SettingsService } from '../../../core/services/settings.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { THEMES, type ThemeId } from '../../../core/themes/theme.registry';
 import { expectNoAxeViolations } from '../../../../testing/a11y';
@@ -116,6 +122,36 @@ describe('ThemePickerComponent', () => {
       expect(dialog()).toHaveTextContent('↑ ↓ preview');
       expect(dialog()).toHaveTextContent('↵ apply');
       expect(dialog()).toHaveTextContent('esc cancel');
+    });
+
+    it('does not preview the committed theme: opening leaves the service without a preview', async () => {
+      const { theme } = await setupOpen('dark');
+
+      expect(theme.preview).not.toHaveBeenCalled();
+    });
+
+    it('goes back to no preview, not to a preview of the committed theme, when the highlight returns to it', async () => {
+      const { user, theme } = await setupOpen('dark');
+
+      await user.keyboard('{ArrowDown}');
+      expect(theme.preview).toHaveBeenCalledExactlyOnceWith('light');
+      theme.cancelPreview.mockClear();
+
+      await user.keyboard('{ArrowUp}');
+
+      expect(theme.cancelPreview).toHaveBeenCalled();
+      expect(theme.preview).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not preview the committed theme when the pointer rests on its row', async () => {
+      const { user, theme } = await setupOpen('light');
+
+      await user.hover(option('Dark'));
+      theme.preview.mockClear();
+      await user.hover(option('Light'));
+
+      expect(theme.preview).not.toHaveBeenCalled();
+      expect(theme.theme()).toBe('light');
     });
   });
 
@@ -256,6 +292,232 @@ describe('ThemePickerComponent', () => {
       expect(optionNames()).toEqual(THEMES.map((theme) => theme.name));
       expect(option('Light')).toHaveAttribute('aria-selected', 'true');
       expect(search()).toHaveFocus();
+    });
+  });
+
+  /** Previewing is a state of `ThemeService`, so these run against the real one over a fake settings source. */
+  describe('previewing and cancelling', () => {
+    const root = document.documentElement;
+    const storedTheme = () => localStorage.getItem('dashboard-theme');
+    const setupPreview = async (committed: ThemeId = 'dark') => {
+      localStorage.clear();
+      const user = userEvent.setup();
+      const view = await render(ThemePickerComponent, {
+        providers: [
+          {
+            provide: SettingsService,
+            useValue: {
+              settings: signal({ ...DEFAULT_DASHBOARD_CONFIG.settings, theme: committed }),
+            },
+          },
+          { provide: LoggerService, useValue: { warn: vi.fn() } },
+          { provide: NotificationService, useValue: { warning: vi.fn() } },
+        ],
+      });
+      const themes = TestBed.inject(ThemeService);
+      await user.click(trigger());
+      TestBed.flushEffects();
+      return { ...view, user, themes };
+    };
+
+    afterEach(() => {
+      localStorage.clear();
+      root.removeAttribute('data-theme');
+    });
+
+    it('shows the committed theme when it opens, and stores nothing', async () => {
+      const { themes } = await setupPreview('light');
+
+      expect(themes.theme()).toBe('light');
+      expect(storedTheme()).toBeNull();
+    });
+
+    it('previews the next theme on ArrowDown without committing or storing it', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+      TestBed.flushEffects();
+
+      expect(option('Light')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('light');
+      expect(themes.committed()).toBe('dark');
+      expect(root.dataset['theme']).toBe('light');
+      expect(storedTheme()).toBeNull();
+    });
+
+    it('previews the previous theme on ArrowUp', async () => {
+      const { user, themes } = await setupPreview('light');
+
+      await user.keyboard('{ArrowUp}');
+
+      expect(option('Dark')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('dark');
+    });
+
+    it('wraps from the last theme to the first on ArrowDown, and back on ArrowUp', async () => {
+      const { user, themes } = await setupPreview('catppuccin-mocha');
+
+      await user.keyboard('{ArrowDown}');
+      expect(option('Dark')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('dark');
+
+      await user.keyboard('{ArrowUp}');
+      expect(option('Catppuccin Mocha')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('catppuccin-mocha');
+    });
+
+    it('moves only through the rows the filter leaves', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.type(search(), 'mando');
+      await user.keyboard('{ArrowDown}{ArrowDown}');
+
+      expect(option('Dark')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('dark');
+    });
+
+    it('previews the first match as the filter changes, and the committed theme when nothing matches', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.type(search(), 'moc');
+      expect(themes.theme()).toBe('catppuccin-mocha');
+
+      await user.clear(search());
+      await user.type(search(), 'zzz');
+      await user.keyboard('{ArrowDown}{ArrowUp}');
+      expect(themes.theme()).toBe('dark');
+    });
+
+    it('keeps the highlighted option in view when the arrows move it', async () => {
+      const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView');
+      const { user } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(scrollIntoView.mock.contexts.at(-1)).toBe(option('Light'));
+    });
+
+    it('previews the hovered row and leaves it highlighted when the pointer moves on', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.hover(option('Catppuccin Mocha'));
+      expect(option('Catppuccin Mocha')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('catppuccin-mocha');
+      expect(themes.committed()).toBe('dark');
+
+      await user.hover(option('Light'));
+      expect(themes.theme()).toBe('light');
+      expect(storedTheme()).toBeNull();
+    });
+
+    it('keeps the button named after the committed theme while another is previewed', async () => {
+      const { user } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+
+      expect(trigger()).toHaveAccessibleName('Change theme, current: Dark');
+    });
+
+    it('commits the previewed theme on Enter: stored, applied, dialog closed, focus on the button', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}{Enter}');
+
+      expect(storedTheme()).toBe('light');
+      expect(themes.committed()).toBe('light');
+      expect(themes.theme()).toBe('light');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(trigger()).toHaveFocus();
+      expect(trigger()).toHaveAccessibleName('Change theme, current: Light');
+    });
+
+    it('commits a clicked row after a preview of another', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.hover(option('Light'));
+      await user.click(option('Catppuccin Mocha'));
+
+      expect(storedTheme()).toBe('catppuccin-mocha');
+      expect(themes.theme()).toBe('catppuccin-mocha');
+    });
+
+    it('restores the committed theme on Escape and stores nothing', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+      expect(themes.theme()).toBe('light');
+      await user.keyboard('{Escape}');
+
+      expect(themes.theme()).toBe('dark');
+      expect(themes.committed()).toBe('dark');
+      expect(root.dataset['theme']).toBe('dark');
+      expect(storedTheme()).toBeNull();
+      expect(trigger()).toHaveFocus();
+    });
+
+    it('restores the committed theme on the Close button', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+      await user.click(within(dialog()).getByRole('button', { name: 'Close' }));
+
+      expect(themes.theme()).toBe('dark');
+      expect(storedTheme()).toBeNull();
+    });
+
+    it('restores the committed theme on a click on the backdrop', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+      await user.click(dialog());
+
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(themes.theme()).toBe('dark');
+      expect(storedTheme()).toBeNull();
+      expect(trigger()).toHaveFocus();
+    });
+
+    it('does not close when a text selection that began in the search field ends on the backdrop', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+      await user.pointer([
+        { keys: '[MouseLeft>]', target: search() },
+        { keys: '[/MouseLeft]', target: dialog() },
+      ]);
+
+      expect(dialog()).toBeVisible();
+      expect(themes.theme()).toBe('light');
+    });
+
+    it('does not close on a click inside the dialog', async () => {
+      const { user } = await setupPreview('dark');
+
+      await user.click(screen.getByText('Themes'));
+
+      expect(dialog()).toBeVisible();
+    });
+
+    it('restores the committed theme when it is destroyed mid-preview', async () => {
+      const { user, themes, fixture } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}');
+      expect(themes.theme()).toBe('light');
+      fixture.destroy();
+
+      expect(themes.theme()).toBe('dark');
+      expect(storedTheme()).toBeNull();
+    });
+
+    it('previews again when it is reopened, starting from the committed theme', async () => {
+      const { user, themes } = await setupPreview('dark');
+
+      await user.keyboard('{ArrowDown}{Escape}');
+      await user.click(trigger());
+
+      expect(option('Dark')).toHaveAttribute('aria-selected', 'true');
+      expect(themes.theme()).toBe('dark');
     });
   });
 

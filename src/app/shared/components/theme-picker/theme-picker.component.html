@@ -15,8 +15,10 @@
   #dialog
   aria-label="Choose a theme"
   class="m-0 mx-auto mt-[14vh] max-h-[calc(100dvh-14vh-16px)] w-[calc(100%-32px)] max-w-[560px] flex-col overflow-hidden rounded-[20px] border border-chrome-line bg-menu p-0 text-text shadow-[var(--glass-shadow),0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-[28px] backdrop-saturate-[1.6] open:flex backdrop:bg-black/32 backdrop:backdrop-blur-[6px]"
+  (click)="onDialogClick($event)"
   (close)="onClosed()"
   (keydown)="onDialogKeydown($event)"
+  (mousedown)="onDialogMouseDown($event)"
 >
   <div class="flex h-[60px] shrink-0 items-center gap-3 border-b border-line px-[18px]">
     <ng-icon aria-hidden="true" class="shrink-0 text-xl text-muted" name="heroMagnifyingGlass" />
@@ -73,6 +75,7 @@
           [attr.aria-selected]="row.id === highlighted()"
           [id]="optionId(row.id)"
           (click)="choose(row.id)"
+          (mousemove)="highlight.set(row.id)"
         >
           <app-theme-preview size="sm" [swatches]="row.swatches" />
           <span class="flex min-w-0 flex-1 flex-col gap-0.5">
